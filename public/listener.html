@@ -5,187 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>תרגום סימולטני – עומדים ביחד</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:      #12082a;
-      --surface: #1e0f3a;
-      --border:  #3d1f6b;
-      --accent:  #8B2FC9;
-      --accent2: #7928b0;
-      --text:    #f0e8ff;
-      --muted:   #9b7fc4;
-    }
-
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1.5rem;
-      gap: 1.6rem;
-      text-align: center;
-    }
-
-    .logo { height: 56px; object-fit: contain; }
-    h1 { font-size: 1.3rem; color: var(--muted); }
-
-    /* No room screen */
-    .no-room {
-      background: var(--surface); border-radius: 14px;
-      padding: 2rem 1.5rem; max-width: 340px;
-      display: flex; flex-direction: column; gap: 1rem; align-items: center;
-    }
-    .no-room p { font-size: .95rem; color: var(--muted); line-height: 1.5; }
-
-    /* Language picker */
-    .lang-pick {
-      background: var(--surface); border-radius: 14px;
-      padding: 1.25rem 1.5rem; width: 100%; max-width: 340px;
-      display: flex; flex-direction: column; gap: .75rem;
-    }
-    .lang-pick label { font-size: .82rem; color: var(--muted); }
-    select {
-      width: 100%; background: var(--bg); color: var(--text);
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: .5rem .75rem; font-size: 1rem; cursor: pointer;
-    }
-
-    /* Central icon */
-    .icon-wrap {
-      width:130px; height:130px; border-radius:50%;
-      background:var(--surface); display:flex; align-items:center;
-      justify-content:center; font-size:3.2rem;
-      transition: background .4s, box-shadow .4s;
-    }
-    .icon-wrap.active { animation: wave 2s ease-in-out infinite; }
-    .icon-wrap.ended  { opacity:.4; }
-    @keyframes wave {
-      0%,100% { box-shadow: 0 0 0  8px rgba(139,47,201,.25), 0 0 0 18px rgba(139,47,201,.12); }
-      50%      { box-shadow: 0 0 0 14px rgba(139,47,201,.30), 0 0 0 28px rgba(139,47,201,.15); }
-    }
-
-    /* Status */
-    .status { font-size:1.05rem; font-weight:600; }
-    .sub    { font-size:.82rem; color:var(--muted); min-height:1.1em; }
-    .green  { color:#22c55e; }
-    .yellow { color:#f59e0b; }
-    .red    { color:#f87171; }
-    .muted  { color:var(--muted); }
-
-    /* Tap button */
-    .tap-btn {
-      background:var(--accent); color:#fff; border:none;
-      border-radius:999px; padding:.85rem 2.25rem;
-      font-size:1rem; cursor:pointer;
-      transition: background .15s, transform .1s;
-    }
-    .tap-btn:hover  { background:var(--accent2); transform:scale(1.03); }
-    .tap-btn:active { transform:scale(.97); }
-
-    /* Volume */
-    .vol-wrap {
-      display:flex; flex-direction:column; align-items:center;
-      gap:.55rem; width:100%; max-width:250px;
-    }
-    .vol-label { font-size:.8rem; color:var(--muted); }
-    input[type=range] { width:100%; accent-color:var(--accent); cursor:pointer; }
-
-    /* AI translation display */
-    .ai-display {
-      width:100%; max-width:400px;
-      display:flex; flex-direction:column; gap:1rem;
-    }
-    .translation-card {
-      background:var(--surface); border-radius:14px;
-      padding:1.25rem 1.1rem;
-    }
-    .card-label { font-size:.72rem; color:var(--muted); margin-bottom:.4rem; }
-    .card-text  { font-size:1.4rem; font-weight:600; color:#67e8f9; line-height:1.4; }
-    .original-card {
-      background:var(--bg); border-radius:10px;
-      padding:.85rem 1rem;
-    }
-    .original-text { font-size:.95rem; color:var(--muted); line-height:1.4; }
-
-    /* TTS toggle */
-    .tts-row {
-      display:flex; align-items:center; justify-content:center;
-      gap:.6rem; font-size:.82rem; color:var(--muted);
-    }
-    .tts-toggle {
-      width:38px; height:22px; background:var(--border);
-      border-radius:999px; border:none; cursor:pointer;
-      position:relative; transition:background .2s;
-    }
-    .tts-toggle::after {
-      content:''; position:absolute; top:3px; right:3px;
-      width:16px; height:16px; border-radius:50%;
-      background:#fff; transition:transform .2s;
-    }
-    .tts-toggle.on { background:var(--accent); }
-    .tts-toggle.on::after { transform:translateX(-16px); }
-
-    .tip  { font-size:.76rem; color:var(--border); }
-    .hidden { display:none !important; }
-    audio { display:none; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#12082a;--surface:#1e0f3a;--border:#3d1f6b;--accent:#8B2FC9;--accent2:#7928b0;--text:#f0e8ff;--muted:#9b7fc4}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;gap:1.6rem;text-align:center}
+    .logo{height:56px;object-fit:contain}h1{font-size:1.3rem;color:var(--muted)}
+    .no-room{background:var(--surface);border-radius:14px;padding:2rem 1.5rem;max-width:340px;display:flex;flex-direction:column;gap:1rem;align-items:center}
+    .no-room p{font-size:.95rem;color:var(--muted);line-height:1.5}
+    .lang-pick{background:var(--surface);border-radius:14px;padding:1.25rem 1.5rem;width:100%;max-width:340px;display:flex;flex-direction:column;gap:.75rem}
+    .lang-pick label{font-size:.82rem;color:var(--muted)}
+    select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;font-size:1rem;cursor:pointer}
+    .icon-wrap{width:130px;height:130px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:3.2rem;transition:background .4s,box-shadow .4s}
+    .icon-wrap.active{animation:wave 2s ease-in-out infinite}.icon-wrap.ended{opacity:.4}
+    @keyframes wave{0%,100%{box-shadow:0 0 0 8px rgba(139,47,201,.25),0 0 0 18px rgba(139,47,201,.12)}50%{box-shadow:0 0 0 14px rgba(139,47,201,.30),0 0 0 28px rgba(139,47,201,.15)}}
+    .status{font-size:1.05rem;font-weight:600}.sub{font-size:.82rem;color:var(--muted);min-height:1.1em}
+    .green{color:#22c55e}.yellow{color:#f59e0b}.red{color:#f87171}.muted{color:var(--muted)}
+    .tap-btn{background:var(--accent);color:#fff;border:none;border-radius:999px;padding:.85rem 2.25rem;font-size:1rem;cursor:pointer;transition:background .15s,transform .1s}
+    .tap-btn:hover{background:var(--accent2);transform:scale(1.03)}.tap-btn:active{transform:scale(.97)}
+    .vol-wrap{display:flex;flex-direction:column;align-items:center;gap:.55rem;width:100%;max-width:250px}
+    .vol-label{font-size:.8rem;color:var(--muted)}
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+    .ai-display{width:100%;max-width:400px;display:flex;flex-direction:column;gap:1rem}
+    .translation-card{background:var(--surface);border-radius:14px;padding:1.25rem 1.1rem}
+    .card-label{font-size:.72rem;color:var(--muted);margin-bottom:.4rem}
+    .card-text{font-size:1.4rem;font-weight:600;color:#67e8f9;line-height:1.5;max-height:9rem;overflow-y:auto}
+    .original-card{background:var(--bg);border-radius:10px;padding:.85rem 1rem}
+    .original-text{font-size:.95rem;color:var(--muted);line-height:1.4;max-height:5rem;overflow-y:auto}
+    .tts-row{display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:.82rem;color:var(--muted)}
+    .tts-toggle{width:38px;height:22px;background:var(--border);border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .2s}
+    .tts-toggle::after{content:'';position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+    .tts-toggle.on{background:var(--accent)}.tts-toggle.on::after{transform:translateX(-16px)}
+    .tip{font-size:.76rem;color:var(--border)}.hidden{display:none!important}audio{display:none}
   </style>
 </head>
 <body>
-
   <img src="logo.png" class="logo" alt="עומדים ביחד">
-  <h1>תרגום סימולטני</h1>
-
-  <!-- No room ID screen -->
-  <div class="no-room hidden" id="noRoom">
-    <div style="font-size:2.5rem">🔗</div>
-    <p>סרוק את קוד ה-QR מהמשדר, או בקש קישור ישיר.</p>
-  </div>
-
-  <!-- Language picker (shown before joining) -->
+  <h1>🎧 תרגום סימולטני</h1>
+  <div class="no-room hidden" id="noRoom"><div style="font-size:2.5rem">🔗</div><p>סרוק את קוד ה-QR מהמשדר, או בקש קישור ישיר.</p></div>
   <div class="lang-pick hidden" id="langPick">
     <label>בחר את השפה שלך:</label>
     <select id="langSelect">
-      <option value="he">עברית</option>
-      <option value="ar">عربية</option>
-      <option value="en">English</option>
-      <option value="ru">Русский</option>
-      <option value="fr">Français</option>
-      <option value="es">Español</option>
-      <option value="am">አማርኛ</option>
-      <option value="uk">Українська</option>
-      <option value="de">Deutsch</option>
+      <option value="he">עברית</option><option value="ar">عربية</option><option value="en">English</option>
+      <option value="ru">Русский</option><option value="fr">Français</option><option value="es">Español</option>
+      <option value="am">አማርኛ</option><option value="uk">Українська</option><option value="de">Deutsch</option>
     </select>
   </div>
-
   <div class="icon-wrap hidden" id="iconWrap">🎧</div>
-
   <div class="hidden" id="statusBlock">
     <div class="status muted" id="statusTxt">מתחבר...</div>
     <div class="sub" id="subTxt">ממתין לשרת</div>
   </div>
-
-  <!-- Tap to start -->
-  <button class="tap-btn hidden" id="tapBtn" onclick="startListening()">
-    לחץ להתחיל האזנה
-  </button>
-
-  <!-- Human mode: volume -->
+  <button class="tap-btn hidden" id="tapBtn" onclick="startListening()">👆 לחץ להתחיל האזנה</button>
   <div class="vol-wrap hidden" id="volWrap">
-    <div class="vol-label">עוצמת קול</div>
-    <input type="range" id="volSlider" min="0" max="1" step="0.05" value="1"
-           oninput="audioEl.volume = +this.value">
+    <div class="vol-label">🔊 עוצמת קול</div>
+    <input type="range" id="volSlider" min="0" max="1" step="0.05" value="1" oninput="audioEl.volume=+this.value">
   </div>
-
-  <!-- AI mode: translation display -->
   <div class="ai-display hidden" id="aiDisplay">
     <div class="translation-card">
       <div class="card-label">תרגום:</div>
-      <div class="card-text" id="translatedCard">ממתין לשידור...</div>
+      <div class="card-text" id="translatedCard">ממתין לשידור…</div>
     </div>
     <div class="original-card">
       <div class="card-label">מקור:</div>
@@ -196,216 +73,109 @@
       <button class="tts-toggle on" id="ttsToggle" onclick="toggleTTS()"></button>
     </div>
   </div>
-
-  <div class="tip hidden" id="tip">מומלץ להשתמש באוזניות</div>
-
+  <div class="tip hidden" id="tip">🎧 מומלץ להשתמש באוזניות</div>
   <audio id="audioEl" playsinline></audio>
-
   <script>
-    // Room ID
-    const roomId = new URLSearchParams(location.search).get('room');
-
-    if (!roomId) {
-      document.getElementById('noRoom').classList.remove('hidden');
-    } else {
-      document.getElementById('langPick').classList.remove('hidden');
-      document.getElementById('iconWrap').classList.remove('hidden');
-      document.getElementById('statusBlock').classList.remove('hidden');
-      document.getElementById('tapBtn').classList.remove('hidden');
-      document.getElementById('tip').classList.remove('hidden');
-      init();
-    }
-
-    // State
-    const audioEl = document.getElementById('audioEl');
-    const iconWrap  = document.getElementById('iconWrap');
-    const statusTxt = document.getElementById('statusTxt');
-    const subTxt    = document.getElementById('subTxt');
-
-    // Wake Lock
-    let wakeLock = null;
-    async function requestWakeLock() {
-      if ('wakeLock' in navigator) {
-        try { wakeLock = await navigator.wakeLock.request('screen'); } catch(_) {}
-      }
-    }
-    document.addEventListener('visibilitychange', async () => {
-      if (wakeLock && document.visibilityState === 'visible') requestWakeLock();
-    });
-
-    let started = false;
-    let ttsOn   = true;
-    let mode    = null; // 'audio' | 'ai'
-
-    const pendingChunks = [];
-    let mediaSource = null, sourceBuffer = null;
-    const msQueue   = [];
-    let msUpdating  = false;
-
-    // TTS — load voices early
-    let voices = [];
-    function loadVoices() { voices = speechSynthesis.getVoices(); }
-    loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
-
-    // WebSocket
-    function init() {
-      const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(wsProto + '//' + location.host + '/ws?role=listener&room=' + roomId);
-      ws.binaryType = 'arraybuffer';
-
-      ws.onopen  = () => {};
-      ws.onclose = () => setStatus('red', 'החיבור נותק', 'רענן את הדף');
-      ws.onerror = () => setStatus('red', 'שגיאת חיבור', '');
-
-      ws.onmessage = async e => {
-        if (typeof e.data === 'string') {
-          const msg = JSON.parse(e.data);
-          handleText(msg);
-        } else {
-          if (!started) { pendingChunks.push(e.data); return; }
-          if (mode === null) switchMode('audio');
-          enqueue(e.data);
-        }
+    const roomId=new URLSearchParams(location.search).get('room');
+    if(!roomId){document.getElementById('noRoom').classList.remove('hidden')}
+    else{['langPick','iconWrap','statusBlock','tapBtn','tip'].forEach(id=>document.getElementById(id).classList.remove('hidden'));init()}
+    const audioEl=document.getElementById('audioEl');
+    const iconWrap=document.getElementById('iconWrap');
+    const statusTxt=document.getElementById('statusTxt');
+    const subTxt=document.getElementById('subTxt');
+    let wakeLock=null;
+    async function requestWakeLock(){if('wakeLock'in navigator){try{wakeLock=await navigator.wakeLock.request('screen')}catch(_){}}}
+    document.addEventListener('visibilitychange',async()=>{if(wakeLock&&document.visibilityState==='visible')requestWakeLock()});
+    let started=false,ttsOn=true,mode=null;
+    const pendingChunks=[],msQueue=[];
+    let mediaSource=null,sourceBuffer=null,msUpdating=false;
+    let voices=[];
+    function loadVoices(){voices=speechSynthesis.getVoices()}loadVoices();
+    speechSynthesis.onvoiceschanged=loadVoices;
+    let accTranslation='',accOriginal='',resetTimer=null;
+    function init(){
+      const wsProto=location.protocol==='https:'?'wss:':'ws:';
+      const ws=new WebSocket(wsProto+'//'+location.host+'/ws?role=listener&room='+roomId);
+      ws.binaryType='arraybuffer';
+      ws.onopen=()=>{};
+      ws.onclose=()=>setStatus('red','🔴 החיבור נותק','רענן את הדף');
+      ws.onerror=()=>setStatus('red','❌ שגיאת חיבור','');
+      ws.onmessage=async e=>{
+        if(typeof e.data==='string'){handleText(JSON.parse(e.data))}
+        else{if(!started){pendingChunks.push(e.data);return}if(mode===null)switchMode('audio');enqueue(e.data)}
       };
     }
-
-    function handleText(msg) {
-      if (msg.type === 'original') {
-        if (!started) return;
-        if (mode === null) switchMode('ai');
-        const tgtLang = document.getElementById('langSelect').value;
-        const srcLang = msg.sourceLang || 'he';
-        if (srcLang === tgtLang) {
-          showTranslation(msg.text, msg.text, tgtLang);
-        } else {
-          translate(msg.text, srcLang, tgtLang).then(translated => {
-            showTranslation(msg.text, translated, tgtLang);
-          });
-        }
-      } else if (msg.type === 'status') {
-        if (msg.broadcasting) setStatus('yellow','שידור פעיל','לחץ להתחיל האזנה');
-        else                  setStatus('muted','ממתין לשידור','המשדר טרם התחיל');
-      } else if (msg.type === 'ended') {
-        setStatus('red','השידור הסתיים','');
-        iconWrap.classList.remove('active');
-        iconWrap.classList.add('ended');
+    function handleText(msg){
+      if(msg.type==='original'){
+        if(!started)return;
+        if(mode===null)switchMode('ai');
+        const tgtLang=document.getElementById('langSelect').value;
+        const srcLang=msg.sourceLang||'he';
+        if(srcLang===tgtLang){appendTranslation(msg.text,msg.text,tgtLang)}
+        else{translate(msg.text,srcLang,tgtLang).then(t=>appendTranslation(msg.text,t,tgtLang))}
+      }else if(msg.type==='status'){
+        if(msg.broadcasting)setStatus('yellow','⏳ שידור פעיל','לחץ להתחיל האזנה');
+        else setStatus('muted','ממתין לשידור','המשדר טרם התחיל');
+      }else if(msg.type==='ended'){
+        setStatus('red','🔴 השידור הסתיים','');
+        iconWrap.classList.remove('active');iconWrap.classList.add('ended');
       }
     }
-
-    // Translation
-    async function translate(text, from, to) {
-      try {
-        const res = await fetch(
-          'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + from + '|' + to
-        );
-        const d = await res.json();
-        if (d.responseStatus === 200 && d.responseData && d.responseData.translatedText)
-          return d.responseData.translatedText;
-      } catch(_) {}
-      try {
-        const res = await fetch(
-          'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text)
-        );
-        const d = await res.json();
-        return d[0].map(x => x && x[0]).filter(Boolean).join('');
-      } catch(_) {}
+    async function translate(text,from,to){
+      try{const res=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+from+'|'+to);const d=await res.json();if(d.responseStatus===200&&d.responseData&&d.responseData.translatedText)return d.responseData.translatedText}catch(_){}
+      try{const res=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+from+'&tl='+to+'&dt=t&q='+encodeURIComponent(text));const d=await res.json();return d[0].map(x=>x&&x[0]).filter(Boolean).join('')}catch(_){}
       return text;
     }
-
-    // Switch display mode
-    function switchMode(m) {
-      mode = m;
-      if (m === 'audio') {
-        document.getElementById('volWrap').classList.remove('hidden');
-        iconWrap.textContent = 'speaker';
-        setStatus('green','מאזין לשידור','');
-      } else {
-        document.getElementById('aiDisplay').classList.remove('hidden');
-        iconWrap.textContent = 'AI';
-        setStatus('green','תרגום AI פעיל','');
-      }
+    function appendTranslation(original,translated,lang){
+      accOriginal+=(accOriginal?' ':'')+original;
+      accTranslation+=(accTranslation?' ':'')+translated;
+      const tc=document.getElementById('translatedCard');
+      tc.textContent=accTranslation;
+      tc.scrollTop=tc.scrollHeight;
+      document.getElementById('originalCard').textContent=accOriginal;
+      if(ttsOn)speakText(translated,lang);
+      clearTimeout(resetTimer);
+      resetTimer=setTimeout(()=>{accTranslation='';accOriginal=''},3000);
+    }
+    function switchMode(m){
+      mode=m;
+      if(m==='audio'){document.getElementById('volWrap').classList.remove('hidden');iconWrap.textContent='🔊';setStatus('green','🟢 מאזין לשידור','')}
+      else{document.getElementById('aiDisplay').classList.remove('hidden');iconWrap.textContent='🤖';setStatus('green','🟢 תרגום AI פעיל','')}
       iconWrap.classList.add('active');
     }
-
-    // Tap to start
-    function startListening() {
-      if (started) return;
-      started = true;
+    function startListening(){
+      if(started)return;started=true;
       document.getElementById('tapBtn').classList.add('hidden');
-      initMediaSource();
-      pendingChunks.forEach(c => enqueue(c));
-      pendingChunks.length = 0;
+      initMediaSource();pendingChunks.forEach(c=>enqueue(c));pendingChunks.length=0;
       requestWakeLock();
     }
-
-    function setStatus(cls, text, sub) {
-      statusTxt.className = 'status ' + cls;
-      statusTxt.textContent = text;
-      subTxt.textContent = sub;
-    }
-
-    // AI: show translation + TTS
-    function showTranslation(original, translated, lang) {
-      document.getElementById('translatedCard').textContent = translated;
-      document.getElementById('originalCard').textContent   = original;
-      if (ttsOn) speakText(translated, lang);
-    }
-
-    function speakText(text, lang) {
-      if (!ttsOn) return;
+    function setStatus(cls,text,sub){statusTxt.className='status '+cls;statusTxt.textContent=text;subTxt.textContent=sub}
+    function speakText(text,lang){
+      if(!ttsOn)return;
       speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang   = lang;
-      utt.rate   = 1.0;
-      utt.volume = 1.0;
-      const match = voices.find(v => v.lang.startsWith(lang))
-                 || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-      if (match) utt.voice = match;
+      const utt=new SpeechSynthesisUtterance(text);
+      utt.lang=lang;utt.rate=1.1;utt.volume=1.0;
+      const match=voices.find(v=>v.lang.startsWith(lang))||voices.find(v=>v.lang.startsWith(lang.split('-')[0]));
+      if(match)utt.voice=match;
       speechSynthesis.speak(utt);
     }
-
-    function toggleTTS() {
-      ttsOn = !ttsOn;
-      document.getElementById('ttsToggle').classList.toggle('on', ttsOn);
-      if (!ttsOn) speechSynthesis.cancel();
-    }
-
-    // Audio pipeline (human mode)
-    function initMediaSource() {
-      mediaSource = new MediaSource();
-      audioEl.src = URL.createObjectURL(mediaSource);
-      mediaSource.addEventListener('sourceopen', () => {
-        const mimes = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
-        const mime  = mimes.find(t => MediaSource.isTypeSupported(t));
-        if (!mime) { setStatus('red','הדפדפן לא נתמך','השתמש ב-Chrome'); return; }
-        try { sourceBuffer = mediaSource.addSourceBuffer(mime); }
-        catch(e) { setStatus('red','שגיאת אודיו', e.message); return; }
-        sourceBuffer.mode = 'sequence';
-        sourceBuffer.addEventListener('updateend', () => {
-          msUpdating = false; processMS(); keepLive(); trimBuffer();
-        });
-        processMS();
-        audioEl.play().catch(() => {});
+    function toggleTTS(){ttsOn=!ttsOn;document.getElementById('ttsToggle').classList.toggle('on',ttsOn);if(!ttsOn)speechSynthesis.cancel()}
+    function initMediaSource(){
+      mediaSource=new MediaSource();audioEl.src=URL.createObjectURL(mediaSource);
+      mediaSource.addEventListener('sourceopen',()=>{
+        const mimes=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+        const mime=mimes.find(t=>MediaSource.isTypeSupported(t));
+        if(!mime){setStatus('red','❌ הדפדפן לא נתמך','השתמש ב-Chrome');return}
+        try{sourceBuffer=mediaSource.addSourceBuffer(mime)}catch(e){setStatus('red','❌ שגיאת אודיו',e.message);return}
+        sourceBuffer.mode='sequence';
+        sourceBuffer.addEventListener('updateend',()=>{msUpdating=false;processMS();keepLive();trimBuffer()});
+        processMS();audioEl.play().catch(()=>{});
       });
     }
-    function enqueue(chunk) { msQueue.push(chunk); processMS(); }
-    function processMS() {
-      if (msUpdating || !msQueue.length || !sourceBuffer || sourceBuffer.updating) return;
-      msUpdating = true;
-      try { sourceBuffer.appendBuffer(msQueue.shift()); }
-      catch(e) { msUpdating = false; if (e.name === 'QuotaExceededError') trimBuffer(); }
-    }
-    function keepLive() {
-      if (!audioEl.buffered.length) return;
-      const end = audioEl.buffered.end(audioEl.buffered.length - 1);
-      if (end - audioEl.currentTime > 2.5) audioEl.currentTime = end - 0.15;
-    }
-    function trimBuffer() {
-      if (!sourceBuffer || sourceBuffer.updating || !audioEl.buffered.length) return;
-      const s = audioEl.buffered.start(0), c = audioEl.currentTime;
-      if (c - s > 20) try { sourceBuffer.remove(s, c - 15); } catch(_) {}
-    }
+    function enqueue(chunk){msQueue.push(chunk);processMS()}
+    function processMS(){if(msUpdating||!msQueue.length||!sourceBuffer||sourceBuffer.updating)return;msUpdating=true;try{sourceBuffer.appendBuffer(msQueue.shift())}catch(e){msUpdating=false;if(e.name==='QuotaExceededError')trimBuffer()}}
+    function keepLive(){if(!audioEl.buffered.length)return;const end=audioEl.buffered.end(audioEl.buffered.length-1);if(end-audioEl.currentTime>2.5)audioEl.currentTime=end-0.15}
+    function trimBuffer(){if(!sourceBuffer||sourceBuffer.updating||!audioEl.buffered.length)return;const s=audioEl.buffered.start(0),c=audioEl.currentTime;if(c-s>20)try{sourceBuffer.remove(s,c-15)}catch(_){}}
   </script>
 </body>
-  </html>
+</html>
