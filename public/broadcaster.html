@@ -7,175 +7,56 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:      #12082a;
-      --surface: #1e0f3a;
-      --border:  #3d1f6b;
-      --accent:  #8B2FC9;
-      --accent2: #7928b0;
-      --text:    #f0e8ff;
-      --muted:   #9b7fc4;
-    }
-
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.5rem 1.25rem 2rem;
-      gap: 1.4rem;
-    }
-
-    .logo { height: 64px; object-fit: contain; }
-    h1 { font-size: 1.1rem; color: var(--muted); margin-top: -.4rem; }
-
-    /* ── Mode tabs ── */
-    .tabs {
-      display: flex;
-      background: var(--surface);
-      border-radius: 999px;
-      padding: 4px;
-      gap: 4px;
-    }
-    .tab {
-      border: none;
-      border-radius: 999px;
-      padding: .45rem 1.25rem;
-      font-size: .88rem;
-      cursor: pointer;
-      background: transparent;
-      color: var(--muted);
-      transition: all .2s;
-    }
-    .tab.active {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    /* ── Status pill ── */
-    .pill {
-      display: flex; align-items: center; gap: .6rem;
-      background: var(--surface); border-radius: 999px;
-      padding: .5rem 1.2rem; font-size: .85rem; color: var(--muted);
-    }
+    :root { --bg:#12082a; --surface:#1e0f3a; --border:#3d1f6b; --accent:#8B2FC9; --accent2:#7928b0; --text:#f0e8ff; --muted:#9b7fc4; }
+    body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100dvh; display:flex; flex-direction:column; align-items:center; padding:1.5rem 1.25rem 2rem; gap:1.4rem; }
+    .logo { height:64px; object-fit:contain; }
+    h1 { font-size:1.1rem; color:var(--muted); margin-top:-.4rem; }
+    .tabs { display:flex; background:var(--surface); border-radius:999px; padding:4px; gap:4px; }
+    .tab { border:none; border-radius:999px; padding:.45rem 1.25rem; font-size:.88rem; cursor:pointer; background:transparent; color:var(--muted); transition:all .2s; }
+    .tab.active { background:var(--accent); color:#fff; }
+    .pill { display:flex; align-items:center; gap:.6rem; background:var(--surface); border-radius:999px; padding:.5rem 1.2rem; font-size:.85rem; color:var(--muted); }
     .dot { width:9px; height:9px; border-radius:50%; background:var(--muted); flex-shrink:0; }
     .dot.live { background:#22c55e; box-shadow:0 0 6px #22c55e; animation:blink 1.4s ease-in-out infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-    /* ── Big button ── */
-    .big-btn {
-      width:140px; height:140px; border-radius:50%; border:none; cursor:pointer;
-      font-size:2.8rem; background:var(--accent); color:#fff;
-      box-shadow:0 4px 24px rgba(37,99,235,.4);
-      transition: background .2s, transform .15s;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .big-btn:hover  { transform:scale(1.05); }
-    .big-btn:active { transform:scale(.97); }
+    .big-btn { width:140px; height:140px; border-radius:50%; border:none; cursor:pointer; font-size:2.8rem; background:var(--accent); color:#fff; box-shadow:0 4px 24px rgba(37,99,235,.4); transition:background .2s,transform .15s; display:flex; align-items:center; justify-content:center; }
+    .big-btn:hover { transform:scale(1.05); }
     .big-btn.on { background:#dc2626; animation:ripple 1.6s ease-out infinite; }
-    @keyframes ripple {
-      0%   { box-shadow:0 0 0 0   rgba(220,38,38,.5); }
-      100% { box-shadow:0 0 0 28px rgba(220,38,38,0); }
-    }
+    @keyframes ripple { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.5)} 100%{box-shadow:0 0 0 28px rgba(220,38,38,0)} }
     .btn-label { font-size:.88rem; color:var(--muted); margin-top:-.6rem; }
-
-    /* ── AI section ── */
-    .ai-section {
-      width:100%; max-width:420px;
-      display:flex; flex-direction:column; gap:1rem;
-    }
-    .lang-row {
-      display:flex; align-items:center; gap:.75rem;
-    }
+    .ai-section { width:100%; max-width:420px; display:flex; flex-direction:column; gap:1rem; }
+    .lang-row { display:flex; align-items:center; gap:.75rem; }
     .lang-row label { font-size:.82rem; color:var(--muted); white-space:nowrap; }
-    select {
-      flex:1; background:var(--surface); color:#f1f5f9;
-      border:1px solid var(--border); border-radius:8px;
-      padding:.45rem .75rem; font-size:.88rem; cursor:pointer;
-    }
-    .arrow { font-size:1.2rem; color:var(--muted); }
-
-    .ai-start-btn {
-      width:100%; padding:.85rem; border:none; border-radius:10px;
-      background:var(--accent); color:#fff; font-size:1rem;
-      cursor:pointer; transition:background .15s;
-    }
+    select { flex:1; background:var(--surface); color:#f1f5f9; border:1px solid var(--border); border-radius:8px; padding:.45rem .75rem; font-size:.88rem; cursor:pointer; }
+    .ai-start-btn { width:100%; padding:.85rem; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:1rem; cursor:pointer; transition:background .15s; }
     .ai-start-btn:hover { background:var(--accent2); }
     .ai-start-btn.on { background:#dc2626; }
-
-    /* ── Live transcript ── */
-    .transcript-box {
-      width:100%; max-width:420px;
-      background:var(--surface); border-radius:12px;
-      padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.75rem;
-    }
+    .transcript-box { width:100%; max-width:420px; background:var(--surface); border-radius:12px; padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.75rem; }
     .transcript-label { font-size:.75rem; color:var(--muted); }
-    .transcript-text {
-      font-size:1rem; color:#f1f5f9; min-height:2.5em;
-      line-height:1.5;
-    }
-    .transcript-text.translated { color:#67e8f9; }
-    .divider { border:none; border-top:1px solid var(--border); }
-
-    /* ── Counter ── */
+    .transcript-text { font-size:1rem; color:#f1f5f9; min-height:2.5em; line-height:1.5; }
     .counter-wrap { text-align:center; }
-    .counter-num  { font-size:2.5rem; font-weight:700; }
-    .counter-lbl  { font-size:.8rem; color:var(--muted); }
-
-    /* ── Share ── */
-    .share-box {
-      background:var(--surface); border-radius:1rem;
-      padding:1.25rem; width:100%; max-width:380px;
-      display:flex; flex-direction:column; align-items:center; gap:.9rem;
-    }
+    .counter-num { font-size:2.5rem; font-weight:700; }
+    .counter-lbl { font-size:.8rem; color:var(--muted); }
+    .share-box { background:var(--surface); border-radius:1rem; padding:1.25rem; width:100%; max-width:380px; display:flex; flex-direction:column; align-items:center; gap:.9rem; }
     .share-title { font-size:.82rem; color:var(--muted); }
+    .room-code { font-size:1.6rem; font-weight:700; letter-spacing:.15em; color:var(--text); font-family:monospace; }
     #qrcode { background:#fff; padding:10px; border-radius:8px; }
     .url-row { width:100%; display:flex; gap:.5rem; }
-    .url-txt {
-      flex:1; background:var(--bg); color:var(--muted);
-      border:1px solid var(--border); border-radius:8px;
-      padding:.42rem .7rem; font-size:.76rem;
-      direction:ltr; text-align:left;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .copy-btn {
-      background:var(--accent); color:#fff; border:none;
-      border-radius:8px; padding:.42rem .9rem;
-      font-size:.8rem; cursor:pointer; white-space:nowrap;
-    }
-
+    .url-txt { flex:1; background:var(--bg); color:var(--muted); border:1px solid var(--border); border-radius:8px; padding:.42rem .7rem; font-size:.76rem; direction:ltr; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .copy-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:.42rem .9rem; font-size:.8rem; cursor:pointer; white-space:nowrap; }
     .error { color:#f87171; font-size:.83rem; text-align:center; max-width:340px; }
     .hidden { display:none !important; }
   </style>
 </head>
 <body>
-
   <img src="logo.png" class="logo" alt="עומדים ביחד">
   <h1>🎙️ תרגום סימולטני — משדר</h1>
-
-  <!-- Mode tabs -->
   <div class="tabs">
     <button class="tab active" id="tabHuman" onclick="setMode('human')">🎙️ מתרגם אנושי</button>
-    <button class="tab"        id="tabAI"    onclick="setMode('ai')">🤖 תרגום AI</button>
+    <button class="tab" id="tabAI" onclick="setMode('ai')">🤖 תרגום AI</button>
   </div>
-
-  <!-- Status pill -->
-  <div class="pill">
-    <div class="dot" id="dot"></div>
-    <span id="statusTxt">מחובר לשרת</span>
-  </div>
-
-  <!-- ── HUMAN MODE ── -->
-  <div id="humanSection">
-    <button class="big-btn" id="micBtn" onclick="toggleHuman()">🎙️</button>
-  </div>
+  <div class="pill"><div class="dot" id="dot"></div><span id="statusTxt">מחובר לשרת</span></div>
+  <div id="humanSection"><button class="big-btn" id="micBtn" onclick="toggleHuman()">🎙️</button></div>
   <div class="btn-label" id="btnLabel">לחץ להתחיל שידור</div>
-
-  <!-- ── AI MODE ── -->
   <div class="ai-section hidden" id="aiSection">
     <div class="lang-row">
       <label>שפת הדובר:</label>
@@ -189,179 +70,101 @@
         <option value="am-ET|am">אמהרית</option>
       </select>
     </div>
-    <div class="lang-row">
-      <span class="arrow">↓</span>
-    </div>
-    <div class="lang-row">
-      <label>שפת הקהל:</label>
-      <select id="tgtLang">
-        <option value="he">עברית</option>
-        <option value="ar">ערבית</option>
-        <option value="en">אנגלית</option>
-        <option value="ru">רוסית</option>
-        <option value="fr">צרפתית</option>
-        <option value="es">ספרדית</option>
-        <option value="am">אמהרית</option>
-      </select>
-    </div>
     <button class="ai-start-btn" id="aiBtn" onclick="toggleAI()">▶ התחל תרגום AI</button>
   </div>
-
-  <!-- Live transcript (AI mode) -->
   <div class="transcript-box hidden" id="transcriptBox">
-    <div class="transcript-label">מקור:</div>
-    <div class="transcript-text"        id="origTxt">—</div>
-    <hr class="divider">
-    <div class="transcript-label">תרגום:</div>
-    <div class="transcript-text translated" id="transTxt">—</div>
+    <div class="transcript-label">מזהה דיבור:</div>
+    <div class="transcript-text" id="origTxt">—</div>
   </div>
-
-  <!-- Listener counter -->
   <div class="counter-wrap">
     <div class="counter-num" id="count">0</div>
     <div class="counter-lbl">מאזינים מחוברים</div>
   </div>
-
-  <!-- Share -->
   <div class="share-box">
     <div class="share-title">שתף עם הקהל:</div>
+    <div class="room-code" id="roomCodeDisplay"></div>
     <div id="qrcode"></div>
     <div class="url-row">
       <div class="url-txt" id="urlTxt"></div>
       <button class="copy-btn" id="copyBtn" onclick="copyUrl()">העתק</button>
     </div>
   </div>
-
   <div class="error hidden" id="errMsg"></div>
-
   <script>
-    // ── QR & URL ─────────────────────────────────────────────────────────────
-    const listenerUrl = `${location.protocol}//${location.host}/listener.html`;
+    function generateRoomId() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let id = '';
+      for (let i = 0; i < 6; i++) { if (i === 3) id += '-'; id += chars[Math.floor(Math.random() * chars.length)]; }
+      return id;
+    }
+    const params = new URLSearchParams(location.search);
+    let roomId = params.get('room');
+    if (!roomId) { roomId = generateRoomId(); history.replaceState(null, '', '?room=' + roomId); }
+    const listenerUrl = location.protocol + '//' + location.host + '/listener.html?room=' + roomId;
+    document.getElementById('roomCodeDisplay').textContent = roomId;
     document.getElementById('urlTxt').textContent = listenerUrl;
-    new QRCode(document.getElementById('qrcode'), {
-      text: listenerUrl, width:150, height:150,
-      colorDark:'#000', colorLight:'#fff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
+    new QRCode(document.getElementById('qrcode'), { text: listenerUrl, width:150, height:150, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
     function copyUrl() {
       navigator.clipboard.writeText(listenerUrl).then(() => {
-        const b = document.getElementById('copyBtn');
-        b.textContent = '✓ הועתק';
-        setTimeout(() => b.textContent = 'העתק', 2200);
+        const b = document.getElementById('copyBtn'); b.textContent = '✓ הועתק'; setTimeout(() => b.textContent = 'העתק', 2200);
       });
     }
-
-    // ── WebSocket ─────────────────────────────────────────────────────────────
     const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${wsProto}//${location.host}/ws?role=broadcaster`);
-    ws.onmessage = e => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'ready' || msg.type === 'count')
-        document.getElementById('count').textContent = msg.count ?? 0;
-    };
+    const ws = new WebSocket(wsProto + '//' + location.host + '/ws?role=broadcaster&room=' + roomId);
+    ws.onmessage = e => { const msg = JSON.parse(e.data); if (msg.type === 'ready' || msg.type === 'count') document.getElementById('count').textContent = msg.count || 0; };
     ws.onclose = () => showErr('החיבור לשרת נותק. רענן את הדף.');
-
-    // ── Mode toggle ───────────────────────────────────────────────────────────
     let currentMode = 'human';
     function setMode(m) {
       if (currentMode === 'human' && humanOn) toggleHuman();
-      if (currentMode === 'ai'    && aiOn)    toggleAI();
+      if (currentMode === 'ai' && aiOn) toggleAI();
       currentMode = m;
       document.getElementById('tabHuman').classList.toggle('active', m === 'human');
-      document.getElementById('tabAI')   .classList.toggle('active', m === 'ai');
-      document.getElementById('humanSection') .classList.toggle('hidden', m !== 'human');
-      document.getElementById('btnLabel')     .classList.toggle('hidden', m !== 'human');
-      document.getElementById('aiSection')    .classList.toggle('hidden', m !== 'ai');
+      document.getElementById('tabAI').classList.toggle('active', m === 'ai');
+      document.getElementById('humanSection').classList.toggle('hidden', m !== 'human');
+      document.getElementById('btnLabel').classList.toggle('hidden', m !== 'human');
+      document.getElementById('aiSection').classList.toggle('hidden', m !== 'ai');
       document.getElementById('transcriptBox').classList.add('hidden');
       renderStatus(false);
     }
-
-    // ── HUMAN mode ────────────────────────────────────────────────────────────
     let humanOn = false, recorder = null, stream = null;
-
-    async function toggleHuman() {
-      humanOn ? stopHuman() : await startHuman();
-    }
+    async function toggleHuman() { humanOn ? stopHuman() : await startHuman(); }
     async function startHuman() {
       clearErr();
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
-        });
-      } catch(err) {
-        return showErr(err.name === 'NotAllowedError'
-          ? 'אין גישה למיקרופון — אשר גישה בדפדפן.'
-          : `שגיאת מיקרופון: ${err.message}`);
-      }
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false } }); }
+      catch(err) { return showErr(err.name === 'NotAllowedError' ? 'אין גישה למיקרופון — אשר גישה בדפדפן.' : 'שגיאת מיקרופון: ' + err.message); }
       const types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
       const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
       if (!mime) return showErr('הדפדפן אינו תומך בהקלטת אודיו. השתמש בכרום.');
       ws.send(JSON.stringify({ type:'meta', mimeType: mime }));
       recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 64000 });
-      recorder.ondataavailable = e => {
-        if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) ws.send(e.data);
-      };
+      recorder.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
       recorder.start(400);
       humanOn = true; renderStatus(true);
     }
-    function stopHuman() {
-      recorder?.stop(); stream?.getTracks().forEach(t => t.stop());
-      recorder = null; stream = null;
-      humanOn = false; renderStatus(false);
-    }
-
-    // ── AI mode ───────────────────────────────────────────────────────────────
+    function stopHuman() { recorder && recorder.stop(); stream && stream.getTracks().forEach(t => t.stop()); recorder = null; stream = null; humanOn = false; renderStatus(false); }
     let aiOn = false, recognition = null;
-
-    async function toggleAI() {
-      aiOn ? stopAI() : await startAI();
-    }
+    async function toggleAI() { aiOn ? stopAI() : await startAI(); }
     async function startAI() {
       clearErr();
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return showErr('זיהוי דיבור לא זמין. פתח את הדף ב-Chrome.');
-
-      const [bcp47, srcCode] = document.getElementById('srcLang').value.split('|');
-      const tgtCode = document.getElementById('tgtLang').value;
-
-      if (srcCode === tgtCode)
-        return showErr('שפת המקור ושפת היעד זהות. בחר שפות שונות.');
-
+      const parts = document.getElementById('srcLang').value.split('|');
+      const bcp47 = parts[0], srcCode = parts[1];
       recognition = new SR();
-      recognition.lang = bcp47;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      let interimBuf = '';
+      recognition.lang = bcp47; recognition.continuous = true; recognition.interimResults = true;
       recognition.onresult = async event => {
         let interim = '', final = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const t = event.results[i][0].transcript;
-          if (event.results[i].isFinal) final += t;
-          else interim += t;
+          if (event.results[i].isFinal) final += t; else interim += t;
         }
-        interimBuf = interim;
         document.getElementById('origTxt').textContent = final || interim || '…';
-
-        if (final.trim()) {
-          const translated = await translate(final.trim(), srcCode, tgtCode);
-          document.getElementById('transTxt').textContent = translated;
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-              type: 'translation',
-              original: final.trim(),
-              translated,
-              targetLang: tgtCode
-            }));
-          }
+        if (final.trim() && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'original', text: final.trim(), sourceLang: srcCode }));
         }
       };
-
-      recognition.onerror = ev => {
-        if (ev.error !== 'no-speech') showErr(`שגיאת זיהוי: ${ev.error}`);
-      };
+      recognition.onerror = ev => { if (ev.error !== 'no-speech') showErr('שגיאת זיהוי: ' + ev.error); };
       recognition.onend = () => { if (aiOn) recognition.start(); };
-
       recognition.start();
       aiOn = true;
       document.getElementById('aiBtn').textContent = '⏹ עצור תרגום AI';
@@ -369,58 +172,15 @@
       document.getElementById('transcriptBox').classList.remove('hidden');
       renderStatus(true);
     }
-    function stopAI() {
-      recognition?.stop(); recognition = null;
-      aiOn = false;
-      document.getElementById('aiBtn').textContent = '▶ התחל תרגום AI';
-      document.getElementById('aiBtn').classList.remove('on');
-      document.getElementById('transcriptBox').classList.add('hidden');
-      renderStatus(false);
-    }
-
-    // ── Translation (MyMemory + Google fallback) ──────────────────────────────
-    async function translate(text, from, to) {
-      try {
-        const res = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`
-        );
-        const d = await res.json();
-        if (d.responseStatus === 200 && d.responseData?.translatedText)
-          return d.responseData.translatedText;
-      } catch(_) {}
-      try {
-        const res = await fetch(
-          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`
-        );
-        const d = await res.json();
-        return d[0].map(x => x?.[0]).filter(Boolean).join('');
-      } catch(_) {}
-      return text;
-    }
-
-    // ── UI helpers ────────────────────────────────────────────────────────────
+    function stopAI() { recognition && recognition.stop(); recognition = null; aiOn = false; document.getElementById('aiBtn').textContent = '▶ התחל תרגום AI'; document.getElementById('aiBtn').classList.remove('on'); document.getElementById('transcriptBox').classList.add('hidden'); renderStatus(false); }
     function renderStatus(active) {
-      const dot = document.getElementById('dot');
-      const st  = document.getElementById('statusTxt');
-      const btn = document.getElementById('micBtn');
-      const lbl = document.getElementById('btnLabel');
-      dot.classList.toggle('live', active);
-      if (currentMode === 'human') {
-        btn.textContent  = active ? '⏹' : '🎙️';
-        btn.classList.toggle('on', active);
-        lbl.textContent  = active ? 'לחץ לעצור שידור' : 'לחץ להתחיל שידור';
-        st.textContent   = active ? '● משדר עכשיו' : 'מחובר לשרת';
-      } else {
-        st.textContent = active ? '● תרגום AI פעיל' : 'מחובר לשרת';
-      }
+      document.getElementById('dot').classList.toggle('live', active);
+      const btn = document.getElementById('micBtn'), lbl = document.getElementById('btnLabel'), st = document.getElementById('statusTxt');
+      if (currentMode === 'human') { btn.textContent = active ? '⏹' : '🎙️'; btn.classList.toggle('on', active); lbl.textContent = active ? 'לחץ לעצור שידור' : 'לחץ להתחיל שידור'; st.textContent = active ? '● משדר עכשיו' : 'מחובר לשרת'; }
+      else { st.textContent = active ? '● תרגום AI פעיל' : 'מחובר לשרת'; }
     }
-    function showErr(msg) {
-      const el = document.getElementById('errMsg');
-      el.textContent = msg; el.classList.remove('hidden');
-    }
-    function clearErr() {
-      document.getElementById('errMsg').classList.add('hidden');
-    }
+    function showErr(msg) { const el = document.getElementById('errMsg'); el.textContent = msg; el.classList.remove('hidden'); }
+    function clearErr() { document.getElementById('errMsg').classList.add('hidden'); }
   </script>
 </body>
 </html>
