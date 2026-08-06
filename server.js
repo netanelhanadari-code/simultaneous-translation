@@ -9,116 +9,112 @@ const wss = new WebSocket.Server({ server, path: '/ws' });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── State ──────────────────────────────────────────────────────────────────
-let broadcaster = null;
-const listeners = new Set();
-let initChunk = null;   // First webm chunk — contains the stream header
-let mimeType = null;    // Codec reported by broadcaster
+const rooms = new Map();
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+function getRoom(roomId) {
+  if (!rooms.has(roomId)) {
+    rooms.set(roomId, { broadcaster: null, listeners: new Set(), initChunk: null, mimeType: null });
+  }
+  return rooms.get(roomId);
+}
+
+function cleanRoom(roomId) {
+  const room = rooms.get(roomId);
+  if (room && !room.broadcaster && room.listeners.size === 0) {
+    rooms.delete(roomId);
+    console.log('[~] Room ' + roomId + ' removed (empty)');
+  }
+}
+
 function send(ws, obj) {
   if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
 }
 
-function notifyBroadcaster() {
-  if (broadcaster) send(broadcaster, { type: 'count', count: listeners.size });
+function notifyBroadcaster(room) {
+  if (room.broadcaster) send(room.broadcaster, { type: 'count', count: room.listeners.size });
 }
 
-function notifyAllListeners(obj) {
-  listeners.forEach(ws => send(ws, obj));
+function notifyAllListeners(room, obj) {
+  room.listeners.forEach(ws => send(ws, obj));
 }
 
-// ── WebSocket handler ──────────────────────────────────────────────────────
 wss.on('connection', (ws, req) => {
   const params = new URL(req.url, 'http://x').searchParams;
-  const role = params.get('role');
+  const role   = params.get('role');
+  const roomId = params.get('room');
 
-  // ── BROADCASTER ──────────────────────────────────────────────────────────
+  if (!roomId) { ws.close(1008, 'Missing room'); return; }
+
+  const room = getRoom(roomId);
+
   if (role === 'broadcaster') {
-    // Replace any existing broadcaster
-    if (broadcaster?.readyState === WebSocket.OPEN) {
-      broadcaster.close(1000, 'Replaced by new broadcaster');
+    if (room.broadcaster && room.broadcaster.readyState === WebSocket.OPEN) {
+      room.broadcaster.close(1000, 'Replaced by new broadcaster');
     }
-    broadcaster = ws;
-    initChunk = null;
-    mimeType = null;
-    console.log('[+] Broadcaster connected');
+    room.broadcaster = ws;
+    room.initChunk   = null;
+    room.mimeType    = null;
+    console.log('[+] Broadcaster  room=' + roomId);
 
     ws.on('message', (data, isBinary) => {
       if (!isBinary) {
-        // Text message: metadata or AI translation
         try {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'meta') {
-            mimeType = msg.mimeType;
-          } else if (msg.type === 'translation') {
-            // Relay translated text to all listeners
+            room.mimeType = msg.mimeType;
+          } else if (msg.type === 'original') {
             const raw = data.toString();
-            listeners.forEach(listener => {
-              if (listener.readyState === WebSocket.OPEN) listener.send(raw);
+            room.listeners.forEach(l => {
+              if (l.readyState === WebSocket.OPEN) l.send(raw);
             });
           }
         } catch (_) {}
         return;
       }
-
-      // First binary chunk = webm init segment (header + first cluster)
-      if (!initChunk) {
-        initChunk = Buffer.from(data);
-      }
-
-      // Relay audio to all listeners
-      listeners.forEach(listener => {
-        if (listener.readyState === WebSocket.OPEN) {
-          listener.send(data, { binary: true });
-        }
+      if (!room.initChunk) room.initChunk = Buffer.from(data);
+      room.listeners.forEach(l => {
+        if (l.readyState === WebSocket.OPEN) l.send(data, { binary: true });
       });
     });
 
     ws.on('close', () => {
-      if (broadcaster === ws) {
-        broadcaster = null;
-        initChunk = null;
-        mimeType = null;
-        console.log('[-] Broadcaster disconnected');
-        notifyAllListeners({ type: 'ended' });
+      if (room.broadcaster === ws) {
+        room.broadcaster = null;
+        room.initChunk   = null;
+        room.mimeType    = null;
+        console.log('[-] Broadcaster  room=' + roomId);
+        notifyAllListeners(room, { type: 'ended' });
+        cleanRoom(roomId);
       }
     });
 
-    ws.on('error', err => console.error('Broadcaster error:', err.message));
+    ws.on('error', err => console.error('Broadcaster error room=' + roomId + ':', err.message));
+    send(ws, { type: 'ready', count: room.listeners.size });
 
-    // Confirm ready
-    send(ws, { type: 'ready', count: listeners.size });
-
-  // ── LISTENER ─────────────────────────────────────────────────────────────
   } else {
-    listeners.add(ws);
-    console.log(`[+] Listener connected  (total: ${listeners.size})`);
-    notifyBroadcaster();
+    room.listeners.add(ws);
+    console.log('[+] Listener     room=' + roomId + '  total=' + room.listeners.size);
+    notifyBroadcaster(room);
 
-    const isBroadcasting = broadcaster?.readyState === WebSocket.OPEN;
-    send(ws, { type: 'status', broadcasting: isBroadcasting, mimeType });
+    const isBroadcasting = room.broadcaster && room.broadcaster.readyState === WebSocket.OPEN;
+    send(ws, { type: 'status', broadcasting: isBroadcasting, mimeType: room.mimeType });
 
-    // Send init chunk so late-joining listener can decode the stream
-    if (isBroadcasting && initChunk) {
-      ws.send(initChunk, { binary: true });
+    if (isBroadcasting && room.initChunk) {
+      ws.send(room.initChunk, { binary: true });
     }
 
     ws.on('close', () => {
-      listeners.delete(ws);
-      console.log(`[-] Listener disconnected (total: ${listeners.size})`);
-      notifyBroadcaster();
+      room.listeners.delete(ws);
+      console.log('[-] Listener     room=' + roomId + '  total=' + room.listeners.size);
+      notifyBroadcaster(room);
+      cleanRoom(roomId);
     });
 
-    ws.on('error', err => console.error('Listener error:', err.message));
+    ws.on('error', err => console.error('Listener error room=' + roomId + ':', err.message));
   }
 });
 
-// ── Start ──────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`\n🎙️  Simultaneous Translation Server`);
-  console.log(`   http://localhost:${PORT}\n`);
-  console.log(`   Broadcaster → http://localhost:${PORT}/broadcaster.html`);
-  console.log(`   Listener    → http://localhost:${PORT}/listener.html\n`);
+  console.log('Simultaneous Translation Server running on port ' + PORT);
 });
