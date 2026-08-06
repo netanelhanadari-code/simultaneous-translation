@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>תרגום סימולטני – עומדים ביחד</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #12082a;
+      --surface: #1e0f3a;
+      --border:  #3d1f6b;
+      --accent:  #8B2FC9;
+      --accent2: #7928b0;
+      --text:    #f0e8ff;
+      --muted:   #9b7fc4;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      gap: 1.8rem;
+      text-align: center;
+    }
+
+    h1 { font-size: 1.3rem; color: var(--muted); }
+
+    /* ── Central icon ── */
+    .icon-wrap {
+      width:130px; height:130px; border-radius:50%;
+      background:var(--surface); display:flex; align-items:center;
+      justify-content:center; font-size:3.2rem;
+      transition: background .4s, box-shadow .4s;
+    }
+    .icon-wrap.active {
+      background:var(--surface);
+      animation: wave 2s ease-in-out infinite;
+    }
+    .icon-wrap.ended { opacity:.4; }
+    @keyframes wave {
+      0%,100% { box-shadow: 0 0 0  8px rgba(139,47,201,.25), 0 0 0 18px rgba(139,47,201,.12); }
+      50%      { box-shadow: 0 0 0 14px rgba(139,47,201,.30), 0 0 0 28px rgba(139,47,201,.15); }
+    }
+    .logo { height: 56px; object-fit: contain; }
+
+    /* ── Status ── */
+    .status { font-size:1.05rem; font-weight:600; }
+    .sub    { font-size:.82rem; color:var(--muted); min-height:1.1em; }
+    .green  { color:#22c55e; }
+    .yellow { color:#f59e0b; }
+    .red    { color:#f87171; }
+    .muted  { color:var(--muted); }
+
+    /* ── Tap button ── */
+    .tap-btn {
+      background:var(--accent); color:#fff; border:none;
+      border-radius:999px; padding:.85rem 2.25rem;
+      font-size:1rem; cursor:pointer;
+      box-shadow:0 4px 18px rgba(37,99,235,.35);
+      transition: background .15s, transform .1s;
+    }
+    .tap-btn:hover  { background:var(--accent2); transform:scale(1.03); }
+    .tap-btn:active { transform:scale(.97); }
+
+    /* ── Volume ── */
+    .vol-wrap {
+      display:flex; flex-direction:column; align-items:center;
+      gap:.55rem; width:100%; max-width:250px;
+    }
+    .vol-label { font-size:.8rem; color:var(--muted); }
+    input[type=range] { width:100%; accent-color:#3b82f6; cursor:pointer; }
+
+    /* ── AI translation display ── */
+    .ai-display {
+      width:100%; max-width:400px;
+      display:flex; flex-direction:column; gap:1rem;
+    }
+    .translation-card {
+      background:var(--surface); border-radius:14px;
+      padding:1.25rem 1.1rem;
+    }
+    .card-label { font-size:.72rem; color:var(--muted); margin-bottom:.4rem; }
+    .card-text  { font-size:1.4rem; font-weight:600; color:#67e8f9; line-height:1.4; }
+    .original-card {
+      background:var(--bg); border-radius:10px;
+      padding:.85rem 1rem;
+    }
+    .original-text { font-size:.95rem; color:var(--muted); line-height:1.4; }
+
+    /* ── TTS toggle ── */
+    .tts-row {
+      display:flex; align-items:center; justify-content:center;
+      gap:.6rem; font-size:.82rem; color:var(--muted);
+    }
+    .tts-toggle {
+      width:38px; height:22px; background:var(--border);
+      border-radius:999px; border:none; cursor:pointer;
+      position:relative; transition:background .2s;
+    }
+    .tts-toggle::after {
+      content:''; position:absolute; top:3px; right:3px;
+      width:16px; height:16px; border-radius:50%;
+      background:#fff; transition:transform .2s;
+    }
+    .tts-toggle.on { background:var(--accent); }
+    .tts-toggle.on::after { transform:translateX(-16px); }
+
+    .tip  { font-size:.76rem; color:var(--border); }
+    .hidden { display:none !important; }
+
+    audio { display:none; }
+  </style>
+</head>
+<body>
+
+  <img src="logo.png" class="logo" alt="עומדים ביחד">
+  <h1>🎧 תרגום סימולטני</h1>
+
+  <div class="icon-wrap" id="iconWrap">🎧</div>
+
+  <div>
+    <div class="status muted" id="statusTxt">מתחבר...</div>
+    <div class="sub" id="subTxt">ממתין לשרת</div>
+  </div>
+
+  <!-- Tap to start -->
+  <button class="tap-btn" id="tapBtn" onclick="startListening()">
+    👆 לחץ להתחיל האזנה
+  </button>
+
+  <!-- Human mode: volume -->
+  <div class="vol-wrap hidden" id="volWrap">
+    <div class="vol-label">🔊 עוצמת קול</div>
+    <input type="range" id="volSlider" min="0" max="1" step="0.05" value="1"
+           oninput="audioEl.volume = +this.value">
+  </div>
+
+  <!-- AI mode: translation display -->
+  <div class="ai-display hidden" id="aiDisplay">
+    <div class="translation-card">
+      <div class="card-label">תרגום:</div>
+      <div class="card-text" id="translatedCard">ממתין לשידור…</div>
+    </div>
+    <div class="original-card">
+      <div class="card-label">מקור:</div>
+      <div class="original-text" id="originalCard">—</div>
+    </div>
+    <div class="tts-row">
+      <span>קריאה בקול</span>
+      <button class="tts-toggle on" id="ttsToggle" onclick="toggleTTS()"></button>
+    </div>
+  </div>
+
+  <div class="tip" id="tip">🎧 מומלץ להשתמש באוזניות</div>
+
+  <audio id="audioEl" playsinline></audio>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    const audioEl    = document.getElementById('audioEl');
+    const iconWrap   = document.getElementById('iconWrap');
+    const statusTxt  = document.getElementById('statusTxt');
+    const subTxt     = document.getElementById('subTxt');
+    const tapBtn     = document.getElementById('tapBtn');
+    const volWrap    = document.getElementById('volWrap');
+    const aiDisplay  = document.getElementById('aiDisplay');
+
+    let started   = false;
+    let ttsOn     = true;
+    let mode      = null; // 'audio' | 'ai'
+    let targetLang = 'he';
+
+    // Queues / buffers
+    const pendingChunks = [];
+    let mediaSource = null, sourceBuffer = null;
+    const msQueue   = [];
+    let msUpdating  = false;
+
+    // TTS — load voices early
+    let voices = [];
+    function loadVoices() { voices = speechSynthesis.getVoices(); }
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+
+    // ── WebSocket ──────────────────────────────────────────────────────────────
+    const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProto}//${location.host}/ws?role=listener`);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen  = () => {};
+    ws.onclose = () => setStatus('red', '🔴 החיבור נותק', 'רענן את הדף');
+    ws.onerror = () => setStatus('red', '❌ שגיאת חיבור', '');
+
+    ws.onmessage = async e => {
+      if (typeof e.data === 'string') {
+        const msg = JSON.parse(e.data);
+        handleText(msg);
+      } else {
+        // Binary = audio (human mode)
+        if (!started) { pendingChunks.push(e.data); return; }
+        if (mode === null) switchMode('audio');
+        enqueue(e.data);
+      }
+    };
+
+    function handleText(msg) {
+      if (msg.type === 'translation') {
+        // AI mode incoming
+        if (!started) return; // ignore before user interaction
+        if (mode === null) switchMode('ai');
+        targetLang = msg.targetLang || 'he';
+        showTranslation(msg.original, msg.translated);
+
+      } else if (msg.type === 'status') {
+        if (msg.broadcasting) setStatus('yellow','⏳ שידור פעיל','לחץ להתחיל האזנה');
+        else                  setStatus('muted','ממתין לשידור','המשדר טרם התחיל');
+
+      } else if (msg.type === 'ended') {
+        setStatus('red','🔴 השידור הסתיים','');
+        iconWrap.classList.remove('active');
+        iconWrap.classList.add('ended');
+      }
+    }
+
+    // ── Switch display mode ───────────────────────────────────────────────────
+    function switchMode(m) {
+      mode = m;
+      if (m === 'audio') {
+        volWrap.classList.remove('hidden');
+        iconWrap.textContent = '🔊';
+        setStatus('green','🟢 מאזין לשידור','');
+      } else {
+        aiDisplay.classList.remove('hidden');
+        iconWrap.textContent = '🤖';
+        setStatus('green','🟢 תרגום AI פעיל','');
+      }
+      iconWrap.classList.add('active');
+    }
+
+    // ── Tap to start ──────────────────────────────────────────────────────────
+    function startListening() {
+      if (started) return;
+      started = true;
+      tapBtn.classList.add('hidden');
+      initMediaSource();
+
+      // Flush buffered audio chunks
+      pendingChunks.forEach(c => enqueue(c));
+      pendingChunks.length = 0;
+    }
+
+    function setStatus(cls, text, sub) {
+      statusTxt.className = `status ${cls}`;
+      statusTxt.textContent = text;
+      subTxt.textContent = sub;
+    }
+
+    // ── AI: show translation + TTS ────────────────────────────────────────────
+    function showTranslation(original, translated) {
+      document.getElementById('translatedCard').textContent = translated;
+      document.getElementById('originalCard').textContent   = original;
+      if (ttsOn) speakText(translated, targetLang);
+    }
+
+    function speakText(text, lang) {
+      if (!ttsOn) return;
+      speechSynthesis.cancel(); // cancel previous, always speak latest
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang  = lang;
+      utt.rate  = 1.0;
+      utt.volume = 1.0;
+      // Try to find a matching voice; fall back to browser default
+      const match = voices.find(v => v.lang.startsWith(lang))
+                 || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+      if (match) utt.voice = match;
+      speechSynthesis.speak(utt);
+    }
+
+    function toggleTTS() {
+      ttsOn = !ttsOn;
+      document.getElementById('ttsToggle').classList.toggle('on', ttsOn);
+      if (!ttsOn) speechSynthesis.cancel();
+    }
+
+    // ── Audio pipeline (human mode) ───────────────────────────────────────────
+    function initMediaSource() {
+      mediaSource = new MediaSource();
+      audioEl.src = URL.createObjectURL(mediaSource);
+      mediaSource.addEventListener('sourceopen', () => {
+        const mimes = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+        const mime  = mimes.find(t => MediaSource.isTypeSupported(t));
+        if (!mime) { setStatus('red','❌ הדפדפן לא נתמך','השתמש ב-Chrome'); return; }
+        try { sourceBuffer = mediaSource.addSourceBuffer(mime); }
+        catch(e) { setStatus('red','❌ שגיאת אודיו', e.message); return; }
+        sourceBuffer.mode = 'sequence';
+        sourceBuffer.addEventListener('updateend', () => {
+          msUpdating = false; processMS(); keepLive(); trimBuffer();
+        });
+        processMS();
+        audioEl.play().catch(() => {});
+      });
+    }
+    function enqueue(chunk) { msQueue.push(chunk); processMS(); }
+    function processMS() {
+      if (msUpdating || !msQueue.length || !sourceBuffer || sourceBuffer.updating) return;
+      msUpdating = true;
+      try { sourceBuffer.appendBuffer(msQueue.shift()); }
+      catch(e) { msUpdating = false; if (e.name === 'QuotaExceededError') trimBuffer(); }
+    }
+    function keepLive() {
+      if (!audioEl.buffered.length) return;
+      const end = audioEl.buffered.end(audioEl.buffered.length - 1);
+      if (end - audioEl.currentTime > 2.5) audioEl.currentTime = end - 0.15;
+    }
+    function trimBuffer() {
+      if (!sourceBuffer || sourceBuffer.updating || !audioEl.buffered.length) return;
+      const s = audioEl.buffered.start(0), c = audioEl.currentTime;
+      if (c - s > 20) try { sourceBuffer.remove(s, c - 15); } catch(_) {}
+    }
+
+  </script>
+</body>
+</html>
