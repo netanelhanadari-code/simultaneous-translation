@@ -160,7 +160,7 @@
       <label>שפת הדובר:</label>
       <select id="srcLang">
         <option value="he-IL|he">עברית</option>
-        <option value="ar-SA|ar">ערבית</option>
+        <option value="ar-EG|ar">ערבית</option>
         <option value="en-US|en">אנגלית</option>
         <option value="ru-RU|ru">רוסית</option>
         <option value="fr-FR|fr">צרפתית</option>
@@ -310,7 +310,7 @@
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return showErr('זיהוי דיבור לא זמין. פתח את הדף ב-Chrome.');
 
-      const [bcp47, srcCode] = document.getElementById('srcLang').value.split('|');
+      let [bcp47, srcCode] = document.getElementById('srcLang').value.split('|');
 
       recognition = new SR();
       recognition.lang = bcp47;
@@ -414,8 +414,17 @@
       };
       recognition.onend = () => {
         clearTimeout(debounceTimer);
-        lastSentPos = 0; // reset for new session; cumulativeSent kept for dedup
-        if (aiOn) recognition.start();
+        lastSentPos = 0;
+        if (aiOn) {
+          // Pick up language change if user switched mid-broadcast
+          const [newBcp47, newSrcCode] = document.getElementById('srcLang').value.split('|');
+          if (newBcp47 !== bcp47) {
+            bcp47 = newBcp47; srcCode = newSrcCode;
+            recognition.lang = newBcp47;
+            cumulativeSent = ''; // reset dedup for new language
+          }
+          recognition.start();
+        }
       };
 
       recognition.start();
