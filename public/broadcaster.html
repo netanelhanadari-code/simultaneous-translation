@@ -160,10 +160,10 @@
       <label>שפת הדובר:</label>
       <select id="srcLang">
         <option value="he-IL|he">עברית</option>
-        <option value="ar-PS|ar">عربية (PS)</option>
+        <option value="ar|ar">عربية</option>
+        <option value="ar-EG|ar">عربية (EG)</option>
         <option value="ar-JO|ar">عربية (JO)</option>
         <option value="ar-LB|ar">عربية (LB)</option>
-        <option value="ar-EG|ar">عربية (EG)</option>
         <option value="en-US|en">אנגלית</option>
         <option value="ru-RU|ru">רוסית</option>
         <option value="fr-FR|fr">צרפתית</option>
@@ -306,10 +306,16 @@
 
     // ── AI mode ───────────────────────────────────────────────────────────────
     let aiOn = false, recognition = null;
+    let whisperRecorder = null, whisperStream = null;
 
     async function toggleAI() { aiOn ? stopAI() : await startAI(); }
     async function startAI() {
       clearErr();
+      const [bcp47Init, srcCodeInit] = document.getElementById('srcLang').value.split('|');
+
+      // Arabic → Whisper mode
+      if (srcCodeInit === 'ar') return await startWhisper(bcp47Init, srcCodeInit);
+
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return showErr('זיהוי דיבור לא זמין. פתח את הדף ב-Chrome.');
 
@@ -438,7 +444,41 @@
       renderStatus(true); requestWakeLock();
     }
 
+    // ── Whisper mode (Arabic) ─────────────────────────────────────────────────
+    async function startWhisper(bcp47, srcCode) {
+      try {
+        whisperStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch(err) {
+        return showErr('אין גישה למיקרופון: ' + err.message);
+      }
+      const mime = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']
+        .find(t => MediaRecorder.isTypeSupported(t)) || '';
+      if (!mime) return showErr('הדפדפן לא תומך בהקלטה');
+
+      whisperRecorder = new MediaRecorder(whisperStream, { mimeType: mime });
+      whisperRecorder.ondataavailable = async e => {
+        if (!aiOn || e.data.size < 1000) return; // skip silence / tiny chunks
+        const form = new FormData();
+        form.append('audio', e.data, 'audio.webm');
+        try {
+          const res = await fetch('/api/transcribe?room=' + roomId + '&lang=' + bcp47, {
+            method: 'POST', body: form
+          });
+          const data = await res.json();
+          if (data.text) document.getElementById('origTxt').textContent = data.text;
+        } catch(err) { console.error('Whisper fetch error:', err); }
+      };
+      whisperRecorder.start(4000); // send every 4 seconds
+      aiOn = true;
+      document.getElementById('aiBtn').textContent = '⏹ עצור תרגום AI';
+      document.getElementById('aiBtn').classList.add('on');
+      document.getElementById('transcriptBox').classList.remove('hidden');
+      renderStatus(true); requestWakeLock();
+    }
+
     function stopAI() {
+      if (whisperRecorder) { whisperRecorder.stop(); whisperRecorder = null; }
+      if (whisperStream)   { whisperStream.getTracks().forEach(t => t.stop()); whisperStream = null; }
       recognition && recognition.stop(); recognition = null;
       aiOn = false; releaseWakeLock();
       document.getElementById('aiBtn').textContent = '▶ התחל תרגום AI';

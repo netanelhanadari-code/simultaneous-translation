@@ -2,10 +2,49 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const multer = require('multer');
+const FormData = require('form-data');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws' });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// ── Whisper transcription endpoint ────────────────────────────────────────────
+app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
+  const { room, lang } = req.query;
+  if (!req.file) return res.status(400).json({ error: 'No audio' });
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
+
+  try {
+    const form = new FormData();
+    form.append('file', req.file.buffer, { filename: 'audio.webm', contentType: req.file.mimetype || 'audio/webm' });
+    form.append('model', 'whisper-1');
+    if (lang) form.append('language', lang.split('-')[0]); // strip dialect, e.g. ar-JO → ar
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, ...form.getHeaders() },
+      body: form
+    });
+
+    const data = await response.json();
+    const text = (data.text || '').trim();
+    if (!text) return res.json({ text: '' });
+
+    // Broadcast transcript to listeners in this room
+    const roomData = rooms.get(room);
+    if (roomData) {
+      const msg = JSON.stringify({ type: 'original', text, sourceLang: lang ? lang.split('-')[0] : 'ar' });
+      roomData.listeners.forEach(l => { if (l.readyState === WebSocket.OPEN) l.send(msg); });
+    }
+
+    res.json({ text });
+  } catch (err) {
+    console.error('Whisper error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
