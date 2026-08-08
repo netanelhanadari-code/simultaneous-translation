@@ -131,7 +131,33 @@
     .tip  { font-size:.76rem; color:var(--border); }
     .hidden { display:none !important; }
     audio { display:none; }
-    .version { position:fixed; bottom:.6rem; left:.8rem; font-size:.7rem; color:var(--border); pointer-events:none; }
+    .version { position:fixed; bottom:.6rem; left:.8rem; font-size:.7rem; color:var(--muted); opacity:.5; pointer-events:none; }
+
+    /* ── Translation log ── */
+    .log-wrap {
+      width:100%; max-width:400px;
+      background:var(--surface); border-radius:14px;
+      padding:.85rem 1rem; display:none; flex-direction:column; gap:.5rem;
+    }
+    .log-header {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:.75rem; color:var(--muted);
+    }
+    .log-toggle-btn {
+      background:none; border:1px solid var(--border); color:var(--muted);
+      border-radius:6px; padding:.2rem .6rem; font-size:.72rem; cursor:pointer;
+    }
+    .log-entries {
+      max-height:220px; overflow-y:auto;
+      display:flex; flex-direction:column; gap:.4rem;
+    }
+    .log-entry {
+      background:var(--bg); border-radius:8px;
+      padding:.5rem .7rem; font-size:.78rem; line-height:1.5;
+      border-right:2px solid var(--border);
+    }
+    .log-src { color:var(--muted); }
+    .log-tgt { color:#67e8f9; margin-top:.2rem; }
   </style>
 </head>
 <body>
@@ -148,7 +174,7 @@
     <label>בחר את השפה שלך:</label>
     <select id="langSelect">
       <option value="he">עברית</option>
-      <option value="ar">عربية</option>
+      <option value="ar-PS">عربية</option>
       <option value="en">English</option>
       <option value="ru">Русский</option>
       <option value="fr">Français</option>
@@ -192,6 +218,14 @@
   </div>
 
   <div class="tip hidden" id="tip">🎧 מומלץ להשתמש באוזניות</div>
+
+  <div class="log-wrap hidden" id="logWrap">
+    <div class="log-header">
+      <span>📋 לוג תרגום</span>
+      <button class="log-toggle-btn" onclick="clearLog()">נקה</button>
+    </div>
+    <div class="log-entries" id="logEntries"></div>
+  </div>
 
   <audio id="audioEl" playsinline></audio>
   <div class="version">v0.4</div>
@@ -247,8 +281,8 @@
     const translationQueue = [];
     let queueProcessing = false;
 
-    async function queueTranslation(text, srcLang, tgtLang) {
-      translationQueue.push({ text, srcLang, tgtLang });
+    async function queueTranslation(text, srcLang, tgtLang, ttsLang) {
+      translationQueue.push({ text, srcLang, tgtLang, ttsLang: ttsLang || tgtLang });
       if (!queueProcessing) processTranslationQueue();
     }
 
@@ -259,7 +293,7 @@
         const translated = (item.srcLang === item.tgtLang)
           ? item.text
           : await translate(item.text, item.srcLang, item.tgtLang);
-        await showTranslation(item.text, translated, item.tgtLang); // wait for TTS to finish
+        await showTranslation(item.text, translated, item.ttsLang); // wait for TTS to finish
       }
       queueProcessing = false;
     }
@@ -289,9 +323,10 @@
       if (msg.type === 'original') {
         if (!started) return;
         if (mode === null) switchMode('ai');
-        const tgtLang = document.getElementById('langSelect').value;
+        const tgtFull = document.getElementById('langSelect').value;
+        const tgtLang = tgtFull.split('-')[0]; // strip dialect for translation API
         const srcLang = msg.sourceLang || 'he';
-        queueTranslation(msg.text, srcLang, tgtLang);
+        queueTranslation(msg.text, srcLang, tgtLang, tgtFull);
       } else if (msg.type === 'status') {
         if (msg.broadcasting) setStatus('yellow','⏳ שידור פעיל','לחץ להתחיל האזנה');
         else                  setStatus('muted','ממתין לשידור','המשדר טרם התחיל');
@@ -326,7 +361,26 @@
     async function showTranslation(original, translated, lang) {
       document.getElementById('translatedCard').textContent = translated;
       document.getElementById('originalCard').textContent   = original;
+      addLog(original, translated);
       await speakText(translated, lang);
+    }
+
+    // ── Log ───────────────────────────────────────────────────────────────────
+    function addLog(src, tgt) {
+      const wrap = document.getElementById('logWrap');
+      wrap.style.display = 'flex';
+      wrap.classList.remove('hidden');
+      const entries = document.getElementById('logEntries');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML =
+        `<div class="log-src">▶ ${src}</div>` +
+        `<div class="log-tgt">← ${tgt}</div>`;
+      entries.appendChild(entry);
+      entries.scrollTop = entries.scrollHeight;
+    }
+    function clearLog() {
+      document.getElementById('logEntries').innerHTML = '';
     }
 
     // ── Mode switching ────────────────────────────────────────────────────────
