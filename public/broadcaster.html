@@ -388,9 +388,10 @@
           return;
         }
 
-        // ── Interim: send after 3+ words or 400ms of quiet ──────────────────
+        // ── Interim: send after N words (language-aware) or 400ms of quiet ───
+        const wordThreshold = { 'he': 8, 'ar': 8, 'en': 5 }[srcCode] || 7;
         const wordCount = unsent.trim().split(/\s+/).length;
-        if (wordCount >= 3) {
+        if (wordCount >= wordThreshold) {
           clearTimeout(debounceTimer);
           sendChunk(unsent);
           lastSentPos = fullText.length;
