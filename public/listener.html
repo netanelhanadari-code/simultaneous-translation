@@ -257,7 +257,7 @@
         const translated = (item.srcLang === item.tgtLang)
           ? item.text
           : await translate(item.text, item.srcLang, item.tgtLang);
-        showTranslation(item.text, translated, item.tgtLang);
+        await showTranslation(item.text, translated, item.tgtLang); // wait for TTS to finish
       }
       queueProcessing = false;
     }
@@ -320,11 +320,11 @@
       return text;
     }
 
-    // ── Display: show current chunk ──────────────────────────────────────────
-    function showTranslation(original, translated, lang) {
+    // ── Display: show current chunk, wait for TTS ────────────────────────────
+    async function showTranslation(original, translated, lang) {
       document.getElementById('translatedCard').textContent = translated;
       document.getElementById('originalCard').textContent   = original;
-      if (ttsOn) speakText(translated, lang);
+      await speakText(translated, lang);
     }
 
     // ── Mode switching ────────────────────────────────────────────────────────
@@ -359,18 +359,22 @@
       subTxt.textContent = sub;
     }
 
-    // ── TTS ───────────────────────────────────────────────────────────────────
+    // ── TTS — returns Promise that resolves when speech ends ──────────────────
     function speakText(text, lang) {
-      if (!ttsOn) return;
+      if (!ttsOn) return Promise.resolve();
       speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang   = lang;
-      utt.rate   = 1.1;
-      utt.volume = 1.0;
-      const match = voices.find(v => v.lang.startsWith(lang))
-                 || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-      if (match) utt.voice = match;
-      speechSynthesis.speak(utt);
+      return new Promise(resolve => {
+        const utt = new SpeechSynthesisUtterance(text);
+        utt.lang   = lang;
+        utt.rate   = 1.1;
+        utt.volume = 1.0;
+        const match = voices.find(v => v.lang.startsWith(lang))
+                   || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+        if (match) utt.voice = match;
+        utt.onend   = resolve;
+        utt.onerror = resolve; // don't block queue on error
+        speechSynthesis.speak(utt);
+      });
     }
 
     function toggleTTS() {
