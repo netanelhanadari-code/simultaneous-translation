@@ -132,7 +132,7 @@
 
     .error { color:#f87171; font-size:.83rem; text-align:center; max-width:340px; }
     .hidden { display:none !important; }
-    .version { position:fixed; bottom:.6rem; left:.8rem; font-size:.7rem; color:var(--border); pointer-events:none; }
+    .version { position:fixed; bottom:.6rem; left:.8rem; font-size:.7rem; color:var(--muted); opacity:.5; pointer-events:none; }
   </style>
 </head>
 <body>
@@ -390,23 +390,23 @@
           return;
         }
 
-        // ── Interim: send after N words (language-aware) or 400ms of quiet ───
-        const wordThreshold = { 'he': 8, 'ar': 8, 'en': 5 }[srcCode] || 7;
+        // ── Interim: emergency fallback only — very long phrase with no pause ─
         const wordCount = unsent.trim().split(/\s+/).length;
-        if (wordCount >= wordThreshold) {
+        if (wordCount >= 20) {
           clearTimeout(debounceTimer);
           sendChunk(unsent);
           lastSentPos = fullText.length;
           return;
         }
 
+        // Wait for natural pause (isFinal) — 1000ms debounce
         clearTimeout(debounceTimer);
         const capturedUnsent = unsent.trim();
         const capturedPos    = fullText.length;
         debounceTimer = setTimeout(() => {
           sendChunk(capturedUnsent);
           lastSentPos = capturedPos;
-        }, 400);
+        }, 1000);
       };
 
       recognition.onerror = ev => {
