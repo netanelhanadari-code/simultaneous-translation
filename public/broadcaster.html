@@ -161,9 +161,6 @@
       <select id="srcLang">
         <option value="he-IL|he">עברית</option>
         <option value="ar|ar">عربية</option>
-        <option value="ar-EG|ar">عربية (EG)</option>
-        <option value="ar-JO|ar">عربية (JO)</option>
-        <option value="ar-LB|ar">عربية (LB)</option>
         <option value="en-US|en">אנגלית</option>
         <option value="ru-RU|ru">רוסית</option>
         <option value="fr-FR|fr">צרפתית</option>
@@ -309,6 +306,11 @@
     let whisperRecorder = null, whisperStream = null;
 
     async function toggleAI() { aiOn ? stopAI() : await startAI(); }
+
+    // Auto-restart when language changes mid-broadcast
+    document.getElementById('srcLang').addEventListener('change', async () => {
+      if (aiOn) { stopAI(); await startAI(); }
+    });
     async function startAI() {
       clearErr();
       const [bcp47Init, srcCodeInit] = document.getElementById('srcLang').value.split('|');
