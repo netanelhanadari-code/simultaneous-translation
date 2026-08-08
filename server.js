@@ -3,7 +3,6 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const multer = require('multer');
-const FormData = require('form-data');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,14 +16,15 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
 
   try {
+    const blob = new Blob([req.file.buffer], { type: req.file.mimetype || 'audio/webm' });
     const form = new FormData();
-    form.append('file', req.file.buffer, { filename: 'audio.webm', contentType: req.file.mimetype || 'audio/webm' });
+    form.append('file', blob, 'audio.webm');
     form.append('model', 'whisper-1');
     if (lang) form.append('language', lang.split('-')[0]); // strip dialect, e.g. ar-JO → ar
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, ...form.getHeaders() },
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY },
       body: form
     });
 
