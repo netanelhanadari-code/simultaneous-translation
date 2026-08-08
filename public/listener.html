@@ -174,7 +174,7 @@
     <label>בחר את השפה שלך:</label>
     <select id="langSelect">
       <option value="he">עברית</option>
-      <option value="ar-PS">عربية</option>
+      <option value="ar">عربية</option>
       <option value="en">English</option>
       <option value="ru">Русский</option>
       <option value="fr">Français</option>
@@ -427,8 +427,10 @@
         const match = voices.find(v => v.lang.startsWith(lang))
                    || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
         if (match) utt.voice = match;
-        utt.onend   = resolve;
-        utt.onerror = resolve; // don't block queue on error
+        // Safety timeout: if TTS hangs, unblock queue after 8s
+        const timeout = setTimeout(resolve, 8000);
+        utt.onend   = () => { clearTimeout(timeout); resolve(); };
+        utt.onerror = () => { clearTimeout(timeout); resolve(); };
         speechSynthesis.speak(utt);
       });
     }
