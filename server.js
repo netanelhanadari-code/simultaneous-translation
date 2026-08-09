@@ -20,7 +20,9 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     const form = new FormData();
     form.append('file', blob, 'audio.webm');
     form.append('model', 'whisper-1');
-    if (lang) form.append('language', lang.split('-')[0]); // strip dialect, e.g. ar-JO → ar
+    if (lang) form.append('language', lang.split('-')[0]);
+    form.append('temperature', '0');
+    form.append('prompt', 'محادثة عربية حية');
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
