@@ -49,29 +49,34 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 });
 
 // ── Translation endpoint ──────────────────────────────────────────────────────
+const LANG_NAMES = { ar: 'Arabic', he: 'Hebrew', en: 'English', ru: 'Russian', fr: 'French' };
 app.get('/api/translate', async (req, res) => {
   const { text, from, to } = req.query;
   if (!text || !from || !to) return res.status(400).json({ error: 'Missing params' });
-  console.log('[translate]', from, '->', to, '|', text.slice(0, 40));
-  // Try Google Translate first (more reliable for ar↔he)
+  if (from === to) return res.json({ text });
+  console.log('[translate]', from, '->', to, '|', text.slice(0, 50));
   try {
-    const tgt = to === 'he' ? 'iw' : to; // Google uses 'iw' for Hebrew
-    const r = await fetch(
-      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + from + '&tl=' + tgt + '&dt=t&q=' + encodeURIComponent(text)
-    );
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a translator. Translate the text from ' + (LANG_NAMES[from] || from) + ' to ' + (LANG_NAMES[to] || to) + '. Return only the translated text.' },
+          { role: 'user', content: text }
+        ],
+        temperature: 0,
+        max_tokens: 500
+      })
+    });
     const d = await r.json();
-    const translated = d[0].map(x => x?.[0]).filter(Boolean).join('');
-    if (translated) { console.log('[translate] google ok:', translated.slice(0, 40)); return res.json({ text: translated }); }
-  } catch(e) { console.log('[translate] google fail:', e.message); }
-  // Fallback: MyMemory
-  try {
-    const r = await fetch(
-      'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + from + '|' + to
-    );
-    const d = await r.json();
-    if (d.responseStatus === 200 && d.responseData?.translatedText)
-      return res.json({ text: d.responseData.translatedText });
-  } catch(_) {}
+    const translated = d.choices?.[0]?.message?.content?.trim();
+    if (translated) { console.log('[translate] ok:', translated.slice(0, 50)); return res.json({ text: translated }); }
+    console.log('[translate] gpt empty:', JSON.stringify(d));
+  } catch(e) { console.log('[translate] gpt fail:', e.message); }
   res.json({ text });
 });
 
