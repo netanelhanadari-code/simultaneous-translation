@@ -448,16 +448,20 @@
 
     // ── Whisper mode (Arabic) ─────────────────────────────────────────────────
     async function startWhisper(bcp47, srcCode) {
+      console.log('[Whisper] startWhisper called, bcp47:', bcp47);
       try {
         whisperStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('[Whisper] got microphone stream');
       } catch(err) {
         return showErr('אין גישה למיקרופון: ' + err.message);
       }
       const mime = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']
         .find(t => MediaRecorder.isTypeSupported(t)) || '';
+      console.log('[Whisper] mime:', mime);
       if (!mime) return showErr('הדפדפן לא תומך בהקלטה');
 
       whisperRecorder = new MediaRecorder(whisperStream, { mimeType: mime });
+      console.log('[Whisper] recorder created, starting...');
       whisperRecorder.ondataavailable = async e => {
         console.log('[Whisper] chunk size:', e.data.size, 'aiOn:', aiOn);
         if (!aiOn || e.data.size < 1000) return; // skip silence / tiny chunks
