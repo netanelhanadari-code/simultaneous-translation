@@ -52,7 +52,18 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 app.get('/api/translate', async (req, res) => {
   const { text, from, to } = req.query;
   if (!text || !from || !to) return res.status(400).json({ error: 'Missing params' });
-  // Try MyMemory
+  console.log('[translate]', from, '->', to, '|', text.slice(0, 40));
+  // Try Google Translate first (more reliable for ar↔he)
+  try {
+    const tgt = to === 'he' ? 'iw' : to; // Google uses 'iw' for Hebrew
+    const r = await fetch(
+      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + from + '&tl=' + tgt + '&dt=t&q=' + encodeURIComponent(text)
+    );
+    const d = await r.json();
+    const translated = d[0].map(x => x?.[0]).filter(Boolean).join('');
+    if (translated) { console.log('[translate] google ok:', translated.slice(0, 40)); return res.json({ text: translated }); }
+  } catch(e) { console.log('[translate] google fail:', e.message); }
+  // Fallback: MyMemory
   try {
     const r = await fetch(
       'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + from + '|' + to
@@ -60,15 +71,6 @@ app.get('/api/translate', async (req, res) => {
     const d = await r.json();
     if (d.responseStatus === 200 && d.responseData?.translatedText)
       return res.json({ text: d.responseData.translatedText });
-  } catch(_) {}
-  // Fallback: Google Translate
-  try {
-    const r = await fetch(
-      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text)
-    );
-    const d = await r.json();
-    const translated = d[0].map(x => x?.[0]).filter(Boolean).join('');
-    return res.json({ text: translated });
   } catch(_) {}
   res.json({ text });
 });
