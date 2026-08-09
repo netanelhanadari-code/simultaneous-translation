@@ -459,6 +459,7 @@
 
       whisperRecorder = new MediaRecorder(whisperStream, { mimeType: mime });
       whisperRecorder.ondataavailable = async e => {
+        console.log('[Whisper] chunk size:', e.data.size, 'aiOn:', aiOn);
         if (!aiOn || e.data.size < 1000) return; // skip silence / tiny chunks
         const form = new FormData();
         form.append('audio', e.data, 'audio.webm');
