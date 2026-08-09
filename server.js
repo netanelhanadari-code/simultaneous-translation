@@ -46,6 +46,31 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   }
 });
 
+// ── Translation endpoint ──────────────────────────────────────────────────────
+app.get('/api/translate', async (req, res) => {
+  const { text, from, to } = req.query;
+  if (!text || !from || !to) return res.status(400).json({ error: 'Missing params' });
+  // Try MyMemory
+  try {
+    const r = await fetch(
+      'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + from + '|' + to
+    );
+    const d = await r.json();
+    if (d.responseStatus === 200 && d.responseData?.translatedText)
+      return res.json({ text: d.responseData.translatedText });
+  } catch(_) {}
+  // Fallback: Google Translate
+  try {
+    const r = await fetch(
+      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text)
+    );
+    const d = await r.json();
+    const translated = d[0].map(x => x?.[0]).filter(Boolean).join('');
+    return res.json({ text: translated });
+  } catch(_) {}
+  res.json({ text });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = new Map();

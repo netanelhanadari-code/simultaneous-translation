@@ -341,18 +341,10 @@
     async function translate(text, from, to) {
       try {
         const res = await fetch(
-          'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + from + '|' + to
+          '/api/translate?text=' + encodeURIComponent(text) + '&from=' + from + '&to=' + to
         );
         const d = await res.json();
-        if (d.responseStatus === 200 && d.responseData && d.responseData.translatedText)
-          return d.responseData.translatedText;
-      } catch(_) {}
-      try {
-        const res = await fetch(
-          'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text)
-        );
-        const d = await res.json();
-        return d[0].map(x => x && x[0]).filter(Boolean).join('');
+        if (d.text) return d.text;
       } catch(_) {}
       return text;
     }
