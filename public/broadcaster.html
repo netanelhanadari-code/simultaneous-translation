@@ -194,7 +194,16 @@
   </div>
 
   <div class="error hidden" id="errMsg"></div>
-  <div class="version">v0.4</div>
+
+  <div id="sessionWarning" class="hidden" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#7c2d12;color:#fff;border-radius:12px;padding:1rem 1.5rem;text-align:center;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:320px;width:90%;">
+    <div style="font-size:.95rem;margin-bottom:.75rem;">⏱ השידור פעיל כבר <strong>3 שעות</strong>.<br>להמשיך?</div>
+    <div style="display:flex;gap:.75rem;justify-content:center;">
+      <button onclick="continueSession()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-size:.9rem;cursor:pointer;">המשך</button>
+      <button onclick="stopAI()" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-size:.9rem;cursor:pointer;">עצור</button>
+    </div>
+  </div>
+
+  <div class="version">v0.5</div>
 
   <script>
     // ── Room ID ───────────────────────────────────────────────────────────────
@@ -475,15 +484,46 @@
           if (data.text) document.getElementById('origTxt').textContent = data.text;
         } catch(err) { console.error('Whisper fetch error:', err); }
       };
-      whisperRecorder.start(4000); // send every 4 seconds
+      whisperRecorder.start(8000); // send every 8 seconds
       aiOn = true;
       document.getElementById('aiBtn').textContent = '⏹ עצור תרגום AI';
       document.getElementById('aiBtn').classList.add('on');
       document.getElementById('transcriptBox').classList.remove('hidden');
       renderStatus(true); requestWakeLock();
+      startSessionTimer();
+    }
+
+    // ── Session timeout (3 hours) ─────────────────────────────────────────────
+    let sessionTimer = null, sessionWarningTimer = null;
+    const SESSION_LIMIT_MS = 3 * 60 * 60 * 1000; // 3 hours
+    const WARNING_TIMEOUT_MS = 2 * 60 * 1000;      // 2 min to respond
+
+    function startSessionTimer() {
+      clearTimeout(sessionTimer);
+      sessionTimer = setTimeout(() => {
+        showSessionWarning();
+      }, SESSION_LIMIT_MS);
+    }
+
+    function showSessionWarning() {
+      const banner = document.getElementById('sessionWarning');
+      banner.classList.remove('hidden');
+      sessionWarningTimer = setTimeout(() => {
+        banner.classList.add('hidden');
+        stopAI();
+        showErr('השידור הופסק אוטומטית אחרי 3 שעות');
+      }, WARNING_TIMEOUT_MS);
+    }
+
+    function continueSession() {
+      document.getElementById('sessionWarning').classList.add('hidden');
+      clearTimeout(sessionWarningTimer);
+      startSessionTimer(); // restart 3-hour timer
     }
 
     function stopAI() {
+      clearTimeout(sessionTimer); clearTimeout(sessionWarningTimer);
+      document.getElementById('sessionWarning').classList.add('hidden');
       if (whisperRecorder) { whisperRecorder.stop(); whisperRecorder = null; }
       if (whisperStream)   { whisperStream.getTracks().forEach(t => t.stop()); whisperStream = null; }
       recognition && recognition.stop(); recognition = null;

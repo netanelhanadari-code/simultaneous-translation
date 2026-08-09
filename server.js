@@ -15,6 +15,10 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No audio' });
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
 
+  // Skip Whisper if no listeners — saves API cost
+  const roomCheck = rooms.get(room);
+  if (!roomCheck || roomCheck.listeners.size === 0) return res.json({ text: '' });
+
   try {
     const blob = new Blob([req.file.buffer], { type: req.file.mimetype || 'audio/webm' });
     const form = new FormData();
@@ -34,6 +38,13 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     const text = (data.text || '').trim();
     if (!text) return res.json({ text: '' });
 
+    // Filter known Whisper hallucinations
+    const HALLUCINATIONS = ['اشتركوا في القناة', 'اشترك في القناة', 'subscribe to the channel', 'شكراً للمشاهدة', 'الحلقة القادمة'];
+    if (HALLUCINATIONS.some(h => text.toLowerCase().includes(h.toLowerCase()))) {
+      console.log('[whisper] hallucination filtered:', text);
+      return res.json({ text: '' });
+    }
+
     // Broadcast transcript to listeners in this room
     const roomData = rooms.get(room);
     if (roomData) {
@@ -49,7 +60,35 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 });
 
 // ── Translation endpoint ──────────────────────────────────────────────────────
-const LANG_NAMES = { ar: 'Arabic', he: 'Hebrew', en: 'English', ru: 'Russian', fr: 'French' };
+const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של עומדים ביחד / نقف معاً, תנועה יהודית-ערבית משותפת בישראל.
+
+כללים:
+- תרגם נאמנה ומדויק — לא להוסיף, לא להחסיר, לא לרכך
+- שמור על טון המדבר — אם נרגש, תרגם נרגש; אם קז'ואל, תרגם קז'ואל
+- ערבית→עברית: הדובר מדבר בניב פלסטיני/בדווי — תרגם לעברית טבעית וברורה
+- עברית→ערבית: השתמש בערבית ספרותית מודרנית (فصحى معاصرة)
+- למונחים רגישים פוליטית — בחר את התרגום הנייטרלי ביותר
+- החזר רק את הטקסט המתורגם, ללא הסברים
+
+גלוסרי — השתמש תמיד בתרגומים הבאים:
+עומדים ביחד = نقف معاً
+תנועה = حراك
+מאבק = نضال
+הפגנה = مظاهرة
+מחאה = احتجاج
+סולידריות = تضامن
+קמפיין = حملة
+צדק חברתי = عدالة اجتماعية
+שוויון = مساواة
+שלום = سلام
+שותפות יהודית-ערבית = شراكة يهودية-عربية
+חיים משותפים = حياة مشتركة
+בית סגול = البيت الليلكي
+פעילים/ות = ناشطين/ناشطات
+אסיפה ארצית = اجتماع قطري
+התארגנות = تنظيم
+מפגש = لقاء`;
+
 app.get('/api/translate', async (req, res) => {
   const { text, from, to } = req.query;
   if (!text || !from || !to) return res.status(400).json({ error: 'Missing params' });
@@ -65,7 +104,7 @@ app.get('/api/translate', async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are a translator. Translate the text from ' + (LANG_NAMES[from] || from) + ' to ' + (LANG_NAMES[to] || to) + '. Return only the translated text.' },
+          { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
           { role: 'user', content: text }
         ],
         temperature: 0,
