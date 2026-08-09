@@ -464,7 +464,7 @@
       console.log('[Whisper] recorder created, starting...');
       whisperRecorder.ondataavailable = async e => {
         console.log('[Whisper] chunk size:', e.data.size, 'aiOn:', aiOn);
-        if (!aiOn || e.data.size < 1000) return; // skip silence / tiny chunks
+        if (!aiOn || e.data.size < 100) return; // skip near-empty chunks
         const form = new FormData();
         form.append('audio', e.data, 'audio.webm');
         try {
