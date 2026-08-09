@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>בדיקת Whisper</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #12082a; color: #f0e8ff; padding: 2rem; max-width: 600px; margin: 0 auto; }
+    h1 { color: #9b7fc4; font-size: 1.2rem; }
+    input[type=file] { margin: 1rem 0; display: block; color: #f0e8ff; }
+    select, button { background: #1e0f3a; color: #f0e8ff; border: 1px solid #3d1f6b; border-radius: 8px; padding: .5rem 1rem; margin: .5rem .25rem; cursor: pointer; }
+    button { background: #8B2FC9; border: none; }
+    button:disabled { opacity: .5; cursor: default; }
+    .box { background: #1e0f3a; border-radius: 10px; padding: 1rem; margin: 1rem 0; min-height: 3rem; }
+    label { color: #9b7fc4; font-size: .85rem; }
+    .result { font-size: 1.1rem; line-height: 1.7; }
+    .error { color: #f87171; }
+  </style>
+</head>
+<body>
+<h1>🔬 בדיקת Whisper + תרגום</h1>
+
+<input type="file" id="audioFile" accept="audio/*">
+
+<div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+  <label>שפת המקור:</label>
+  <select id="srcLang">
+    <option value="ar">ערבית (ar)</option>
+    <option value="he">עברית (he)</option>
+    <option value="en">אנגלית (en)</option>
+  </select>
+  <label>תרגום ל:</label>
+  <select id="tgtLang">
+    <option value="he">עברית</option>
+    <option value="ar">ערבית</option>
+    <option value="en">אנגלית</option>
+  </select>
+  <button id="btn" onclick="run()">▶ בדוק</button>
+</div>
+
+<label>תמלול Whisper:</label>
+<div class="box" id="transcript"><span style="color:#3d1f6b">ממתין לקובץ...</span></div>
+
+<label>תרגום:</label>
+<div class="box" id="translation"><span style="color:#3d1f6b">ממתין לתמלול...</span></div>
+
+<script>
+async function run() {
+  const file = document.getElementById('audioFile').files[0];
+  if (!file) return alert('בחר קובץ שמע');
+  const src = document.getElementById('srcLang').value;
+  const tgt = document.getElementById('tgtLang').value;
+  const btn = document.getElementById('btn');
+  const tBox = document.getElementById('transcript');
+  const rBox = document.getElementById('translation');
+
+  btn.disabled = true;
+  tBox.innerHTML = '⏳ שולח ל-Whisper...';
+  rBox.innerHTML = '';
+
+  // Send to Whisper
+  const form = new FormData();
+  form.append('audio', file, file.name);
+  let transcript = '';
+  try {
+    const res = await fetch('/api/transcribe?lang=' + src, { method: 'POST', body: form });
+    const d = await res.json();
+    if (d.error) { tBox.innerHTML = '<span class="error">שגיאה: ' + d.error + '</span>'; btn.disabled = false; return; }
+    transcript = d.text || '';
+    tBox.innerHTML = transcript ? '<span class="result">' + transcript + '</span>' : '<span style="color:#9b7fc4">לא זוהה דיבור</span>';
+  } catch(e) {
+    tBox.innerHTML = '<span class="error">' + e.message + '</span>';
+    btn.disabled = false; return;
+  }
+
+  if (!transcript || src === tgt) { rBox.innerHTML = transcript ? '<span class="result">' + transcript + '</span>' : ''; btn.disabled = false; return; }
+
+  // Translate
+  rBox.innerHTML = '⏳ מתרגם...';
+  try {
+    const res = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
+    const d = await res.json();
+    rBox.innerHTML = '<span class="result">' + (d.text || transcript) + '</span>';
+  } catch(e) {
+    rBox.innerHTML = '<span class="error">' + e.message + '</span>';
+  }
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
