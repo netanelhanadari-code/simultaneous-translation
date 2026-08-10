@@ -134,7 +134,7 @@ app.get('/api/translate', async (req, res) => {
     const genderNote = gender === 'f'
       ? '\nהדוברת היא אישה — השתמש בלשון נקבה'
       : '\nהדובר הוא גבר — השתמש בלשון זכר';
-    const systemPrompt = TRANSLATION_SYSTEM_PROMPT + genderNote;
+    const systemPrompt = TRANSLATION_SYSTEM_PROMPT + genderNote + `\nשפת המקור: ${from}. שפת היעד: ${to}. תרגם אך ורק לשפת היעד.`;
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
