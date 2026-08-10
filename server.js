@@ -13,7 +13,9 @@ const sbHeaders = () => ({
 });
 async function sbInsert(table, data) {
   if (!SB_URL) return null;
-  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+  const url = `${SB_URL}/rest/v1/${table}`;
+  console.log('[supabase] POST', url.replace(/\/\/[^.]+/, '//***'));
+  const r = await fetch(url, {
     method: 'POST',
     headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(data)
