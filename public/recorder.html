@@ -103,15 +103,22 @@
 
 <div class="langs">
   <select id="srcLang">
-    <option value="ar">ערבית</option>
+    <option value="ar">العربية</option>
     <option value="he">עברית</option>
-    <option value="en">אנגלית</option>
+    <option value="en">English</option>
   </select>
   <span class="arrow">←</span>
   <select id="tgtLang">
     <option value="he">עברית</option>
-    <option value="ar">ערבית</option>
-    <option value="en">אנגלית</option>
+    <option value="ar">العربية</option>
+    <option value="en">English</option>
+  </select>
+  <label style="color:#9b7fc4;font-size:.85rem;">באיזה קול תרצה להיות מתורגם?</label>
+  <select id="ttsVoice">
+    <option value="nova">👩 נשי — רך</option>
+    <option value="shimmer">👩 נשי — ברור</option>
+    <option value="onyx">👨 גברי — עמוק</option>
+    <option value="echo">👨 גברי — רגיל</option>
   </select>
 </div>
 
@@ -208,7 +215,7 @@ async function process() {
     const r = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: translation, lang: tgt })
+      body: JSON.stringify({ text: translation, lang: tgt, voice: document.getElementById('ttsVoice').value })
     });
     if (!r.ok) throw new Error(await r.text());
     const audioBlob = await r.blob();

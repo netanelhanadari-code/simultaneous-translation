@@ -58,9 +58,20 @@
       background:var(--surface); display:flex; align-items:center;
       justify-content:center; font-size:3.2rem;
       transition: background .4s, box-shadow .4s;
+      position:relative; cursor:pointer;
     }
-    .icon-wrap.active { animation: wave 2s ease-in-out infinite; }
-    .icon-wrap.ended  { opacity:.4; }
+    .icon-wrap:hover { background: #2a1550; }
+    .icon-wrap.active { animation: wave 2s ease-in-out infinite; cursor:default; }
+    .icon-wrap.ended  { opacity:.4; cursor:default; }
+    .play-badge {
+      position:absolute; bottom:8px; right:8px;
+      width:28px; height:28px; border-radius:50%;
+      background:var(--accent); color:#fff;
+      font-size:.75rem; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 6px rgba(0,0,0,.4);
+    }
+    .icon-wrap.active .play-badge,
+    .icon-wrap.ended  .play-badge { display:none; }
     @keyframes wave {
       0%,100% { box-shadow: 0 0 0  8px rgba(139,47,201,.25), 0 0 0 18px rgba(139,47,201,.12); }
       50%      { box-shadow: 0 0 0 14px rgba(139,47,201,.30), 0 0 0 28px rgba(139,47,201,.15); }
@@ -178,25 +189,24 @@
       <option value="ar">العربية</option>
       <option value="en">English</option>
       <option value="ru">Русский</option>
+      <option value="am">አማርኛ</option>
       <option value="fr">Français</option>
       <option value="es">Español</option>
-      <option value="am">አማርኛ</option>
       <option value="uk">Українська</option>
       <option value="de">Deutsch</option>
     </select>
   </div>
 
-  <div class="icon-wrap hidden" id="iconWrap">🎧</div>
+  <div class="icon-wrap hidden" id="iconWrap" onclick="startListening()">
+    🎧
+    <div class="play-badge">▶</div>
+  </div>
 
   <div class="hidden" id="statusBlock">
     <div class="status muted" id="statusTxt">מתחבר...</div>
     <div class="sub" id="subTxt">ממתין לשרת</div>
   </div>
 
-  <button class="tap-btn hidden" id="tapBtn" onclick="startListening()">
-    👆 לחץ להתחיל האזנה
-  </button>
-  <!-- tapBtn נשאר כגיבוי למקרה שה-onchange לא הופעל -->
 
   <div class="vol-wrap hidden" id="volWrap">
     <div class="vol-label">🔊 עוצמת קול</div>
@@ -242,7 +252,7 @@
       document.getElementById('langPick').classList.remove('hidden');
       document.getElementById('iconWrap').classList.remove('hidden');
       document.getElementById('statusBlock').classList.remove('hidden');
-      document.getElementById('tapBtn').classList.remove('hidden');
+
       document.getElementById('tip').classList.remove('hidden');
       init();
     }
@@ -396,7 +406,6 @@
     function startListening() {
       if (started) return;
       started = true;
-      document.getElementById('tapBtn').classList.add('hidden');
       initMediaSource();
       pendingChunks.forEach(c => enqueue(c));
       pendingChunks.length = 0;

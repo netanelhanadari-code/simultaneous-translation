@@ -168,7 +168,7 @@ app.get('/api/logs', (req, res) => {
 
 // ── TTS endpoint ──────────────────────────────────────────────────────────────
 app.post('/api/tts', express.json(), async (req, res) => {
-  const { text, lang } = req.body;
+  const { text, lang, voice } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
   try {
@@ -178,7 +178,7 @@ app.post('/api/tts', express.json(), async (req, res) => {
         'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ model: 'tts-1', input: text, voice: 'nova', response_format: 'mp3' })
+      body: JSON.stringify({ model: 'tts-1', input: text, voice: voice || 'nova', response_format: 'mp3' })
     });
     if (!r.ok) { const e = await r.text(); return res.status(500).json({ error: e }); }
     const buf = await r.arrayBuffer();
