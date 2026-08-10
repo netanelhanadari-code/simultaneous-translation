@@ -134,7 +134,7 @@ app.get('/api/translate', async (req, res) => {
     const genderNote = gender === 'f'
       ? '\nהדוברת היא אישה — השתמש בלשון נקבה'
       : '\nהדובר הוא גבר — השתמש בלשון זכר';
-    const systemPrompt = TRANSLATION_SYSTEM_PROMPT + genderNote + `\nשפת המקור: ${from}. שפת היעד: ${to}. תרגם אך ורק לשפת היעד.`;
+    const systemPrompt = `תרגם מ-${from} ל-${to} בלבד. אל תתרגם לשפה אחרת.\n\n` + TRANSLATION_SYSTEM_PROMPT + genderNote;
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -145,7 +145,7 @@ app.get('/api/translate', async (req, res) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: text }
+          { role: 'user', content: `[${from}→${to}] ${text}` }
         ],
         temperature: 0,
         max_tokens: 500
