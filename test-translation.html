@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ניתוח תרגום</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
+      --accent: #8B2FC9; --text: #f0e8ff; --muted: #9b7fc4;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100dvh; display: flex; flex-direction: column;
+      gap: 1.2rem; padding: 1.5rem;
+    }
+    h1 { font-size: 1.1rem; color: var(--muted); text-align: center; }
+
+    #setup {
+      background: var(--surface); border-radius: 12px;
+      padding: 1rem; display: flex; flex-direction: column; gap: .75rem;
+    }
+    label { font-size: .82rem; color: var(--muted); }
+    textarea {
+      width: 100%; height: 160px; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .75rem; font-size: .95rem; line-height: 1.6; resize: vertical;
+      direction: rtl;
+    }
+    .row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+    select {
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .45rem .75rem; font-size: .9rem; cursor: pointer;
+    }
+    button {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; padding: .55rem 1.4rem;
+      font-size: .95rem; cursor: pointer; transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button.sec { background: #374151; }
+
+    /* comparison grid */
+    #progress { font-size: .82rem; color: var(--muted); text-align: center; min-height: 1.2em; }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: .5rem;
+    }
+    .col-header {
+      background: var(--surface); border-radius: 8px;
+      padding: .6rem .8rem; text-align: center;
+      font-size: .8rem; font-weight: 600; color: var(--muted);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .col-header.h3  { border-top: 3px solid #f59e0b; }
+    .col-header.hcl { border-top: 3px solid var(--accent); }
+    .col-header.hse { border-top: 3px solid #22c55e; }
+
+    .chunk-cell {
+      background: var(--surface); border-radius: 8px;
+      padding: .7rem .85rem; display: flex; flex-direction: column; gap: .4rem;
+      min-height: 80px;
+    }
+    .chunk-cell.c3  { border-right: 3px solid #f59e0b; }
+    .chunk-cell.ccl { border-right: 3px solid var(--accent); }
+    .chunk-cell.cse { border-right: 3px solid #22c55e; }
+    .src-text { font-size: .85rem; color: var(--muted); line-height: 1.4; direction: rtl; }
+    .tgt-text { font-size: 1rem; color: #67e8f9; line-height: 1.5; direction: rtl; }
+    .tgt-text.pending { color: var(--border); font-style: italic; }
+    .sep { font-size: .65rem; color: var(--border); }
+
+    #results { display: none; flex-direction: column; gap: .5rem; }
+  </style>
+</head>
+<body>
+
+<h1>🔬 ניתוח שיטות תרגום</h1>
+
+<div id="setup">
+  <label>הדבק טקסט:</label>
+  <textarea id="sourceText" placeholder="הדבק כאן…"></textarea>
+  <div class="row">
+    <label>מ:</label>
+    <select id="srcLang">
+      <option value="he">עברית</option>
+      <option value="ar">ערבית</option>
+      <option value="en">אנגלית</option>
+    </select>
+    <label>ל:</label>
+    <select id="tgtLang">
+      <option value="ar">ערבית</option>
+      <option value="he">עברית</option>
+      <option value="en">אנגלית</option>
+    </select>
+    <button onclick="runAnalysis()">▶ נתח</button>
+    <button class="sec" onclick="clearAll()">נקה</button>
+  </div>
+</div>
+
+<div id="progress"></div>
+<div id="results">
+  <div class="compare-grid" id="headers">
+    <div class="col-header h3">⚡ 3 מילים<br><small>כמו דיבור מהיר</small></div>
+    <div class="col-header hcl">✂️ פסקית<br><small>עם פיסוק/מחברים</small></div>
+    <div class="col-header hse">📄 משפט שלם<br><small>הכי מדויק, הכי מאחר</small></div>
+  </div>
+  <div id="grid" class="compare-grid"></div>
+</div>
+
+<script>
+  async function translate(text, from, to) {
+    try {
+      const r = await fetch(
+        'https://api.mymemory.translated.net/get?q=' +
+        encodeURIComponent(text) + '&langpair=' + from + '|' + to);
+      const d = await r.json();
+      if (d.responseStatus === 200 && d.responseData?.translatedText)
+        return d.responseData.translatedText;
+    } catch(_) {}
+    try {
+      const r = await fetch(
+        'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' +
+        from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text));
+      const d = await r.json();
+      return d[0].map(x => x?.[0]).filter(Boolean).join('');
+    } catch(_) {}
+    return '[שגיאה]';
+  }
+
+  function splitWords(text, n) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const chunks = [];
+    for (let i = 0; i < words.length; i += n)
+      chunks.push(words.slice(i, i + n).join(' '));
+    return chunks;
+  }
+
+  function splitClauses(text) {
+    const sents = text.split(/(?<=[.!?\n])\s+/).map(s => s.trim()).filter(Boolean);
+    const chunks = [];
+    for (const s of sents) {
+      const parts = s.split(/[,;]\s*|\s+(אבל|אך|כי|ולכן|לכן|כאשר|אם|למרות|בגלל|אולם|but|because|however|when|if|although)\s+/i);
+      for (const p of parts) { const t = p.trim(); if (t) chunks.push(t); }
+    }
+    return chunks;
+  }
+
+  function splitSentences(text) {
+    return text.split(/(?<=[.!?])\s+|(?<=\n)/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Build a cell element
+  function makeCell(srcText, cls) {
+    const cell = document.createElement('div');
+    cell.className = 'chunk-cell ' + cls;
+    const src = document.createElement('div');
+    src.className = 'src-text';
+    src.textContent = srcText;
+    const sep = document.createElement('div');
+    sep.className = 'sep';
+    sep.textContent = '↓';
+    const tgt = document.createElement('div');
+    tgt.className = 'tgt-text pending';
+    tgt.textContent = '…';
+    cell.append(src, sep, tgt);
+    return { cell, tgt };
+  }
+
+  async function runAnalysis() {
+    const text = document.getElementById('sourceText').value.trim();
+    if (!text) { alert('הדבק טקסט'); return; }
+    const src = document.getElementById('srcLang').value;
+    const tgt = document.getElementById('tgtLang').value;
+
+    const chunks3  = splitWords(text, 3);
+    const chunksCl = splitClauses(text);
+    const chunksSe = splitSentences(text);
+
+    const maxRows = Math.max(chunks3.length, chunksCl.length, chunksSe.length);
+
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    document.getElementById('results').style.display = 'flex';
+
+    // Build all cells
+    const cells3 = [], cellsCl = [], cellsSe = [];
+    for (let i = 0; i < maxRows; i++) {
+      const c3  = chunks3[i]  ? makeCell(chunks3[i],  'c3')  : { cell: document.createElement('div'), tgt: null };
+      const ccl = chunksCl[i] ? makeCell(chunksCl[i], 'ccl') : { cell: document.createElement('div'), tgt: null };
+      const cse = chunksSe[i] ? makeCell(chunksSe[i], 'cse') : { cell: document.createElement('div'), tgt: null };
+      c3.cell.className  = c3.cell.className  || 'chunk-cell';
+      ccl.cell.className = ccl.cell.className || 'chunk-cell';
+      cse.cell.className = cse.cell.className || 'chunk-cell';
+      grid.append(c3.cell, ccl.cell, cse.cell);
+      cells3.push(c3);
+      cellsCl.push(ccl);
+      cellsSe.push(cse);
+    }
+
+    const prog = document.getElementById('progress');
+    const total = chunks3.length + chunksCl.length + chunksSe.length;
+    let done = 0;
+
+    // Translate all three in parallel per-chunk
+    async function translateColumn(chunks, cells) {
+      for (let i = 0; i < chunks.length; i++) {
+        if (!cells[i].tgt) continue;
+        const result = await translate(chunks[i], src, tgt);
+        cells[i].tgt.textContent = result;
+        cells[i].tgt.classList.remove('pending');
+        done++;
+        prog.textContent = `מתרגם… ${done}/${total}`;
+        await new Promise(r => setTimeout(r, 250)); // small delay per column
+      }
+    }
+
+    prog.textContent = `מתרגם…`;
+    await Promise.all([
+      translateColumn(chunks3,  cells3),
+      translateColumn(chunksCl, cellsCl),
+      translateColumn(chunksSe, cellsSe),
+    ]);
+    prog.textContent = `✓ הושלם`;
+  }
+
+  function clearAll() {
+    document.getElementById('grid').innerHTML = '';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('progress').textContent = '';
+  }
+</script>
+</body>
+</html>

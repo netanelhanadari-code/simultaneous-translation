@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הקלטה</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #12082a;
+      color: #f0e8ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      gap: 1.5rem;
+    }
+    h1 { color: #9b7fc4; font-size: 1.2rem; }
+    .btn {
+      border: none;
+      border-radius: 50%;
+      width: 90px;
+      height: 90px;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: transform .1s, opacity .2s;
+    }
+    .btn:active { transform: scale(.93); }
+    .btn:disabled { opacity: .4; cursor: default; }
+    #btnRecord { background: #8B2FC9; }
+    #btnStop   { background: #3d1f6b; }
+    .timer {
+      font-size: 2.5rem;
+      font-variant-numeric: tabular-nums;
+      color: #c9a0f0;
+      min-width: 5ch;
+      text-align: center;
+    }
+    .pulse { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    .download-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .75rem;
+      width: 100%;
+      max-width: 320px;
+    }
+    audio { width: 100%; border-radius: 8px; }
+    .dl-btn {
+      display: block;
+      width: 100%;
+      padding: .75rem;
+      background: #8B2FC9;
+      color: #fff;
+      text-align: center;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 1rem;
+    }
+    .dl-btn:hover { background: #a03de0; }
+    .again-btn {
+      background: none;
+      border: 1px solid #3d1f6b;
+      color: #9b7fc4;
+      padding: .5rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .9rem;
+    }
+    .hidden { display: none !important; }
+    .status { color: #9b7fc4; font-size: .9rem; }
+  </style>
+</head>
+<body>
+
+<h1>🎙 הקלט הודעה קולית</h1>
+
+<div class="timer" id="timer">0:00</div>
+
+<div style="display:flex; gap:1.5rem;">
+  <button class="btn" id="btnRecord" onclick="startRec()" title="התחל הקלטה">⏺</button>
+  <button class="btn" id="btnStop"   onclick="stopRec()"  title="עצור" disabled>⏹</button>
+</div>
+
+<p class="status" id="status">לחץ כדי להתחיל להקליט</p>
+
+<div class="download-area hidden" id="downloadArea">
+  <audio id="player" controls></audio>
+  <a id="dlLink" class="dl-btn" download="הקלטה.webm">⬇ הורד קובץ</a>
+  <button class="again-btn" onclick="reset()">🔄 הקלטה חדשה</button>
+</div>
+
+<script>
+let recorder, chunks = [], timerInterval, seconds = 0;
+
+async function startRec() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = finalize;
+    recorder.start();
+
+    document.getElementById('btnRecord').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    document.getElementById('downloadArea').classList.add('hidden');
+    document.getElementById('status').textContent = '🔴 מקליט...';
+    document.getElementById('timer').classList.add('pulse');
+
+    seconds = 0;
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+  } catch(e) {
+    document.getElementById('status').textContent = 'שגיאה: ' + e.message;
+  }
+}
+
+function stopRec() {
+  if (recorder && recorder.state !== 'inactive') {
+    recorder.stop();
+    recorder.stream.getTracks().forEach(t => t.stop());
+  }
+  clearInterval(timerInterval);
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('timer').classList.remove('pulse');
+  document.getElementById('status').textContent = 'ההקלטה הסתיימה';
+}
+
+function finalize() {
+  const blob = new Blob(chunks, { type: 'audio/webm' });
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('player').src = url;
+  document.getElementById('dlLink').href = url;
+  document.getElementById('downloadArea').classList.remove('hidden');
+}
+
+function reset() {
+  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('downloadArea').classList.add('hidden');
+  document.getElementById('status').textContent = 'לחץ כדי להתחיל להקליט';
+  seconds = 0;
+  document.getElementById('timer').textContent = '0:00';
+}
+
+function updateTimer() {
+  seconds++;
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, '0');
+  document.getElementById('timer').textContent = m + ':' + s;
+}
+</script>
+</body>
+</html>

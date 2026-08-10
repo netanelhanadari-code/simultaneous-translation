@@ -72,10 +72,15 @@ const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של �
 - עברית→ערבית: השתמש בערבית ספרותית מודרנית (فصحى معاصرة)
 - למונחים רגישים פוליטית — בחר את התרגום הנייטרלי ביותר
 - החזר רק את הטקסט המתורגם, ללא הסברים
+- ברכות ופרידות — השאר בשפת המקור כמו שהן, אל תמחק אותן (مرحبا، شكراً، ما سلامة، والسلام عليكم، يعطيك العافية، أعطيكم العافية וכד')
+- שמות פרטיים — חובה לשמר אותם בתרגום, אל תמחק שמות של אנשים
+- אל תשתמש במילה "מגזר" — במקומה: "חברה ערבית" או "עבודה קהילתית, חברתית וציבורית"
 
 גלוסרי — השתמש תמיד בתרגומים הבאים:
-עומדים ביחד = نقف معاً
-תנועה = حراك
+עומדים ביחד / נקף מען = نقف معاً (השאר את השם בערבית, אל תתרגם)
+תנועה = حراك (תרגם — אל תשאיר "חיראק" בעברית)
+מפלגה = حزب
+מעגל = دائرة (לא קבוצה, לא חוג)
 מאבק = نضال
 הפגנה = مظاهرة
 מחאה = احتجاج
@@ -90,10 +95,33 @@ const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של �
 פעילים/ות = ناشطين/ناشطات
 אסיפה ארצית = اجتماع قطري
 התארגנות = تنظيم
-מפגש = لقاء`;
+מפגש = لقاء
+צוות = طاقم
+אורגנייזר = منظم ميداني
+מארגן קהילתי = منظم جماهيري
+מעגל ירושלים = حلقة القدس
+עבודה קהילתית וחברתית = العمل الجماهيري والمجتمعي
+צוות קליטה = طاقم الاستيعاب
+המפגש החודשי = اللقاء الشهري
+חברה ערבית = المجتمع العربي
+בניית כוח = بناء القوة
+פיתוח מנהיגות = تطوير القيادة
+מחלקה (ארגונית) = قسم
+הסתה = تحريض
+השמצה = تشويه
+שעיר לעזאזל = كبش فداء
+משמר הגבול = حرس الحدود
+הצרה = تضييق
+הטרדות = مضايقات
+סיור = دورية
+העיר העתיקה = البلد القديمة
+קנסות = مخالفات`;
+
+// ── Translation log (in-memory) ───────────────────────────────────────────────
+const translationLog = [];
 
 app.get('/api/translate', async (req, res) => {
-  const { text, from, to } = req.query;
+  const { text, from, to, room } = req.query;
   if (!text || !from || !to) return res.status(400).json({ error: 'Missing params' });
   if (from === to) return res.json({ text });
   console.log('[translate]', from, '->', to, '|', text.slice(0, 50));
@@ -116,10 +144,20 @@ app.get('/api/translate', async (req, res) => {
     });
     const d = await r.json();
     const translated = d.choices?.[0]?.message?.content?.trim();
-    if (translated) { console.log('[translate] ok:', translated.slice(0, 50)); return res.json({ text: translated }); }
+    if (translated) {
+      console.log('[translate] ok:', translated.slice(0, 50));
+      translationLog.push({ ts: new Date().toISOString(), room: room || null, from, to, source: text, translation: translated });
+      return res.json({ text: translated });
+    }
     console.log('[translate] gpt empty:', JSON.stringify(d));
   } catch(e) { console.log('[translate] gpt fail:', e.message); }
   res.json({ text });
+});
+
+// Download translation log as JSON
+app.get('/api/logs', (req, res) => {
+  res.setHeader('Content-Disposition', 'attachment; filename="translation-log.json"');
+  res.json(translationLog);
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
