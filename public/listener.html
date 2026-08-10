@@ -420,7 +420,6 @@
     // ── TTS — Web Speech API ──────────────────────────────────────────────────
     async function speakText(text, lang) {
       if (!ttsOn) return;
-      window.speechSynthesis.cancel();
       return new Promise(resolve => {
         const utt = new SpeechSynthesisUtterance(text);
         utt.lang = LANG_BCP47[lang] || lang;
