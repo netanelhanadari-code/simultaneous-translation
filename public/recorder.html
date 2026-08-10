@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>הקלטה</title>
+  <title>הקלט ותרגם</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -16,82 +16,127 @@
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
     h1 { color: #9b7fc4; font-size: 1.2rem; }
+    .langs {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    select {
+      background: #1e0f3a;
+      color: #f0e8ff;
+      border: 1px solid #3d1f6b;
+      border-radius: 8px;
+      padding: .4rem .75rem;
+    }
+    .arrow { color: #9b7fc4; font-size: 1.2rem; }
+    .controls { display: flex; gap: 1.5rem; align-items: center; }
     .btn {
       border: none;
       border-radius: 50%;
-      width: 90px;
-      height: 90px;
-      font-size: 2rem;
+      width: 80px;
+      height: 80px;
+      font-size: 1.8rem;
       cursor: pointer;
       transition: transform .1s, opacity .2s;
     }
     .btn:active { transform: scale(.93); }
-    .btn:disabled { opacity: .4; cursor: default; }
+    .btn:disabled { opacity: .35; cursor: default; }
     #btnRecord { background: #8B2FC9; }
     #btnStop   { background: #3d1f6b; }
     .timer {
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-variant-numeric: tabular-nums;
       color: #c9a0f0;
-      min-width: 5ch;
+      min-width: 4ch;
       text-align: center;
     }
     .pulse { animation: pulse 1s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
-    .download-area {
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+    .status { color: #9b7fc4; font-size: .9rem; text-align: center; }
+    .box {
+      background: #1e0f3a;
+      border-radius: 10px;
+      padding: 1rem;
+      width: 100%;
+      max-width: 360px;
+      min-height: 3rem;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #f0e8ff;
+    }
+    .box label { display: block; color: #9b7fc4; font-size: .8rem; margin-bottom: .35rem; }
+    .actions {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: .75rem;
+      gap: .6rem;
       width: 100%;
-      max-width: 320px;
+      max-width: 360px;
     }
-    audio { width: 100%; border-radius: 8px; }
-    .dl-btn {
+    .action-btn {
       display: block;
       width: 100%;
-      padding: .75rem;
-      background: #8B2FC9;
-      color: #fff;
-      text-align: center;
+      padding: .7rem;
+      border: none;
       border-radius: 10px;
-      text-decoration: none;
       font-size: 1rem;
-    }
-    .dl-btn:hover { background: #a03de0; }
-    .again-btn {
-      background: none;
-      border: 1px solid #3d1f6b;
-      color: #9b7fc4;
-      padding: .5rem 1.5rem;
-      border-radius: 8px;
       cursor: pointer;
-      font-size: .9rem;
+      text-align: center;
+      text-decoration: none;
     }
+    .dl  { background: #8B2FC9; color: #fff; }
+    .dl:hover { background: #a03de0; }
+    .again { background: none; border: 1px solid #3d1f6b; color: #9b7fc4; }
+    .again:hover { border-color: #8B2FC9; color: #f0e8ff; }
     .hidden { display: none !important; }
-    .status { color: #9b7fc4; font-size: .9rem; }
+    .spinner { display: inline-block; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
-<h1>🎙 הקלט הודעה קולית</h1>
+<h1>🎙 הקלט ותרגם</h1>
 
-<div class="timer" id="timer">0:00</div>
-
-<div style="display:flex; gap:1.5rem;">
-  <button class="btn" id="btnRecord" onclick="startRec()" title="התחל הקלטה">⏺</button>
-  <button class="btn" id="btnStop"   onclick="stopRec()"  title="עצור" disabled>⏹</button>
+<div class="langs">
+  <select id="srcLang">
+    <option value="ar">ערבית</option>
+    <option value="he">עברית</option>
+    <option value="en">אנגלית</option>
+  </select>
+  <span class="arrow">←</span>
+  <select id="tgtLang">
+    <option value="he">עברית</option>
+    <option value="ar">ערבית</option>
+    <option value="en">אנגלית</option>
+  </select>
 </div>
 
-<p class="status" id="status">לחץ כדי להתחיל להקליט</p>
+<div class="controls">
+  <button class="btn" id="btnRecord" onclick="startRec()">⏺</button>
+  <div class="timer" id="timer">0:00</div>
+  <button class="btn" id="btnStop" onclick="stopRec()" disabled>⏹</button>
+</div>
 
-<div class="download-area hidden" id="downloadArea">
-  <audio id="player" controls></audio>
-  <a id="dlLink" class="dl-btn" download="הקלטה.webm">⬇ הורד קובץ</a>
-  <button class="again-btn" onclick="reset()">🔄 הקלטה חדשה</button>
+<p class="status" id="status">לחץ ⏺ כדי להתחיל להקליט</p>
+
+<div class="box hidden" id="transcriptBox">
+  <label>תמלול</label>
+  <span id="transcriptText"></span>
+</div>
+
+<div class="box hidden" id="translationBox">
+  <label>תרגום</label>
+  <span id="translationText"></span>
+</div>
+
+<div class="actions hidden" id="actions">
+  <audio id="player" controls style="width:100%;border-radius:8px;"></audio>
+  <a id="dlLink" class="action-btn dl" download="תרגום.mp3">⬇ הורד אודיו מתורגם</a>
+  <button class="action-btn again" onclick="reset()">🔄 הקלטה חדשה</button>
 </div>
 
 <script>
@@ -103,21 +148,19 @@ async function startRec() {
     chunks = [];
     recorder = new MediaRecorder(stream);
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = finalize;
+    recorder.onstop = process;
     recorder.start();
 
     document.getElementById('btnRecord').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    document.getElementById('downloadArea').classList.add('hidden');
-    document.getElementById('status').textContent = '🔴 מקליט...';
+    document.getElementById('transcriptBox').classList.add('hidden');
+    document.getElementById('translationBox').classList.add('hidden');
+    document.getElementById('actions').classList.add('hidden');
+    setStatus('🔴 מקליט...');
     document.getElementById('timer').classList.add('pulse');
-
-    seconds = 0;
-    updateTimer();
+    seconds = 0; updateTimer();
     timerInterval = setInterval(updateTimer, 1000);
-  } catch(e) {
-    document.getElementById('status').textContent = 'שגיאה: ' + e.message;
-  }
+  } catch(e) { setStatus('שגיאה: ' + e.message); }
 }
 
 function stopRec() {
@@ -128,24 +171,78 @@ function stopRec() {
   clearInterval(timerInterval);
   document.getElementById('btnStop').disabled = true;
   document.getElementById('timer').classList.remove('pulse');
-  document.getElementById('status').textContent = 'ההקלטה הסתיימה';
+  setStatus('<span class="spinner">⏳</span> שולח ל-Whisper...');
 }
 
-function finalize() {
+async function process() {
+  const src = document.getElementById('srcLang').value;
+  const tgt = document.getElementById('tgtLang').value;
   const blob = new Blob(chunks, { type: 'audio/webm' });
-  const url  = URL.createObjectURL(blob);
-  document.getElementById('player').src = url;
-  document.getElementById('dlLink').href = url;
-  document.getElementById('downloadArea').classList.remove('hidden');
+
+  // 1. Transcribe
+  const form = new FormData();
+  form.append('audio', blob, 'rec.webm');
+  let transcript = '';
+  try {
+    const r = await fetch('/api/transcribe?lang=' + src, { method: 'POST', body: form });
+    const d = await r.json();
+    transcript = d.text || '';
+  } catch(e) { setStatus('שגיאת תמלול: ' + e.message); reset(true); return; }
+
+  if (!transcript) { setStatus('לא זוהה דיבור. נסה שוב.'); reset(true); return; }
+  showBox('transcriptBox', 'transcriptText', transcript);
+
+  // 2. Translate
+  setStatus('<span class="spinner">⏳</span> מתרגם...');
+  let translation = '';
+  try {
+    const r = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
+    const d = await r.json();
+    translation = d.text || transcript;
+  } catch(e) { translation = transcript; }
+  showBox('translationBox', 'translationText', translation);
+
+  // 3. TTS
+  setStatus('<span class="spinner">⏳</span> מייצר אודיו...');
+  try {
+    const r = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: translation, lang: tgt })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const audioBlob = await r.blob();
+    const url = URL.createObjectURL(audioBlob);
+    document.getElementById('player').src = url;
+    document.getElementById('dlLink').href = url;
+    document.getElementById('actions').classList.remove('hidden');
+    setStatus('✅ מוכן');
+  } catch(e) {
+    setStatus('שגיאת אודיו: ' + e.message);
+  }
+
+  document.getElementById('btnRecord').disabled = false;
 }
 
-function reset() {
-  document.getElementById('btnRecord').disabled = false;
+function showBox(boxId, spanId, text) {
+  document.getElementById(spanId).textContent = text;
+  document.getElementById(boxId).classList.remove('hidden');
+}
+
+function setStatus(html) {
+  document.getElementById('status').innerHTML = html;
+}
+
+function reset(keepRecord = false) {
+  if (!keepRecord) document.getElementById('btnRecord').disabled = false;
   document.getElementById('btnStop').disabled = true;
-  document.getElementById('downloadArea').classList.add('hidden');
-  document.getElementById('status').textContent = 'לחץ כדי להתחיל להקליט';
+  document.getElementById('transcriptBox').classList.add('hidden');
+  document.getElementById('translationBox').classList.add('hidden');
+  document.getElementById('actions').classList.add('hidden');
   seconds = 0;
   document.getElementById('timer').textContent = '0:00';
+  document.getElementById('timer').classList.remove('pulse');
+  if (!keepRecord) setStatus('לחץ ⏺ כדי להתחיל להקליט');
 }
 
 function updateTimer() {

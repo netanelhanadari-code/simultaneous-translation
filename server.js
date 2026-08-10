@@ -160,6 +160,30 @@ app.get('/api/logs', (req, res) => {
   res.json(translationLog);
 });
 
+// ── TTS endpoint ──────────────────────────────────────────────────────────────
+app.post('/api/tts', express.json(), async (req, res) => {
+  const { text, lang } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text' });
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
+  try {
+    const r = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ model: 'tts-1', input: text, voice: 'nova', response_format: 'mp3' })
+    });
+    if (!r.ok) { const e = await r.text(); return res.status(500).json({ error: e }); }
+    const buf = await r.arrayBuffer();
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Disposition', 'attachment; filename="translation.mp3"');
+    res.send(Buffer.from(buf));
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = new Map();
