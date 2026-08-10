@@ -162,7 +162,7 @@ app.get('/api/translate', async (req, res) => {
       })
     });
     const d = await r.json();
-    const translated = d.choices?.[0]?.message?.content?.trim();
+    const translated = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
     if (translated) {
       console.log('[translate] ok:', translated.slice(0, 50));
       translationLog.push({ ts: new Date().toISOString(), room: room || null, from, to, source: text, translation: translated });
