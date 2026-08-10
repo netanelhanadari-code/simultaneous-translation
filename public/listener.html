@@ -172,9 +172,10 @@
 
   <div class="lang-pick hidden" id="langPick">
     <label>בחר את השפה שלך:</label>
-    <select id="langSelect">
+    <select id="langSelect" onchange="startListening()">
+      <option value="" disabled selected>בחר שפה</option>
       <option value="he">עברית</option>
-      <option value="ar">عربية</option>
+      <option value="ar">العربية</option>
       <option value="en">English</option>
       <option value="ru">Русский</option>
       <option value="fr">Français</option>
@@ -195,6 +196,7 @@
   <button class="tap-btn hidden" id="tapBtn" onclick="startListening()">
     👆 לחץ להתחיל האזנה
   </button>
+  <!-- tapBtn נשאר כגיבוי למקרה שה-onchange לא הופעל -->
 
   <div class="vol-wrap hidden" id="volWrap">
     <div class="vol-label">🔊 עוצמת קול</div>
