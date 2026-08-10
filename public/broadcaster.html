@@ -368,6 +368,8 @@
       let debounceTimer = null;
       let lastSentPos     = 0;
       let cumulativeSent  = '';
+      let pendingText = '';
+      let pendingPos  = 0;
 
       function sendChunk(text) {
         const t = text.trim();
@@ -444,14 +446,13 @@
           return;
         }
 
-        // Wait for natural pause (isFinal) — 1000ms debounce
+        // Wait for natural pause (isFinal) — 1500ms debounce
         clearTimeout(debounceTimer);
-        const capturedUnsent = unsent.trim();
-        const capturedPos    = fullText.length;
+        pendingText = unsent.trim();
+        pendingPos  = fullText.length;
         debounceTimer = setTimeout(() => {
-          sendChunk(capturedUnsent);
-          lastSentPos = capturedPos;
-        }, 1000);
+          if (pendingText) { sendChunk(pendingText); lastSentPos = pendingPos; pendingText = ''; }
+        }, 1500);
       };
 
       recognition.onerror = ev => {
@@ -459,6 +460,7 @@
       };
       recognition.onend = () => {
         clearTimeout(debounceTimer);
+        if (pendingText) { sendChunk(pendingText); pendingText = ''; }
         lastSentPos = 0;
         if (aiOn) {
           // Pick up language change if user switched mid-broadcast
