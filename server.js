@@ -270,6 +270,7 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   form.append('file', blob, 'audio.webm');
   form.append('model', 'whisper-1');
   form.append('temperature', '0');
+  if (sender_lang) form.append('language', sender_lang.split('-')[0]);
   let original_text = '', detected_lang = sender_lang || 'ar';
   try {
     const wResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -321,10 +322,11 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   let msgId = Date.now().toString();
   const msgCreatedAt = new Date().toISOString();
   if (supabase) {
-    const { data } = await supabase.from('messages').insert({
+    const { data, error } = await supabase.from('messages').insert({
       room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
     }).select().single();
-    if (data) { msgId = data.id; }
+    if (error) console.error('[supabase] message insert error:', JSON.stringify(error));
+    if (data) msgId = data.id;
   }
 
   // 5. Broadcast to room members via WebSocket
@@ -430,13 +432,26 @@ wss.on('connection', (ws, req) => {
     if (!room.members) room.members = new Map();
     room.members.set(ws, { name, lang });
     console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
+
+    // Send current member list to newcomer
+    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang }));
+    send(ws, { type: 'joined', room: roomId, members: memberList });
+
+    // Notify others that someone joined
+    room.members.forEach((m, w) => {
+      if (w !== ws) send(w, { type: 'member_joined', name, lang });
+    });
+
     ws.on('close', () => {
       if (room.members) room.members.delete(ws);
       console.log('[-] Member   room=' + roomId + ' name=' + name);
+      // Notify others that someone left
+      if (room.members) {
+        room.members.forEach((m, w) => send(w, { type: 'member_left', name }));
+      }
       cleanRoom(roomId);
     });
     ws.on('error', err => console.error('Member error room=' + roomId + ':', err.message));
-    send(ws, { type: 'joined', room: roomId });
 
   } else {
     room.listeners.add(ws);
