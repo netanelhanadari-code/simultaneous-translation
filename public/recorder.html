@@ -19,6 +19,22 @@
       gap: 1.25rem;
     }
     h1 { color: #9b7fc4; font-size: 1.2rem; }
+
+    .tabs {
+      display: flex;
+      background: #1e0f3a;
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .tab {
+      border: none; border-radius: 999px;
+      padding: .45rem 1.25rem; font-size: .88rem;
+      cursor: pointer; background: transparent;
+      color: #9b7fc4; transition: all .2s;
+    }
+    .tab.active { background: #8B2FC9; color: #fff; }
+
     .langs {
       display: flex;
       align-items: center;
@@ -34,14 +50,17 @@
       padding: .4rem .75rem;
     }
     .arrow { color: #9b7fc4; font-size: 1.2rem; }
+
+    /* ── Tab panels ── */
+    .panel { display: none; flex-direction: column; align-items: center; gap: 1.25rem; width: 100%; max-width: 380px; }
+    .panel.active { display: flex; }
+
+    /* ── Recording tab ── */
     .controls { display: flex; gap: 1.5rem; align-items: center; }
     .btn {
-      border: none;
-      border-radius: 50%;
-      width: 80px;
-      height: 80px;
-      font-size: 1.8rem;
-      cursor: pointer;
+      border: none; border-radius: 50%;
+      width: 80px; height: 80px;
+      font-size: 1.8rem; cursor: pointer;
       transition: transform .1s, opacity .2s;
     }
     .btn:active { transform: scale(.93); }
@@ -49,49 +68,46 @@
     #btnRecord { background: #8B2FC9; }
     #btnStop   { background: #3d1f6b; }
     .timer {
-      font-size: 2rem;
-      font-variant-numeric: tabular-nums;
-      color: #c9a0f0;
-      min-width: 4ch;
-      text-align: center;
+      font-size: 2rem; font-variant-numeric: tabular-nums;
+      color: #c9a0f0; min-width: 4ch; text-align: center;
     }
     .pulse { animation: pulse 1s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
-    .status { color: #9b7fc4; font-size: .9rem; text-align: center; }
+
+    /* ── File upload tab ── */
+    .file-drop {
+      width: 100%; border: 2px dashed #3d1f6b; border-radius: 12px;
+      padding: 2rem 1rem; text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s;
+      color: #9b7fc4; font-size: .95rem;
+    }
+    .file-drop:hover, .file-drop.over { border-color: #8B2FC9; background: #1e0f3a; }
+    .file-drop input { display: none; }
+    .file-name { font-size: .85rem; color: #c9a0f0; margin-top: .4rem; }
+
+    /* ── Shared ── */
+    .status { color: #9b7fc4; font-size: .9rem; text-align: center; min-height: 1.2em; }
     .box {
-      background: #1e0f3a;
-      border-radius: 10px;
-      padding: 1rem;
-      width: 100%;
-      max-width: 360px;
-      min-height: 3rem;
-      font-size: 1rem;
-      line-height: 1.6;
-      color: #f0e8ff;
+      background: #1e0f3a; border-radius: 10px;
+      padding: 1rem; width: 100%;
+      font-size: 1rem; line-height: 1.6; color: #f0e8ff;
     }
     .box label { display: block; color: #9b7fc4; font-size: .8rem; margin-bottom: .35rem; }
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: .6rem;
-      width: 100%;
-      max-width: 360px;
-    }
+    .actions { display: flex; flex-direction: column; gap: .6rem; width: 100%; }
     .action-btn {
-      display: block;
-      width: 100%;
-      padding: .7rem;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
+      display: block; width: 100%; padding: .7rem; border: none;
+      border-radius: 10px; font-size: 1rem; cursor: pointer;
+      text-align: center; text-decoration: none;
     }
     .dl  { background: #8B2FC9; color: #fff; }
     .dl:hover { background: #a03de0; }
     .again { background: none; border: 1px solid #3d1f6b; color: #9b7fc4; }
     .again:hover { border-color: #8B2FC9; color: #f0e8ff; }
+    .process-btn {
+      width: 100%; padding: .7rem; border: none; border-radius: 10px;
+      background: #8B2FC9; color: #fff; font-size: 1rem; cursor: pointer;
+    }
+    .process-btn:disabled { opacity: .35; cursor: default; }
     .hidden { display: none !important; }
     .spinner { display: inline-block; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -101,20 +117,30 @@
 
 <h1>🎙 הקלט ותרגם</h1>
 
+<div class="tabs">
+  <button class="tab active" onclick="setTab('rec')">🔴 הקלטה חיה</button>
+  <button class="tab"        onclick="setTab('file')">📂 העלאת קובץ</button>
+</div>
+
+<!-- ── Shared: language + voice ── -->
 <div class="langs">
   <select id="srcLang" onchange="autoTarget()">
     <option value="ar">العربية</option>
     <option value="he">עברית</option>
     <option value="en">English</option>
+    <option value="ru">Русский</option>
+    <option value="fr">Français</option>
   </select>
   <span class="arrow">←</span>
   <select id="tgtLang">
     <option value="he">עברית</option>
     <option value="ar">العربية</option>
     <option value="en">English</option>
+    <option value="ru">Русский</option>
+    <option value="fr">Français</option>
   </select>
 </div>
-<div class="langs" style="margin-top:-.25rem;">
+<div class="langs">
   <label style="color:#9b7fc4;font-size:.85rem;">באיזה קול תרצה להיות מתורגם?</label>
   <select id="ttsVoice">
     <option value="nova">👩 נשי — רך</option>
@@ -124,38 +150,94 @@
   </select>
 </div>
 
-<div class="controls">
-  <button class="btn" id="btnRecord" onclick="startRec()">⏺</button>
-  <div class="timer" id="timer">0:00</div>
-  <button class="btn" id="btnStop" onclick="stopRec()" disabled>⏹</button>
+<!-- ══ TAB: הקלטה חיה ══ -->
+<div class="panel active" id="panelRec">
+
+  <div class="controls">
+    <button class="btn" id="btnRecord" onclick="startRec()">⏺</button>
+    <div class="timer" id="timer">0:00</div>
+    <button class="btn" id="btnStop" onclick="stopRec()" disabled>⏹</button>
+  </div>
+
+  <p class="status" id="recStatus">לחץ ⏺ כדי להתחיל להקליט</p>
+
+  <div class="box hidden" id="recTranscriptBox">
+    <label>תמלול</label>
+    <span id="recTranscriptText"></span>
+  </div>
+  <div class="box hidden" id="recTranslationBox">
+    <label>תרגום</label>
+    <span id="recTranslationText"></span>
+  </div>
+  <div class="actions hidden" id="recActions">
+    <audio id="recPlayer" controls style="width:100%;border-radius:8px;"></audio>
+    <a id="recDlLink" class="action-btn dl" download="תרגום.mp3">⬇ הורד אודיו מתורגם</a>
+    <button class="action-btn again" onclick="resetRec()">🔄 הקלטה חדשה</button>
+  </div>
+
 </div>
 
-<p class="status" id="status">לחץ ⏺ כדי להתחיל להקליט</p>
+<!-- ══ TAB: העלאת קובץ ══ -->
+<div class="panel" id="panelFile">
 
-<div class="box hidden" id="transcriptBox">
-  <label>תמלול</label>
-  <span id="transcriptText"></span>
-</div>
+  <label class="file-drop" id="fileDrop">
+    <div id="fileDropLabel">📂 לחץ או גרור קובץ שמע לכאן</div>
+    <div class="file-name hidden" id="fileName"></div>
+    <input type="file" id="fileInput" accept="audio/*" onchange="onFileSelect()">
+  </label>
 
-<div class="box hidden" id="translationBox">
-  <label>תרגום</label>
-  <span id="translationText"></span>
-</div>
+  <button class="process-btn" id="processBtn" onclick="processFile()" disabled>▶ שלח לתרגום</button>
 
-<div class="actions hidden" id="actions">
-  <audio id="player" controls style="width:100%;border-radius:8px;"></audio>
-  <a id="dlLink" class="action-btn dl" download="תרגום.mp3">⬇ הורד אודיו מתורגם</a>
-  <button class="action-btn again" onclick="reset()">🔄 הקלטה חדשה</button>
+  <p class="status" id="fileStatus"></p>
+
+  <div class="box hidden" id="fileTranscriptBox">
+    <label>תמלול</label>
+    <span id="fileTranscriptText"></span>
+  </div>
+  <div class="box hidden" id="fileTranslationBox">
+    <label>תרגום</label>
+    <span id="fileTranslationText"></span>
+  </div>
+  <div class="actions hidden" id="fileActions">
+    <audio id="filePlayer" controls style="width:100%;border-radius:8px;"></audio>
+    <a id="fileDlLink" class="action-btn dl" download="תרגום.mp3">⬇ הורד אודיו מתורגם</a>
+    <button class="action-btn again" onclick="resetFile()">🔄 קובץ חדש</button>
+  </div>
+
 </div>
 
 <script>
-let recorder, chunks = [], timerInterval, seconds = 0;
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function setTab(t) {
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', (i===0&&t==='rec')||(i===1&&t==='file')));
+  document.getElementById('panelRec') .classList.toggle('active', t === 'rec');
+  document.getElementById('panelFile').classList.toggle('active', t === 'file');
+}
 
+// ── Language helpers ──────────────────────────────────────────────────────────
 function autoTarget() {
   const src = document.getElementById('srcLang').value;
   const tgt = document.getElementById('tgtLang');
-  tgt.value = (src === 'ar') ? 'he' : (src === 'he') ? 'ar' : 'he';
+  tgt.value = (src === 'he') ? 'ar' : 'he';
 }
+
+// ── Shared: TTS via OpenAI ────────────────────────────────────────────────────
+async function playTTS(text, audioEl, dlEl) {
+  const r = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice: document.getElementById('ttsVoice').value })
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const blob = await r.blob();
+  const url  = URL.createObjectURL(blob);
+  audioEl.src = url;
+  if (dlEl) dlEl.href = url;
+  return url;
+}
+
+// ══ RECORDING TAB ════════════════════════════════════════════════════════════
+let recorder, chunks = [], timerInterval, seconds = 0;
 
 async function startRec() {
   try {
@@ -163,19 +245,18 @@ async function startRec() {
     chunks = [];
     recorder = new MediaRecorder(stream);
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = process;
+    recorder.onstop = processRec;
     recorder.start();
-
     document.getElementById('btnRecord').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    document.getElementById('transcriptBox').classList.add('hidden');
-    document.getElementById('translationBox').classList.add('hidden');
-    document.getElementById('actions').classList.add('hidden');
-    setStatus('🔴 מקליט...');
+    document.getElementById('recTranscriptBox').classList.add('hidden');
+    document.getElementById('recTranslationBox').classList.add('hidden');
+    document.getElementById('recActions').classList.add('hidden');
+    setRecStatus('🔴 מקליט...');
     document.getElementById('timer').classList.add('pulse');
     seconds = 0; updateTimer();
     timerInterval = setInterval(updateTimer, 1000);
-  } catch(e) { setStatus('שגיאה: ' + e.message); }
+  } catch(e) { setRecStatus('שגיאה: ' + e.message); }
 }
 
 function stopRec() {
@@ -186,10 +267,10 @@ function stopRec() {
   clearInterval(timerInterval);
   document.getElementById('btnStop').disabled = true;
   document.getElementById('timer').classList.remove('pulse');
-  setStatus('<span class="spinner">⏳</span> שולח ל-Whisper...');
+  setRecStatus('<span class="spinner">⏳</span> שולח ל-Whisper...');
 }
 
-async function process() {
+async function processRec() {
   const src = document.getElementById('srcLang').value;
   const tgt = document.getElementById('tgtLang').value;
   const blob = new Blob(chunks, { type: 'audio/webm' });
@@ -202,69 +283,142 @@ async function process() {
     const r = await fetch('/api/transcribe?lang=' + src, { method: 'POST', body: form });
     const d = await r.json();
     transcript = d.text || '';
-  } catch(e) { setStatus('שגיאת תמלול: ' + e.message); reset(true); return; }
+  } catch(e) { setRecStatus('שגיאת תמלול: ' + e.message); resetRec(true); return; }
 
-  if (!transcript) { setStatus('לא זוהה דיבור. נסה שוב.'); reset(true); return; }
-  showBox('transcriptBox', 'transcriptText', transcript);
+  if (!transcript) { setRecStatus('לא זוהה דיבור. נסה שוב.'); resetRec(true); return; }
+  showRecBox('recTranscriptBox', 'recTranscriptText', transcript);
 
   // 2. Translate
-  setStatus('<span class="spinner">⏳</span> מתרגם...');
-  let translation = '';
-  try {
-    const r = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
-    const d = await r.json();
-    translation = d.text || transcript;
-  } catch(e) { translation = transcript; }
-  showBox('translationBox', 'translationText', translation);
+  setRecStatus('<span class="spinner">⏳</span> מתרגם...');
+  let translation = transcript;
+  if (src !== tgt) {
+    try {
+      const r = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
+      const d = await r.json();
+      translation = d.text || transcript;
+    } catch(e) {}
+  }
+  showRecBox('recTranslationBox', 'recTranslationText', translation);
 
   // 3. TTS
-  setStatus('<span class="spinner">⏳</span> מייצר אודיו...');
+  setRecStatus('<span class="spinner">⏳</span> מייצר אודיו...');
   try {
-    const r = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: translation, lang: tgt, voice: document.getElementById('ttsVoice').value })
-    });
-    if (!r.ok) throw new Error(await r.text());
-    const audioBlob = await r.blob();
-    const url = URL.createObjectURL(audioBlob);
-    document.getElementById('player').src = url;
-    document.getElementById('dlLink').href = url;
-    document.getElementById('actions').classList.remove('hidden');
-    setStatus('✅ מוכן');
-  } catch(e) {
-    setStatus('שגיאת אודיו: ' + e.message);
-  }
-
+    await playTTS(translation, document.getElementById('recPlayer'), document.getElementById('recDlLink'));
+    document.getElementById('recActions').classList.remove('hidden');
+    setRecStatus('✅ מוכן');
+  } catch(e) { setRecStatus('שגיאת אודיו: ' + e.message); }
   document.getElementById('btnRecord').disabled = false;
 }
 
-function showBox(boxId, spanId, text) {
+function showRecBox(boxId, spanId, text) {
   document.getElementById(spanId).textContent = text;
   document.getElementById(boxId).classList.remove('hidden');
 }
-
-function setStatus(html) {
-  document.getElementById('status').innerHTML = html;
+function setRecStatus(html) { document.getElementById('recStatus').innerHTML = html; }
+function updateTimer() {
+  seconds++;
+  document.getElementById('timer').textContent = Math.floor(seconds/60) + ':' + String(seconds%60).padStart(2,'0');
 }
-
-function reset(keepRecord = false) {
-  if (!keepRecord) document.getElementById('btnRecord').disabled = false;
+function resetRec(keepBtn = false) {
+  if (!keepBtn) document.getElementById('btnRecord').disabled = false;
   document.getElementById('btnStop').disabled = true;
-  document.getElementById('transcriptBox').classList.add('hidden');
-  document.getElementById('translationBox').classList.add('hidden');
-  document.getElementById('actions').classList.add('hidden');
+  document.getElementById('recTranscriptBox').classList.add('hidden');
+  document.getElementById('recTranslationBox').classList.add('hidden');
+  document.getElementById('recActions').classList.add('hidden');
   seconds = 0;
   document.getElementById('timer').textContent = '0:00';
   document.getElementById('timer').classList.remove('pulse');
-  if (!keepRecord) setStatus('לחץ ⏺ כדי להתחיל להקליט');
+  if (!keepBtn) setRecStatus('לחץ ⏺ כדי להתחיל להקליט');
 }
 
-function updateTimer() {
-  seconds++;
-  const m = Math.floor(seconds / 60);
-  const s = String(seconds % 60).padStart(2, '0');
-  document.getElementById('timer').textContent = m + ':' + s;
+// ══ FILE UPLOAD TAB ══════════════════════════════════════════════════════════
+let selectedFile = null;
+
+// Drag & drop
+const fileDrop = document.getElementById('fileDrop');
+fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('over'); });
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('over'));
+fileDrop.addEventListener('drop', e => {
+  e.preventDefault(); fileDrop.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('audio/')) setFile(f);
+});
+
+function onFileSelect() {
+  const f = document.getElementById('fileInput').files[0];
+  if (f) setFile(f);
+}
+function setFile(f) {
+  selectedFile = f;
+  document.getElementById('fileDropLabel').textContent = '📂 קובץ נבחר:';
+  const fn = document.getElementById('fileName');
+  fn.textContent = f.name;
+  fn.classList.remove('hidden');
+  document.getElementById('processBtn').disabled = false;
+  resetFile(true);
+}
+
+async function processFile() {
+  if (!selectedFile) return;
+  const src = document.getElementById('srcLang').value;
+  const tgt = document.getElementById('tgtLang').value;
+
+  document.getElementById('processBtn').disabled = true;
+  document.getElementById('fileTranscriptBox').classList.add('hidden');
+  document.getElementById('fileTranslationBox').classList.add('hidden');
+  document.getElementById('fileActions').classList.add('hidden');
+  setFileStatus('<span class="spinner">⏳</span> שולח ל-Whisper...');
+
+  // 1. Transcribe
+  const form = new FormData();
+  form.append('audio', selectedFile, selectedFile.name);
+  let transcript = '';
+  try {
+    const r = await fetch('/api/transcribe?lang=' + src, { method: 'POST', body: form });
+    const d = await r.json();
+    if (d.error) { setFileStatus('שגיאה: ' + d.error); document.getElementById('processBtn').disabled = false; return; }
+    transcript = d.text || '';
+  } catch(e) { setFileStatus('שגיאת תמלול: ' + e.message); document.getElementById('processBtn').disabled = false; return; }
+
+  if (!transcript) { setFileStatus('לא זוהה דיבור בקובץ.'); document.getElementById('processBtn').disabled = false; return; }
+  document.getElementById('fileTranscriptText').textContent = transcript;
+  document.getElementById('fileTranscriptBox').classList.remove('hidden');
+
+  // 2. Translate
+  setFileStatus('<span class="spinner">⏳</span> מתרגם...');
+  let translation = transcript;
+  if (src !== tgt) {
+    try {
+      const r = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
+      const d = await r.json();
+      translation = d.text || transcript;
+    } catch(e) {}
+  }
+  document.getElementById('fileTranslationText').textContent = translation;
+  document.getElementById('fileTranslationBox').classList.remove('hidden');
+
+  // 3. TTS
+  setFileStatus('<span class="spinner">⏳</span> מייצר אודיו...');
+  try {
+    await playTTS(translation, document.getElementById('filePlayer'), document.getElementById('fileDlLink'));
+    document.getElementById('fileActions').classList.remove('hidden');
+    setFileStatus('✅ מוכן');
+  } catch(e) { setFileStatus('שגיאת אודיו: ' + e.message); }
+  document.getElementById('processBtn').disabled = false;
+}
+
+function setFileStatus(html) { document.getElementById('fileStatus').innerHTML = html; }
+function resetFile(keepFile = false) {
+  if (!keepFile) {
+    selectedFile = null;
+    document.getElementById('fileDropLabel').textContent = '📂 לחץ או גרור קובץ שמע לכאן';
+    document.getElementById('fileName').classList.add('hidden');
+    document.getElementById('processBtn').disabled = true;
+  }
+  document.getElementById('fileTranscriptBox').classList.add('hidden');
+  document.getElementById('fileTranslationBox').classList.add('hidden');
+  document.getElementById('fileActions').classList.add('hidden');
+  setFileStatus('');
 }
 </script>
 </body>
