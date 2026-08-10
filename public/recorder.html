@@ -123,16 +123,9 @@
   <button class="tab"        onclick="setTab('file')">📂 העלאת קובץ</button>
 </div>
 
-<!-- ── Shared: language + voice ── -->
+<!-- ── Shared: target language + voice ── -->
 <div class="langs">
-  <select id="srcLang" onchange="autoTarget()">
-    <option value="ar">العربية</option>
-    <option value="he">עברית</option>
-    <option value="en">English</option>
-    <option value="ru">Русский</option>
-    <option value="fr">Français</option>
-  </select>
-  <span class="arrow">←</span>
+  <label style="color:#9b7fc4;font-size:.85rem;">תרגם ל:</label>
   <select id="tgtLang">
     <option value="he">עברית</option>
     <option value="ar">العربية</option>
@@ -141,6 +134,7 @@
     <option value="fr">Français</option>
   </select>
 </div>
+<p style="color:#9b7fc4;font-size:.78rem;text-align:center;">שפת המקור תזוהה אוטומטית</p>
 <div class="langs">
   <label style="color:#9b7fc4;font-size:.85rem;">באיזה קול תרצה להיות מתורגם?</label>
   <select id="ttsVoice">
@@ -272,26 +266,30 @@ function stopRec() {
 }
 
 async function processRec() {
-  const src = document.getElementById('srcLang').value;
   const tgt = document.getElementById('tgtLang').value;
   const blob = new Blob(chunks, { type: 'audio/webm' });
 
-  // 1. Transcribe
+  // 1. Transcribe — auto-detect language
   const form = new FormData();
   form.append('audio', blob, 'rec.webm');
-  let transcript = '';
+  let transcript = '', detectedLang = '';
   try {
-    const r = await fetch('/api/transcribe?lang=' + src, { method: 'POST', body: form });
+    const r = await fetch('/api/transcribe', { method: 'POST', body: form });
     const d = await r.json();
-    transcript = d.text || '';
+    transcript   = d.text || '';
+    detectedLang = d.detectedLang || '';
   } catch(e) { setRecStatus('שגיאת תמלול: ' + e.message); resetRec(true); return; }
 
   if (!transcript) { setRecStatus('לא זוהה דיבור. נסה שוב.'); resetRec(true); return; }
-  showRecBox('recTranscriptBox', 'recTranscriptText', transcript);
+  const langLabel = detectedLang ? ` (זוהה: ${detectedLang})` : '';
+  document.getElementById('recTranscriptText').textContent = transcript;
+  document.getElementById('recTranscriptBox').querySelector('label').textContent = 'תמלול' + langLabel;
+  document.getElementById('recTranscriptBox').classList.remove('hidden');
 
   // 2. Translate
   setRecStatus('<span class="spinner">⏳</span> מתרגם...');
   let translation = transcript;
+  const src = detectedLang || 'ar';
   if (src !== tgt) {
     try {
       const r = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
@@ -361,7 +359,6 @@ function setFile(f) {
 
 async function processFile() {
   if (!selectedFile) return;
-  const src = document.getElementById('srcLang').value;
   const tgt = document.getElementById('tgtLang').value;
 
   document.getElementById('processBtn').disabled = true;
@@ -370,24 +367,28 @@ async function processFile() {
   document.getElementById('fileActions').classList.add('hidden');
   setFileStatus('<span class="spinner">⏳</span> שולח ל-Whisper...');
 
-  // 1. Transcribe
+  // 1. Transcribe — no lang param, Whisper auto-detects
   const form = new FormData();
   form.append('audio', selectedFile, selectedFile.name);
-  let transcript = '';
+  let transcript = '', detectedLang = '';
   try {
-    const r = await fetch('/api/transcribe?lang=' + src, { method: 'POST', body: form });
+    const r = await fetch('/api/transcribe', { method: 'POST', body: form });
     const d = await r.json();
     if (d.error) { setFileStatus('שגיאה: ' + d.error); document.getElementById('processBtn').disabled = false; return; }
-    transcript = d.text || '';
+    transcript   = d.text || '';
+    detectedLang = d.detectedLang || '';
   } catch(e) { setFileStatus('שגיאת תמלול: ' + e.message); document.getElementById('processBtn').disabled = false; return; }
 
   if (!transcript) { setFileStatus('לא זוהה דיבור בקובץ.'); document.getElementById('processBtn').disabled = false; return; }
+  const langLabel = detectedLang ? ` (זוהה: ${detectedLang})` : '';
   document.getElementById('fileTranscriptText').textContent = transcript;
+  document.getElementById('fileTranscriptBox').querySelector('label').textContent = 'תמלול' + langLabel;
   document.getElementById('fileTranscriptBox').classList.remove('hidden');
 
   // 2. Translate
   setFileStatus('<span class="spinner">⏳</span> מתרגם...');
   let translation = transcript;
+  const src = detectedLang || 'ar';
   if (src !== tgt) {
     try {
       const r = await fetch('/api/translate?text=' + encodeURIComponent(transcript) + '&from=' + src + '&to=' + tgt);
