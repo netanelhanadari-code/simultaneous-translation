@@ -237,7 +237,10 @@ app.post('/api/rooms', express.json(), async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = makeRoomId();
-  if (supabase) await supabase.from('rooms').insert({ id, name });
+  if (supabase) {
+    const { error } = await supabase.from('rooms').insert({ id, name });
+    if (error) console.error('[supabase] room insert error:', JSON.stringify(error));
+  }
   res.json({ id, name });
 });
 
@@ -324,9 +327,9 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   if (supabase) {
     const { data, error } = await supabase.from('messages').insert({
       room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
-    }).select().single();
+    }).select('id');
     if (error) console.error('[supabase] message insert error:', JSON.stringify(error));
-    if (data) msgId = data.id;
+    else if (data?.[0]?.id) msgId = data[0].id;
   }
 
   // 5. Broadcast to room members via WebSocket
