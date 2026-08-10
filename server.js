@@ -15,9 +15,11 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No audio' });
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
 
-  // Skip Whisper if no listeners — saves API cost
-  const roomCheck = rooms.get(room);
-  if (!roomCheck || roomCheck.listeners.size === 0) return res.json({ text: '' });
+  // Skip Whisper if no listeners — saves API cost (skip check for test calls without room)
+  if (room) {
+    const roomCheck = rooms.get(room);
+    if (!roomCheck || roomCheck.listeners.size === 0) return res.json({ text: '' });
+  }
 
   try {
     const blob = new Blob([req.file.buffer], { type: req.file.mimetype || 'audio/webm' });
