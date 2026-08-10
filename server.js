@@ -126,6 +126,12 @@ app.get('/api/translate', async (req, res) => {
   if (from === to) return res.json({ text });
   console.log('[translate]', from, '->', to, '|', text.slice(0, 50));
   try {
+    const roomData = room ? rooms.get(room) : null;
+    const gender = roomData ? roomData.gender : 'm';
+    const genderNote = gender === 'f'
+      ? '\nהדוברת היא אישה — בתרגום לערבית השתמש בלשון נקבה בלבד'
+      : '\nהדובר הוא גבר — בתרגום לערבית השתמש בלשון זכר בלבד';
+    const systemPrompt = TRANSLATION_SYSTEM_PROMPT + genderNote;
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -135,7 +141,7 @@ app.get('/api/translate', async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
         ],
         temperature: 0,
@@ -190,7 +196,7 @@ const rooms = new Map();
 
 function getRoom(roomId) {
   if (!rooms.has(roomId)) {
-    rooms.set(roomId, { broadcaster: null, listeners: new Set(), initChunk: null, mimeType: null });
+    rooms.set(roomId, { broadcaster: null, listeners: new Set(), initChunk: null, mimeType: null, gender: 'm' });
   }
   return rooms.get(roomId);
 }
@@ -239,6 +245,8 @@ wss.on('connection', (ws, req) => {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'meta') {
             room.mimeType = msg.mimeType;
+          } else if (msg.type === 'gender') {
+            room.gender = msg.gender;
           } else if (msg.type === 'original') {
             const raw = data.toString();
             room.listeners.forEach(l => {

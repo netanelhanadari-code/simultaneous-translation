@@ -228,7 +228,7 @@
   </div>
 
   <audio id="audioEl" playsinline></audio>
-  <div class="version">v0.4</div>
+  <div class="version">v0.5</div>
 
   <script>
     // ── Room ID ───────────────────────────────────────────────────────────────
@@ -341,7 +341,7 @@
     async function translate(text, from, to) {
       try {
         const res = await fetch(
-          '/api/translate?text=' + encodeURIComponent(text) + '&from=' + from + '&to=' + to
+          '/api/translate?text=' + encodeURIComponent(text) + '&from=' + from + '&to=' + to + '&room=' + roomId
         );
         const d = await res.json();
         if (d.text) return d.text;
