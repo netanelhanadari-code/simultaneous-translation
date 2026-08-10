@@ -209,6 +209,7 @@ app.post('/api/tts', express.json(), async (req, res) => {
   }
 });
 
+app.get('/', (req, res) => res.redirect('/broadcaster.html'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = new Map();
