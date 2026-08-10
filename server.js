@@ -132,8 +132,8 @@ app.get('/api/translate', async (req, res) => {
     const roomData = room ? rooms.get(room) : null;
     const gender = roomData ? roomData.gender : 'm';
     const genderNote = gender === 'f'
-      ? '\nהדוברת היא אישה — בתרגום לערבית השתמש בלשון נקבה בלבד'
-      : '\nהדובר הוא גבר — בתרגום לערבית השתמש בלשון זכר בלבד';
+      ? '\nהדוברת היא אישה — השתמש בלשון נקבה'
+      : '\nהדובר הוא גבר — השתמש בלשון זכר';
     const systemPrompt = TRANSLATION_SYSTEM_PROMPT + genderNote;
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
