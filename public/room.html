@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Babel Fish</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
+      --accent: #8B2FC9; --accent2: #7928b0; --text: #f0e8ff; --muted: #9b7fc4;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: .7rem 1rem; display: flex; align-items: center; gap: .7rem;
+      flex-shrink: 0;
+    }
+    .back-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 0 .2rem;
+    }
+    .room-info { flex: 1; min-width: 0; }
+    .room-name { font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .room-code {
+      font-size: .72rem; color: var(--muted); cursor: pointer;
+      display: inline-flex; align-items: center; gap: .25rem;
+    }
+    .lang-badge {
+      background: var(--border); border-radius: 6px;
+      padding: .2rem .55rem; font-size: .72rem; color: var(--muted); flex-shrink: 0;
+    }
+    #messages {
+      flex: 1; overflow-y: auto; padding: .9rem 1rem;
+      display: flex; flex-direction: column; gap: .65rem;
+    }
+    .empty { text-align: center; color: var(--muted); font-size: .9rem; margin: auto; }
+    .bubble {
+      max-width: 80%; display: flex; flex-direction: column; gap: .18rem;
+    }
+    .bubble.mine { align-self: flex-start; }
+    .bubble.other { align-self: flex-end; }
+    .bubble-inner {
+      padding: .55rem .85rem; border-radius: 12px; line-height: 1.5;
+    }
+    .bubble.mine  .bubble-inner { background: var(--accent2); border-radius: 12px 4px 12px 12px; }
+    .bubble.other .bubble-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
+    .bubble-sender { font-size: .7rem; color: var(--muted); padding: 0 .2rem; }
+    .bubble-text { font-size: .95rem; }
+    .bubble-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 .2rem; }
+    .bubble-time { font-size: .67rem; color: var(--muted); }
+    .speak-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: .8rem; padding: 0; line-height: 1;
+    }
+    .speak-btn:active { color: var(--text); }
+    footer {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: .9rem 1rem; display: flex; align-items: center;
+      justify-content: center; gap: 1rem; flex-shrink: 0;
+    }
+    #recordBtn {
+      width: 62px; height: 62px; border-radius: 50%;
+      background: var(--accent); border: 3px solid rgba(255,255,255,.15);
+      cursor: pointer; font-size: 1.5rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .1s, background .15s;
+      -webkit-user-select: none; user-select: none; touch-action: none;
+    }
+    #recordBtn.recording {
+      background: #c0392b; transform: scale(1.1);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 5px rgba(192,57,43,.3); }
+      50%      { box-shadow: 0 0 0 12px rgba(192,57,43,.1); }
+    }
+    #status { color: var(--muted); font-size: .82rem; min-width: 70px; text-align: center; }
+    .tts-toggle {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 8px; padding: .35rem .65rem;
+      font-size: .8rem; cursor: pointer;
+    }
+    .tts-toggle.on { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="back-btn" onclick="location.href='/home.html'">‹</button>
+    <div class="room-info">
+      <div class="room-name" id="roomNameEl">טוען...</div>
+      <span class="room-code" id="codeEl" title="לחץ להעתיק">📋 ...</span>
+    </div>
+    <div class="lang-badge" id="langBadge"></div>
+  </header>
+
+  <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>לחץ והחזק את הכפתור כדי לשלוח הודעה קולית</small></div></div>
+
+  <footer>
+    <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()">🔊 קול</button>
+    <button id="recordBtn">🎤</button>
+    <div id="status"></div>
+  </footer>
+
+  <script>
+    const params  = new URLSearchParams(location.search);
+    const roomId  = params.get('room');
+    const myName  = localStorage.getItem('bf_name') || 'אנונימי';
+    const myLang  = localStorage.getItem('bf_lang') || 'he';
+
+    if (!roomId) { location.href = '/home.html'; }
+
+    const LANG_NAMES = { he:'עברית', ar:'ערבית', en:'English', ru:'Русский', am:'አማርኛ' };
+    const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET' };
+
+    let ttsOn = true;
+    const displayedIds = new Set();
+
+    document.getElementById('langBadge').textContent = LANG_NAMES[myLang] || myLang;
+    document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
+
+    // ── Room code copy ─────────────────────────────────────────────────────
+    const codeEl = document.getElementById('codeEl');
+    codeEl.onclick = () => {
+      navigator.clipboard.writeText(roomId).catch(() => {});
+      codeEl.textContent = '✓ הועתק';
+      setTimeout(() => codeEl.textContent = '📋 ' + roomId, 1800);
+    };
+
+    // ── Load history ───────────────────────────────────────────────────────
+    async function loadRoom() {
+      try {
+        const r = await fetch('/api/rooms/' + roomId);
+        if (!r.ok) { location.href = '/home.html'; return; }
+        const data = await r.json();
+        document.getElementById('roomNameEl').textContent = data.name;
+        document.title = 'Babel Fish — ' + data.name;
+        codeEl.textContent = '📋 ' + roomId;
+        if (data.messages && data.messages.length > 0) {
+          document.querySelector('.empty')?.remove();
+          data.messages.forEach(addMessage);
+          scrollBottom();
+        }
+      } catch(e) { console.error('loadRoom:', e); }
+    }
+
+    // ── WebSocket ──────────────────────────────────────────────────────────
+    const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(
+      `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}`
+    );
+    ws.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'room_message') {
+        document.querySelector('.empty')?.remove();
+        addMessage(msg);
+        scrollBottom();
+        if (ttsOn && msg.sender_name !== myName) {
+          const text = msg.translations?.[myLang] || msg.original_text;
+          speak(text, myLang);
+        }
+      }
+    };
+    ws.onerror = () => console.warn('WS error');
+
+    // ── Add message bubble ─────────────────────────────────────────────────
+    function addMessage(msg) {
+      if (msg.id && displayedIds.has(String(msg.id))) return;
+      if (msg.id) displayedIds.add(String(msg.id));
+      const isMine = msg.sender_name === myName;
+      const text = msg.translations?.[myLang] || msg.original_text || '';
+      const time = msg.created_at
+        ? new Date(msg.created_at).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
+        : '';
+      const div = document.createElement('div');
+      div.className = 'bubble ' + (isMine ? 'mine' : 'other');
+      div.innerHTML =
+        (!isMine ? `<div class="bubble-sender">${esc(msg.sender_name)}</div>` : '') +
+        `<div class="bubble-inner"><div class="bubble-text">${esc(text)}</div></div>` +
+        `<div class="bubble-footer">
+          <button class="speak-btn" data-text="${encodeURIComponent(text)}" data-lang="${myLang}" onclick="speakBtn(this)">🔊</button>
+          <div class="bubble-time">${time}</div>
+        </div>`;
+      document.getElementById('messages').appendChild(div);
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
+
+    // ── TTS ────────────────────────────────────────────────────────────────
+    function speak(text, lang) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = LANG_BCP47[lang] || lang;
+      utt.rate = 1.05;
+      window.speechSynthesis.speak(utt);
+    }
+    function speakBtn(btn) { speak(decodeURIComponent(btn.dataset.text), btn.dataset.lang); }
+    function toggleTTS() {
+      ttsOn = !ttsOn;
+      document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
+      if (!ttsOn) window.speechSynthesis?.cancel();
+    }
+
+    // ── Recording ──────────────────────────────────────────────────────────
+    let mediaRecorder, audioChunks = [], stream, recordStart, shouldSend = false;
+    const recordBtn = document.getElementById('recordBtn');
+    const statusEl  = document.getElementById('status');
+
+    async function startRec() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        shouldSend = true;
+        recordStart = Date.now();
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = sendAudio;
+        mediaRecorder.start();
+        recordBtn.classList.add('recording');
+        recordBtn.textContent = '⏹';
+        statusEl.textContent = 'מקליט...';
+      } catch(e) {
+        statusEl.textContent = 'אין גישה למיק';
+        setTimeout(() => statusEl.textContent = '', 2000);
+      }
+    }
+
+    function stopRec() {
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+      if (Date.now() - recordStart < 600) shouldSend = false; // too short
+      mediaRecorder.stop();
+      stream?.getTracks().forEach(t => t.stop());
+      recordBtn.classList.remove('recording');
+      recordBtn.textContent = '🎤';
+      statusEl.textContent = shouldSend ? 'שולח...' : '';
+    }
+
+    async function sendAudio() {
+      if (!shouldSend || audioChunks.length === 0) { statusEl.textContent = ''; return; }
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      if (blob.size < 800) { statusEl.textContent = ''; return; }
+      const form = new FormData();
+      form.append('audio', blob, 'audio.webm');
+      form.append('sender_name', myName);
+      form.append('sender_lang', myLang);
+      try {
+        await fetch('/api/rooms/' + roomId + '/message', { method: 'POST', body: form });
+      } catch(e) { console.error('send error:', e); }
+      statusEl.textContent = '';
+    }
+
+    recordBtn.addEventListener('mousedown',  () => startRec());
+    recordBtn.addEventListener('mouseup',    () => stopRec());
+    recordBtn.addEventListener('mouseleave', () => stopRec());
+    recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRec(); }, { passive: false });
+    recordBtn.addEventListener('touchend',   e => { e.preventDefault(); stopRec(); },  { passive: false });
+
+    loadRoom();
+  </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Babel Fish</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
+      --accent: #8B2FC9; --text: #f0e8ff; --muted: #9b7fc4;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100dvh; display: flex; flex-direction: column;
+      align-items: center; padding: 1.5rem 1.25rem 2rem; gap: 1.1rem;
+    }
+    .logos { display: flex; align-items: center; gap: 1rem; justify-content: center; }
+    .logos img { height: 52px; object-fit: contain; }
+    h1 { font-size: 1rem; color: var(--muted); letter-spacing: .05em; }
+    .section-label { font-size: .8rem; color: var(--muted); width: 100%; max-width: 360px; margin-bottom: -.3rem; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.2rem; width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: .7rem;
+    }
+    .card h2 { font-size: .95rem; }
+    input, select {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .6rem .85rem; font-size: .95rem; direction: rtl;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+    button.primary {
+      width: 100%; background: var(--accent); color: white;
+      border: none; border-radius: 10px; padding: .7rem;
+      font-size: 1rem; cursor: pointer; font-weight: 600;
+    }
+    button.primary:active { opacity: .85; }
+    .divider { color: var(--muted); font-size: .8rem; }
+    .event-link {
+      color: var(--muted); font-size: .85rem; text-decoration: none;
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: .5rem 1.5rem; margin-top: .4rem;
+    }
+    .room-code-input { text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 1.1rem; }
+    #err { color: #e07070; font-size: .85rem; min-height: 1.2em; }
+  </style>
+</head>
+<body>
+  <div class="logos">
+    <img src="logo.png" alt="עומדים ביחד">
+    <img src="babel-fish.png" alt="Babel Fish">
+  </div>
+  <h1>Babel Fish — הודעות</h1>
+
+  <p class="section-label">הפרטים שלך</p>
+  <div class="card">
+    <input id="myName" type="text" placeholder="שמך" maxlength="30" autocomplete="name">
+    <select id="myLang">
+      <option value="ar">عربي — ערבית</option>
+      <option value="he" selected>עברית</option>
+      <option value="en">English</option>
+      <option value="ru">Русский</option>
+      <option value="am">አማርኛ</option>
+    </select>
+  </div>
+
+  <p class="section-label">קבוצה</p>
+  <div class="card">
+    <h2>🟣 צור קבוצה חדשה</h2>
+    <input id="roomName" type="text" placeholder="שם הקבוצה" maxlength="40">
+    <button class="primary" onclick="createRoom()">צור</button>
+  </div>
+
+  <div class="divider">— או —</div>
+
+  <div class="card">
+    <h2>🔗 הצטרף לקבוצה קיימת</h2>
+    <input id="roomCode" class="room-code-input" type="text" placeholder="ABCDE" maxlength="6">
+    <button class="primary" onclick="joinRoom()">הצטרף</button>
+  </div>
+
+  <p id="err"></p>
+  <a href="/broadcaster.html" class="event-link">🎙️ אירוע חי</a>
+
+  <script>
+    const nameEl = document.getElementById('myName');
+    const langEl = document.getElementById('myLang');
+    const errEl  = document.getElementById('err');
+
+    nameEl.value = localStorage.getItem('bf_name') || '';
+    langEl.value = localStorage.getItem('bf_lang') || 'he';
+
+    function getUser() {
+      const name = nameEl.value.trim();
+      const lang = langEl.value;
+      if (!name) { errEl.textContent = 'הכנס שם'; nameEl.focus(); return null; }
+      localStorage.setItem('bf_name', name);
+      localStorage.setItem('bf_lang', lang);
+      return { name, lang };
+    }
+
+    async function createRoom() {
+      const user = getUser(); if (!user) return;
+      const roomName = document.getElementById('roomName').value.trim();
+      if (!roomName) { errEl.textContent = 'הכנס שם קבוצה'; return; }
+      errEl.textContent = '';
+      try {
+        const r = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: roomName })
+        });
+        const { id } = await r.json();
+        location.href = `/room.html?room=${id}`;
+      } catch(e) { errEl.textContent = 'שגיאה ביצירת הקבוצה'; }
+    }
+
+    function joinRoom() {
+      const user = getUser(); if (!user) return;
+      const code = document.getElementById('roomCode').value.trim().toUpperCase();
+      if (!code) { errEl.textContent = 'הכנס קוד קבוצה'; return; }
+      errEl.textContent = '';
+      location.href = `/room.html?room=${code}`;
+    }
+
+    document.getElementById('roomCode').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+  </script>
+</body>
+</html>

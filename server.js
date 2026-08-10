@@ -3,6 +3,10 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
+const supabase = process.env.SUPABASE_URL
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+  : null;
 
 const app = express();
 const server = http.createServer(app);
@@ -222,6 +226,114 @@ app.post('/api/tts', express.json(), async (req, res) => {
 app.get('/', (req, res) => res.redirect('/broadcaster.html'));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Persistent Rooms (IM mode) ────────────────────────────────────────────────
+
+function makeRoomId() {
+  return Math.random().toString(36).slice(2, 7).toUpperCase();
+}
+
+// Create room
+app.post('/api/rooms', express.json(), async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Missing name' });
+  const id = makeRoomId();
+  if (supabase) await supabase.from('rooms').insert({ id, name });
+  res.json({ id, name });
+});
+
+// Get room + history
+app.get('/api/rooms/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!supabase) return res.json({ id, name: id, messages: [] });
+  const { data: room } = await supabase.from('rooms').select('*').eq('id', id).single();
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  const { data: messages } = await supabase.from('messages')
+    .select('*').eq('room_id', id).order('created_at', { ascending: true }).limit(100);
+  res.json({ ...room, messages: messages || [] });
+});
+
+// Send voice message
+app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
+  const { id } = req.params;
+  const { sender_name, sender_lang } = req.body;
+  if (!req.file) return res.status(400).json({ error: 'No audio' });
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
+
+  // 1. Transcribe
+  const blob = new Blob([req.file.buffer], { type: req.file.mimetype || 'audio/webm' });
+  const form = new FormData();
+  form.append('file', blob, 'audio.webm');
+  form.append('model', 'whisper-1');
+  form.append('temperature', '0');
+  let original_text = '', detected_lang = sender_lang || 'ar';
+  try {
+    const wResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY },
+      body: form
+    });
+    const wData = await wResp.json();
+    original_text = (wData.text || '').trim();
+    detected_lang = wData.language || sender_lang || 'ar';
+  } catch(e) { console.error('Whisper error:', e.message); }
+  if (!original_text) return res.json({ ok: true, text: '' });
+
+  // 2. Find languages of active room members
+  const roomWs = rooms.get(id);
+  const memberLangs = new Set([detected_lang]);
+  if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
+
+  // 3. Translate to each language
+  const translations = {};
+  for (const lang of memberLangs) {
+    if (lang === detected_lang) { translations[lang] = original_text; continue; }
+    const fromName = LANG_NAMES[detected_lang] || detected_lang;
+    const toName   = LANG_NAMES[lang] || lang;
+    const systemPrompt =
+      `תרגם מ${fromName} ל${toName} בלבד. הפלט חייב להיות ב${toName} בלבד.\n\n` + TRANSLATION_SYSTEM_PROMPT;
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `[${fromName}→${toName}]\n<text>\n${original_text}\n</text>` }
+          ],
+          temperature: 0, max_tokens: 500
+        })
+      });
+      const d = await r.json();
+      let t = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
+      if (t && lang === 'he') t = t.replace(/[؀-ۿ]/g, '');
+      if (t && lang === 'ar') t = t.replace(/[א-ת]/g, '');
+      translations[lang] = t || original_text;
+    } catch(e) { translations[lang] = original_text; }
+  }
+
+  // 4. Save to DB
+  let msgId = Date.now().toString();
+  const msgCreatedAt = new Date().toISOString();
+  if (supabase) {
+    const { data } = await supabase.from('messages').insert({
+      room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
+    }).select().single();
+    if (data) { msgId = data.id; }
+  }
+
+  // 5. Broadcast to room members via WebSocket
+  const payload = JSON.stringify({
+    type: 'room_message', id: msgId, sender_name,
+    sender_lang: detected_lang, original_text, translations, created_at: msgCreatedAt
+  });
+  if (roomWs?.members) {
+    roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  }
+
+  res.json({ ok: true, id: msgId, translations });
+});
+
 const rooms = new Map();
 
 function getRoom(roomId) {
@@ -233,7 +345,8 @@ function getRoom(roomId) {
 
 function cleanRoom(roomId) {
   const room = rooms.get(roomId);
-  if (room && !room.broadcaster && room.listeners.size === 0) {
+  const memberCount = room?.members?.size ?? 0;
+  if (room && !room.broadcaster && room.listeners.size === 0 && memberCount === 0) {
     rooms.delete(roomId);
     console.log('[~] Room ' + roomId + ' removed (empty)');
   }
@@ -305,6 +418,20 @@ wss.on('connection', (ws, req) => {
 
     ws.on('error', err => console.error('Broadcaster error room=' + roomId + ':', err.message));
     send(ws, { type: 'ready', count: room.listeners.size });
+
+  } else if (role === 'member') {
+    const name = params.get('name') || 'אנונימי';
+    const lang  = params.get('lang')  || 'he';
+    if (!room.members) room.members = new Map();
+    room.members.set(ws, { name, lang });
+    console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
+    ws.on('close', () => {
+      if (room.members) room.members.delete(ws);
+      console.log('[-] Member   room=' + roomId + ' name=' + name);
+      cleanRoom(roomId);
+    });
+    ws.on('error', err => console.error('Member error room=' + roomId + ':', err.message));
+    send(ws, { type: 'joined', room: roomId });
 
   } else {
     room.listeners.add(ws);
