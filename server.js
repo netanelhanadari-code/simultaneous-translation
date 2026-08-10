@@ -3,10 +3,31 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const multer = require('multer');
-const { createClient } = require('@supabase/supabase-js');
-const supabase = process.env.SUPABASE_URL
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
-  : null;
+// ── Supabase REST helpers ────────────────────────────────────────────────────
+const SB_URL = process.env.SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_ANON_KEY;
+const sbHeaders = () => ({
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Content-Type': 'application/json'
+});
+async function sbInsert(table, data) {
+  if (!SB_URL) return null;
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(data)
+  });
+  const text = await r.text();
+  if (!r.ok) { console.error(`[supabase] INSERT ${table}:`, text); return null; }
+  try { const arr = JSON.parse(text); return arr[0] || null; } catch { return null; }
+}
+async function sbQuery(table, qs) {
+  if (!SB_URL) return [];
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, { headers: sbHeaders() });
+  if (!r.ok) return [];
+  try { return await r.json(); } catch { return []; }
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -237,22 +258,19 @@ app.post('/api/rooms', express.json(), async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = makeRoomId();
-  if (supabase) {
-    const { error } = await supabase.from('rooms').insert({ id, name });
-    if (error) console.error('[supabase] room insert error:', JSON.stringify(error));
-  }
+  await sbInsert('rooms', { id, name });
   res.json({ id, name });
 });
 
 // Get room + history
 app.get('/api/rooms/:id', async (req, res) => {
   const { id } = req.params;
-  if (!supabase) return res.json({ id, name: id, messages: [] });
+  if (!SB_URL) return res.json({ id, name: id, messages: [] });
   try {
-    const { data: room } = await supabase.from('rooms').select('*').eq('id', id).single();
+    const rooms = await sbQuery('rooms', `id=eq.${id}&limit=1`);
+    const room = rooms[0];
     if (!room) return res.json({ id, name: id, messages: [] });
-    const { data: messages } = await supabase.from('messages')
-      .select('*').eq('room_id', id).order('created_at', { ascending: true }).limit(100);
+    const messages = await sbQuery('messages', `room_id=eq.${id}&order=created_at.asc&limit=100`);
     res.json({ ...room, messages: messages || [] });
   } catch(e) {
     console.error('getRoom error:', e.message);
@@ -324,13 +342,10 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   // 4. Save to DB
   let msgId = Date.now().toString();
   const msgCreatedAt = new Date().toISOString();
-  if (supabase) {
-    const { data, error } = await supabase.from('messages').insert({
-      room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
-    }).select('id');
-    if (error) console.error('[supabase] message insert error:', JSON.stringify(error));
-    else if (data?.[0]?.id) msgId = data[0].id;
-  }
+  const saved = await sbInsert('messages', {
+    room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
+  });
+  if (saved?.id) msgId = saved.id;
 
   // 5. Broadcast to room members via WebSocket
   const payload = JSON.stringify({
