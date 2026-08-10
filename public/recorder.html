@@ -102,7 +102,7 @@
 <h1>🎙 הקלט ותרגם</h1>
 
 <div class="langs">
-  <select id="srcLang">
+  <select id="srcLang" onchange="autoTarget()">
     <option value="ar">العربية</option>
     <option value="he">עברית</option>
     <option value="en">English</option>
@@ -113,6 +113,8 @@
     <option value="ar">العربية</option>
     <option value="en">English</option>
   </select>
+</div>
+<div class="langs" style="margin-top:-.25rem;">
   <label style="color:#9b7fc4;font-size:.85rem;">באיזה קול תרצה להיות מתורגם?</label>
   <select id="ttsVoice">
     <option value="nova">👩 נשי — רך</option>
@@ -148,6 +150,12 @@
 
 <script>
 let recorder, chunks = [], timerInterval, seconds = 0;
+
+function autoTarget() {
+  const src = document.getElementById('srcLang').value;
+  const tgt = document.getElementById('tgtLang');
+  tgt.value = (src === 'ar') ? 'he' : (src === 'he') ? 'ar' : 'he';
+}
 
 async function startRec() {
   try {
