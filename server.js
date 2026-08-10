@@ -123,18 +123,28 @@ const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של �
 // ── Translation log (in-memory) ───────────────────────────────────────────────
 const translationLog = [];
 
+const LANG_NAMES = {
+  he: 'עברית', ar: 'ערבית', en: 'אנגלית',
+  ru: 'רוסית', am: 'אמהרית', fr: 'צרפתית',
+  es: 'ספרדית', uk: 'אוקראינית', de: 'גרמנית'
+};
+
 app.get('/api/translate', async (req, res) => {
   const { text, from, to, room } = req.query;
   if (!text || !from || !to) return res.status(400).json({ error: 'Missing params' });
   if (from === to) return res.json({ text });
-  console.log('[translate]', from, '->', to, '|', text.slice(0, 50));
+  const fromName = LANG_NAMES[from] || from;
+  const toName   = LANG_NAMES[to]   || to;
+  console.log('[translate]', fromName, '->', toName, '|', text.slice(0, 50));
   try {
     const roomData = room ? rooms.get(room) : null;
     const gender = roomData ? roomData.gender : 'm';
     const genderNote = gender === 'f'
       ? '\nהדוברת היא אישה — השתמש בלשון נקבה'
       : '\nהדובר הוא גבר — השתמש בלשון זכר';
-    const systemPrompt = `תרגם מ-${from} ל-${to} בלבד. אל תתרגם לשפה אחרת.\n\n` + TRANSLATION_SYSTEM_PROMPT + genderNote;
+    const systemPrompt =
+      `תרגם מ${fromName} ל${toName} בלבד. הפלט חייב להיות ב${toName} בלבד. אל תתרגם לשפה אחרת.\n\n` +
+      TRANSLATION_SYSTEM_PROMPT + genderNote;
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -145,7 +155,7 @@ app.get('/api/translate', async (req, res) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `[${from}→${to}] ${text}` }
+          { role: 'user', content: `[${fromName}→${toName}] ${text}` }
         ],
         temperature: 0,
         max_tokens: 500
