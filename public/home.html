@@ -48,6 +48,23 @@
     }
     .room-code-input { text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 1.1rem; }
     #err { color: #e07070; font-size: .85rem; min-height: 1.2em; }
+    .my-rooms-list { display: flex; flex-direction: column; gap: .5rem; }
+    .room-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: .7rem 1rem;
+      display: flex; align-items: center; gap: .6rem; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .room-chip:hover { border-color: var(--accent); }
+    .room-chip-info { flex: 1; min-width: 0; }
+    .room-chip-name { font-size: .95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .room-chip-code { font-size: .72rem; color: var(--muted); letter-spacing: 1px; }
+    .room-chip-leave {
+      background: none; border: none; color: var(--muted);
+      font-size: 1rem; cursor: pointer; padding: .2rem .4rem; border-radius: 6px;
+      line-height: 1; flex-shrink: 0;
+    }
+    .room-chip-leave:hover { color: #e07070; background: rgba(224,112,112,.1); }
   </style>
 </head>
 <body>
@@ -69,6 +86,11 @@
     </select>
   </div>
 
+  <div id="my-rooms-section" style="display:none;width:100%;max-width:360px;">
+    <p class="section-label">הקבוצות שלי</p>
+    <div id="my-rooms-list" class="my-rooms-list"></div>
+  </div>
+
   <p class="section-label">קבוצה</p>
   <div class="card">
     <h2>🟣 צור קבוצה חדשה</h2>
@@ -86,6 +108,7 @@
 
   <p id="err"></p>
   <a href="/broadcaster.html" class="event-link">🎙️ אירוע חי</a>
+  <a href="/settings.html?from=/home.html" class="event-link">⚙️ הגדרות</a>
 
   <script>
     const nameEl = document.getElementById('myName');
@@ -94,6 +117,48 @@
 
     nameEl.value = localStorage.getItem('bf_name') || '';
     langEl.value = localStorage.getItem('bf_lang') || 'he';
+
+    // ── My Rooms ───────────────────────────────────────────────────────────
+    function getMyRooms() {
+      try { return JSON.parse(localStorage.getItem('bf_rooms') || '[]'); } catch { return []; }
+    }
+    function saveMyRooms(rooms) {
+      localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
+    }
+    function renderMyRooms() {
+      const rooms = getMyRooms();
+      const section = document.getElementById('my-rooms-section');
+      const list = document.getElementById('my-rooms-list');
+      if (rooms.length === 0) { section.style.display = 'none'; return; }
+      section.style.display = '';
+      list.innerHTML = '';
+      rooms.forEach(r => {
+        const chip = document.createElement('div');
+        chip.className = 'room-chip';
+        chip.innerHTML = `
+          <div class="room-chip-info" onclick="enterRoom('${r.id}')">
+            <div class="room-chip-name">${esc(r.name)}</div>
+            <div class="room-chip-code">${r.id}</div>
+          </div>
+          <button class="room-chip-leave" title="הסר" onclick="leaveRoom('${r.id}')">✕</button>`;
+        list.appendChild(chip);
+      });
+    }
+    function addMyRoom(id, name) {
+      const rooms = getMyRooms().filter(r => r.id !== id);
+      rooms.unshift({ id, name, ts: Date.now() });
+      saveMyRooms(rooms);
+    }
+    function leaveRoom(id) {
+      saveMyRooms(getMyRooms().filter(r => r.id !== id));
+      renderMyRooms();
+    }
+    function enterRoom(id) {
+      if (!getUser()) return;
+      location.href = `/room.html?room=${id}`;
+    }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    renderMyRooms();
 
     function getUser() {
       const name = nameEl.value.trim();
@@ -116,6 +181,7 @@
           body: JSON.stringify({ name: roomName })
         });
         const { id } = await r.json();
+        addMyRoom(id, roomName);
         location.href = `/room.html?room=${id}`;
       } catch(e) { errEl.textContent = 'שגיאה ביצירת הקבוצה'; }
     }
