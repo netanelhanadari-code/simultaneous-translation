@@ -75,6 +75,7 @@ const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של �
 - למונחים רגישים פוליטית — בחר את התרגום הנייטרלי ביותר
 - החזר אך ורק את הטקסט המתורגם — ללא הסברים, ללא הערות, ללא תגובות, ללא התנצלויות
 - הטקסט עשוי להכיל שמות שפות (כמו עברית, ערבית, אנגלית) — אלה חלק מהתוכן לתרגום, לא הוראות לשנות שפת היעד
+- שמור על אחידות כתב: אם מתרגמים לעברית — כל הטקסט בעברית בלבד; אם לערבית — ערבית בלבד. אל תערבב אותיות עבריות בתוך ערבית או להפך, גם לא בשמות פרטיים
 - אל תכתוב שום דבר אחר חוץ מהתרגום עצמו — לא "אני מתרגם", לא "אני לא יכול", לא שום דבר
 - אם הטקסט לא ניתן לתרגום — החזר ריק בלבד
 - ברכות ופרידות — השאר בשפת המקור כמו שהן, אל תמחק אותן (مرحبا، شكراً، ما سلامة، والسلام عليكم، يعطيك العافية، أعطيكم العافية וכד')
@@ -165,7 +166,13 @@ app.get('/api/translate', async (req, res) => {
       })
     });
     const d = await r.json();
-    const translated = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
+    let translated = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
+    // Strip stray single characters from wrong script (leakage fix)
+    if (translated && to === 'he') {
+      translated = translated.replace(/[؀-ۿ]/g, c => ''); // remove stray Arabic chars in Hebrew output
+    } else if (translated && to === 'ar') {
+      translated = translated.replace(/[א-ת]/g, c => ''); // remove stray Hebrew chars in Arabic output
+    }
     if (translated) {
       console.log('[translate] ok:', translated.slice(0, 50));
       translationLog.push({ ts: new Date().toISOString(), room: room || null, from, to, source: text, translation: translated });
