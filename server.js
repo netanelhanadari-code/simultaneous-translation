@@ -38,6 +38,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 
     const data = await response.json();
     const text = (data.text || '').trim();
+    const detectedLang = data.language || null;
     if (!text) return res.json({ text: '' });
 
     // Filter known Whisper hallucinations
@@ -54,7 +55,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       roomData.listeners.forEach(l => { if (l.readyState === WebSocket.OPEN) l.send(msg); });
     }
 
-    res.json({ text });
+    res.json({ text, detectedLang });
   } catch (err) {
     console.error('Whisper error:', err.message);
     res.status(500).json({ error: err.message });
@@ -102,6 +103,7 @@ const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של �
 מפגש = لقاء
 צוות = طاقم
 אורגנייזר = منظم ميداني
+אורגנייזר שטח = منظم ميداني
 מארגן קהילתי = منظم جماهيري
 מעגל ירושלים = حلقة القدس
 עבודה קהילתית וחברתית = العمل الجماهيري والمجتمعي
