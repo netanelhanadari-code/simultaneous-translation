@@ -428,12 +428,7 @@
         utt.lang   = lang;
         utt.rate   = 1.1;
         utt.volume = 1.0;
-        const base = lang.split('-')[0];
-        // בחר קול שתואם בדיוק לשפת היעד בלבד
-        const match = voices.find(v => v.lang === lang)
-                   || voices.find(v => v.lang.startsWith(base + '-'))
-                   || voices.find(v => v.lang === base);
-        if (match && match.lang.startsWith(base)) utt.voice = match;
+        // מאפשרים לדפדפן לבחור קול לפי utt.lang בלבד
         // Safety timeout: if TTS hangs, unblock queue after 8s
         const timeout = setTimeout(resolve, 8000);
         utt.onend   = () => { clearTimeout(timeout); resolve(); };
