@@ -171,17 +171,23 @@ app.get('/api/logs', (req, res) => {
 
 // ── TTS endpoint ──────────────────────────────────────────────────────────────
 app.post('/api/tts', express.json(), async (req, res) => {
-  const { text, lang, voice } = req.body;
+  const { text, lang, voice, room: roomParam } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
   try {
+    let selectedVoice = voice;
+    if (!selectedVoice && roomParam) {
+      const rd = rooms.get(roomParam);
+      selectedVoice = rd?.gender === 'f' ? 'nova' : 'onyx';
+    }
+    selectedVoice = selectedVoice || 'nova';
     const r = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ model: 'tts-1', input: text, voice: voice || 'nova', response_format: 'mp3' })
+      body: JSON.stringify({ model: 'tts-1', input: text, voice: selectedVoice, response_format: 'mp3' })
     });
     if (!r.ok) { const e = await r.text(); return res.status(500).json({ error: e }); }
     const buf = await r.arrayBuffer();

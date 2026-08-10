@@ -283,11 +283,7 @@
     const msQueue   = [];
     let msUpdating  = false;
 
-    // TTS — load voices early
-    let voices = [];
-    function loadVoices() { voices = speechSynthesis.getVoices(); }
-    loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
+    let ttsAudio = null; // נגן אודיו פעיל
 
     // ── Translation queue — sequential, no drops ──────────────────────────────
     const translationQueue = [];
@@ -418,29 +414,34 @@
       subTxt.textContent = sub;
     }
 
-    // ── TTS — returns Promise that resolves when speech ends ──────────────────
-    function speakText(text, lang) {
-      if (!ttsOn) return Promise.resolve();
-      speechSynthesis.cancel();
-      voices = speechSynthesis.getVoices(); // רענן רשימת קולות
-      return new Promise(resolve => {
-        const utt = new SpeechSynthesisUtterance(text);
-        utt.lang   = lang;
-        utt.rate   = 1.1;
-        utt.volume = 1.0;
-        // מאפשרים לדפדפן לבחור קול לפי utt.lang בלבד
-        // Safety timeout: if TTS hangs, unblock queue after 8s
-        const timeout = setTimeout(resolve, 8000);
-        utt.onend   = () => { clearTimeout(timeout); resolve(); };
-        utt.onerror = () => { clearTimeout(timeout); resolve(); };
-        speechSynthesis.speak(utt);
-      });
+    // ── TTS — OpenAI TTS ──────────────────────────────────────────────────────
+    async function speakText(text, lang) {
+      if (!ttsOn) return;
+      if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
+      try {
+        const r = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, lang, room: roomId })
+        });
+        if (!r.ok) return;
+        const blob = await r.blob();
+        const url  = URL.createObjectURL(blob);
+        await new Promise(resolve => {
+          ttsAudio = new Audio(url);
+          const timeout = setTimeout(resolve, 15000);
+          ttsAudio.onended = () => { clearTimeout(timeout); URL.revokeObjectURL(url); resolve(); };
+          ttsAudio.onerror = () => { clearTimeout(timeout); URL.revokeObjectURL(url); resolve(); };
+          ttsAudio.play().catch(resolve);
+        });
+        ttsAudio = null;
+      } catch(_) {}
     }
 
     function toggleTTS() {
       ttsOn = !ttsOn;
       document.getElementById('ttsToggle').classList.toggle('on', ttsOn);
-      if (!ttsOn) speechSynthesis.cancel();
+      if (!ttsOn && ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
     }
 
     // ── Audio pipeline (human mode) ───────────────────────────────────────────
