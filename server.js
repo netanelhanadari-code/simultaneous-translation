@@ -155,7 +155,7 @@ app.get('/api/translate', async (req, res) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `[${fromName}→${toName}] ${text}` }
+          { role: 'user', content: `[${fromName}→${toName}]\n<text>\n${text}\n</text>` }
         ],
         temperature: 0,
         max_tokens: 500
