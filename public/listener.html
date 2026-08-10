@@ -302,10 +302,10 @@
       queueProcessing = true;
       while (translationQueue.length > 0) {
         const item = translationQueue.shift();
-        const translated = (item.srcLang === item.tgtLang)
-          ? item.text
-          : await translate(item.text, item.srcLang, item.tgtLang);
-        await showTranslation(item.text, translated, item.ttsLang); // wait for TTS to finish
+        const sameLang = item.srcLang === item.tgtLang;
+        const translated = sameLang ? item.text : await translate(item.text, item.srcLang, item.tgtLang);
+        const translationFailed = !sameLang && translated === item.text;
+        await showTranslation(item.text, translated, translationFailed ? null : item.ttsLang);
       }
       queueProcessing = false;
     }
@@ -366,7 +366,7 @@
       document.getElementById('translatedCard').textContent = translated;
       document.getElementById('originalCard').textContent   = original;
       addLog(original, translated);
-      await speakText(translated, lang);
+      if (lang) await speakText(translated, lang);
     }
 
     // ── Log ───────────────────────────────────────────────────────────────────
@@ -422,14 +422,18 @@
     function speakText(text, lang) {
       if (!ttsOn) return Promise.resolve();
       speechSynthesis.cancel();
+      voices = speechSynthesis.getVoices(); // רענן רשימת קולות
       return new Promise(resolve => {
         const utt = new SpeechSynthesisUtterance(text);
         utt.lang   = lang;
         utt.rate   = 1.1;
         utt.volume = 1.0;
-        const match = voices.find(v => v.lang.startsWith(lang))
-                   || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-        if (match) utt.voice = match;
+        const base = lang.split('-')[0];
+        // בחר קול שתואם בדיוק לשפת היעד בלבד
+        const match = voices.find(v => v.lang === lang)
+                   || voices.find(v => v.lang.startsWith(base + '-'))
+                   || voices.find(v => v.lang === base);
+        if (match && match.lang.startsWith(base)) utt.voice = match;
         // Safety timeout: if TTS hangs, unblock queue after 8s
         const timeout = setTimeout(resolve, 8000);
         utt.onend   = () => { clearTimeout(timeout); resolve(); };
