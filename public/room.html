@@ -232,11 +232,29 @@
     function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
 
     // ── TTS ────────────────────────────────────────────────────────────────
+    let _voices = [];
+    function loadVoices() { _voices = window.speechSynthesis.getVoices(); }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+    }
+    function getBestVoice(bcp47) {
+      if (!_voices.length) _voices = window.speechSynthesis?.getVoices() || [];
+      const lang = bcp47.toLowerCase();
+      const prefix = lang.split('-')[0];
+      return _voices.find(v => v.lang.toLowerCase() === lang)
+          || _voices.find(v => v.lang.toLowerCase().startsWith(prefix + '-'))
+          || _voices.find(v => v.lang.toLowerCase().startsWith(prefix))
+          || null;
+    }
     function speak(text, lang) {
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
       const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = LANG_BCP47[lang] || lang;
+      const bcp47 = LANG_BCP47[lang] || lang;
+      utt.lang = bcp47;
+      const voice = getBestVoice(bcp47);
+      if (voice) utt.voice = voice;
       utt.rate = 1.05;
       window.speechSynthesis.speak(utt);
     }
