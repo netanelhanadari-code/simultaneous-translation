@@ -245,11 +245,16 @@ app.post('/api/rooms', express.json(), async (req, res) => {
 app.get('/api/rooms/:id', async (req, res) => {
   const { id } = req.params;
   if (!supabase) return res.json({ id, name: id, messages: [] });
-  const { data: room } = await supabase.from('rooms').select('*').eq('id', id).single();
-  if (!room) return res.status(404).json({ error: 'Room not found' });
-  const { data: messages } = await supabase.from('messages')
-    .select('*').eq('room_id', id).order('created_at', { ascending: true }).limit(100);
-  res.json({ ...room, messages: messages || [] });
+  try {
+    const { data: room } = await supabase.from('rooms').select('*').eq('id', id).single();
+    if (!room) return res.json({ id, name: id, messages: [] });
+    const { data: messages } = await supabase.from('messages')
+      .select('*').eq('room_id', id).order('created_at', { ascending: true }).limit(100);
+    res.json({ ...room, messages: messages || [] });
+  } catch(e) {
+    console.error('getRoom error:', e.message);
+    res.json({ id, name: id, messages: [] });
+  }
 });
 
 // Send voice message
