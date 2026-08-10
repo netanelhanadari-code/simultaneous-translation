@@ -4,7 +4,8 @@ const WebSocket = require('ws');
 const path = require('path');
 const multer = require('multer');
 // ── Supabase REST helpers ────────────────────────────────────────────────────
-const SB_URL = process.env.SUPABASE_URL;
+const SB_RAW = process.env.SUPABASE_URL || '';
+const SB_URL = SB_RAW.replace(/\/rest\/v1\/?$/, ''); // strip trailing /rest/v1 if user pasted full URL
 const SB_KEY = process.env.SUPABASE_ANON_KEY;
 const sbHeaders = () => ({
   'apikey': SB_KEY,
