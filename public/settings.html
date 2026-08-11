@@ -198,13 +198,13 @@
         const img = new Image();
         img.onload = () => {
           const canvas = document.getElementById('avatarCanvas');
-          canvas.width = canvas.height = 80;
+          canvas.width = canvas.height = 40;
           const ctx = canvas.getContext('2d');
           const size = Math.min(img.width, img.height);
           const ox = (img.width - size) / 2;
           const oy = (img.height - size) / 2;
-          ctx.drawImage(img, ox, oy, size, size, 0, 0, 80, 80);
-          localStorage.setItem('bf_avatar', canvas.toDataURL('image/jpeg', 0.7));
+          ctx.drawImage(img, ox, oy, size, size, 0, 0, 40, 40);
+          localStorage.setItem('bf_avatar', canvas.toDataURL('image/jpeg', 0.75));
           loadAvatarPreview();
         };
         img.src = ev.target.result;

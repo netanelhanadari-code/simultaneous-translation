@@ -515,7 +515,7 @@
           ? (localStorage.getItem('bf_dm_peer_' + roomId) || data.name || roomId)
           : (names[myUiLang] || names.he || data.name || roomId);
         document.getElementById('roomNameEl').textContent = displayName;
-        document.title = 'Babel Fish — ' + displayName;
+        document.title = baseTitle = 'Babel Fish — ' + displayName;
         if (isDM) {
           codeEl.innerHTML = '<span class="dm-badge">👤 שיחה פרטית</span>';
         } else {
@@ -600,9 +600,15 @@
           document.querySelector('.empty')?.remove();
           addMessage(msg);
           scrollBottom();
-          if (ttsOn && msg.sender_name !== myName) {
-            const text = msg.translations?.[myLang] || msg.original_text;
-            speak(text, myLang);
+          if (msg.sender_name !== myName) {
+            if (document.hidden) {
+              unreadCount++;
+              document.title = `(${unreadCount}) ${baseTitle}`;
+            }
+            if (ttsOn) {
+              const text = msg.translations?.[myLang] || msg.original_text;
+              speak(text, myLang);
+            }
           }
         }
       };
@@ -612,6 +618,16 @@
       };
     }
     connectWS();
+
+    // ── Unread badge ───────────────────────────────────────────────────────
+    let unreadCount = 0;
+    let baseTitle = document.title;
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && unreadCount > 0) {
+        unreadCount = 0;
+        document.title = baseTitle;
+      }
+    });
 
     // ── Add message bubble ─────────────────────────────────────────────────
     function addMessage(msg) {
@@ -626,11 +642,15 @@
         ? new Date(msg.created_at).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
         : '';
       const senderEmoji = msg.sender_emoji || '';
+      const senderAvatar = allMembers.get(msg.sender_name)?.avatar || activeMembers.get(msg.sender_name)?.avatar || '';
+      const senderAvatarHtml = senderAvatar
+        ? `<img src="${senderAvatar}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${esc(msg.sender_name)}">`
+        : (senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : '');
       const div = document.createElement('div');
       div.className = 'bubble ' + (isMine ? 'mine' : 'other');
       div.innerHTML =
         (!isMine
-          ? `<div class="bubble-sender">${senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : ''}${esc(msg.sender_name)}</div>`
+          ? `<div class="bubble-sender">${senderAvatarHtml}${esc(msg.sender_name)}</div>`
           : '') +
         `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
           ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
@@ -728,7 +748,7 @@
         currentRoomNames = names;
         const displayName = names[myUiLang] || names.he || names.ar || names.en;
         document.getElementById('roomNameEl').textContent = displayName;
-        document.title = 'Babel Fish — ' + displayName;
+        document.title = baseTitle = 'Babel Fish — ' + displayName;
         // Update bf_rooms
         try {
           const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
@@ -803,6 +823,17 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
     });
 
+    function detectTextLang(text) {
+      const clean = text.replace(/\s/g, '') || ' ';
+      const ar = (text.match(/[؀-ۿ]/g) || []).length / clean.length;
+      const he = (text.match(/[֐-׿]/g) || []).length / clean.length;
+      const cy = (text.match(/[Ѐ-ӿ]/g) || []).length / clean.length;
+      if (ar > 0.3) return 'ar';
+      if (he > 0.3) return 'he';
+      if (cy > 0.3) return 'ru';
+      return myLang; // fallback to user's saved lang
+    }
+
     async function sendText() {
       const text = textInput.value.trim();
       if (!text) return;
@@ -811,11 +842,12 @@
       sendBtn.disabled = true;
       const reply_to = replyingTo;
       cancelReply();
+      const detectedLang = detectTextLang(text);
       try {
         await fetch('/api/rooms/' + roomId + '/text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: myLang, text, reply_to })
+          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: detectedLang, text, reply_to })
         });
       } catch(e) { console.error('sendText:', e); }
     }
@@ -984,6 +1016,9 @@
 
     initPushUI().then(async () => {
       if (!swReg) return;
+      // iOS requires standalone (home screen PWA) for push — skip auto-subscribe otherwise
+      const isIosNonStandalone = /iPhone|iPad/.test(navigator.userAgent) && navigator.standalone !== true;
+      if (isIosNonStandalone) return;
       const sub = await swReg.pushManager.getSubscription();
       if (!sub && Notification.permission === 'default') {
         togglePushNotifications();
