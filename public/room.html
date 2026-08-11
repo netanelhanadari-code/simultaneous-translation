@@ -77,6 +77,26 @@
       cursor: pointer; white-space: nowrap; line-height: 1.4;
     }
     #members-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    #members-panel {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: .3rem .8rem .5rem; display: none; flex-direction: column; gap: .15rem;
+      max-height: 14rem; overflow-y: auto; flex-shrink: 0;
+    }
+    #members-panel.open { display: flex; }
+    .member-row {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .35rem .3rem; border-radius: 8px; font-size: .83rem; color: var(--muted);
+    }
+    .member-row.online { color: var(--text); }
+    .member-row.me { color: var(--accent); }
+    .member-row .dot { width: 6px; height: 6px; border-radius: 50%; background: #555; flex-shrink: 0; }
+    .member-row.online .dot { background: #4caf50; }
+    .row-avatar { font-size: 1.1rem; flex-shrink: 0; }
+    .row-name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row-phone { font-size: .78rem; color: var(--muted); direction: ltr; flex-shrink: 0; text-decoration: none; }
+    .row-phone:hover { color: var(--accent); }
+    .row-lang { font-size: .7rem; color: var(--muted); flex-shrink: 0; }
+    .member-row[style*="cursor"]:hover { background: rgba(139,47,201,.1); }
     .member-chip {
       background: var(--border); border-radius: 20px;
       padding: .2rem .65rem; font-size: .72rem; color: var(--muted);
@@ -157,6 +177,7 @@
   <div id="members-bar">
     <button id="members-toggle" onclick="toggleMembersBar()"><span id="members-count">0</span> ▾</button>
   </div>
+  <div id="members-panel"></div>
   <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
 
   <footer>
@@ -173,6 +194,7 @@
     const myName  = localStorage.getItem('bf_name')  || 'אנונימי';
     const myLang  = localStorage.getItem('bf_lang')  || 'he';
     const myEmoji = localStorage.getItem('bf_emoji') || '';
+    const myPhone = localStorage.getItem('bf_phone') || '';
 
     if (!roomId) { location.href = '/home.html'; }
 
@@ -198,36 +220,54 @@
     }
 
     function toggleMembersBar() {
-      const bar = document.getElementById('members-bar');
-      const expanded = bar.classList.toggle('expanded');
+      const panel = document.getElementById('members-panel');
+      const isOpen = panel.classList.toggle('open');
       const btn = document.getElementById('members-toggle');
       const count = document.getElementById('members-count').textContent;
-      btn.innerHTML = `<span id="members-count">${count}</span> ${expanded ? '▴' : '▾'}`;
+      btn.innerHTML = `<span id="members-count">${count}</span> ${isOpen ? '▴' : '▾'}`;
     }
 
     function renderMembers() {
       const bar = document.getElementById('members-bar');
       [...bar.querySelectorAll('.member-chip')].forEach(c => c.remove());
-      // merge: all known members, mark online ones
+      const panel = document.getElementById('members-panel');
+      panel.innerHTML = '';
+
       const merged = new Map([...allMembers]);
       activeMembers.forEach((v, k) => merged.set(k, { ...v, online: true }));
-      // sort: me first, then online, then offline
       const sorted = [...merged.entries()].sort(([a], [b]) => {
         if (a === myName) return -1; if (b === myName) return 1;
         const ao = activeMembers.has(a), bo = activeMembers.has(b);
         return ao === bo ? 0 : ao ? -1 : 1;
       });
       document.getElementById('members-count').textContent = merged.size;
-      sorted.forEach(([name, { lang, emoji, online }]) => {
+
+      sorted.forEach(([name, { lang, emoji, phone, online }]) => {
+        // chip (one-line bar)
         const chip = document.createElement('div');
-        chip.className = 'member-chip'
-          + (online ? ' online' : '')
-          + (name === myName ? ' me' : '');
-        const shortName = name.length > 10 ? name.slice(0, 10) + '…' : name;
+        chip.className = 'member-chip' + (online ? ' online' : '') + (name === myName ? ' me' : '');
+        const shortName = name.length > 8 ? name.slice(0, 8) + '…' : name;
         chip.innerHTML = `<span class="dot"></span>`
-          + (emoji ? `<span class="chip-avatar">${emoji}</span>` : `<span class="chip-label">${esc(shortName)}</span>`);
+          + (emoji ? `<span class="chip-avatar">${emoji}</span>` : '')
+          + `<span class="chip-label">${esc(shortName)}</span>`;
         chip.addEventListener('click', () => showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`));
         bar.appendChild(chip);
+
+        // panel row (expanded view)
+        const row = document.createElement('div');
+        row.className = 'member-row' + (online ? ' online' : '') + (name === myName ? ' me' : '');
+        row.innerHTML =
+          `<span class="dot"></span>`
+          + `<span class="row-avatar">${emoji || '👤'}</span>`
+          + `<span class="row-name">${esc(name)}</span>`
+          + (phone ? `<span class="row-phone">${esc(phone)}</span>` : '')
+          + `<span class="row-lang">${LANG_NAMES[lang]||lang}</span>`;
+        if (name !== myName) {
+          row.style.cursor = 'pointer';
+          row.title = `פתח צ'אט פרטי עם ${name}`;
+          row.addEventListener('click', () => openDM(name));
+        }
+        panel.appendChild(row);
       });
     }
 
@@ -258,7 +298,7 @@
           localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
         } catch(e) {}
         if (data.allMembers) {
-          data.allMembers.forEach(m => allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' }));
+          data.allMembers.forEach(m => allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '', phone: m.phone || '' }));
           renderMembers();
         }
         if (data.messages && data.messages.length > 0) {
@@ -275,19 +315,20 @@
 
     function connectWS() {
       ws = new WebSocket(
-        `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}&emoji=${encodeURIComponent(myEmoji)}`
+        `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}&emoji=${encodeURIComponent(myEmoji)}&phone=${encodeURIComponent(myPhone)}`
       );
       ws.onmessage = e => {
         const msg = JSON.parse(e.data);
         if (msg.type === 'joined') {
           activeMembers.clear();
           (msg.members || []).forEach(m => {
-            activeMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' });
-            allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' });
+            const info = { lang: m.lang, emoji: m.emoji || '', phone: m.phone || '' };
+            activeMembers.set(m.name, info);
+            allMembers.set(m.name, info);
           });
           renderMembers();
         } else if (msg.type === 'member_joined') {
-          const info = { lang: msg.lang, emoji: msg.emoji || '' };
+          const info = { lang: msg.lang, emoji: msg.emoji || '', phone: msg.phone || '' };
           activeMembers.set(msg.name, info);
           allMembers.set(msg.name, info);
           renderMembers();
@@ -349,6 +390,14 @@
     }
 
     function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    async function openDM(otherName) {
+      try {
+        const r = await fetch(`/api/dm?from=${encodeURIComponent(myName)}&to=${encodeURIComponent(otherName)}`);
+        const { id } = await r.json();
+        location.href = `/room.html?room=${id}`;
+      } catch(e) { console.error('openDM:', e); }
+    }
     function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
 
     // ── TTS ────────────────────────────────────────────────────────────────

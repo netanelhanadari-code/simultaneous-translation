@@ -258,6 +258,23 @@ function makeRoomId() {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
+// DM room — deterministic ID for a pair of users
+app.get('/api/dm', async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'Missing params' });
+  const sorted = [from, to].sort();
+  let hash = 0;
+  const str = sorted.join('|');
+  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  const id = 'D' + Math.abs(hash).toString(36).toUpperCase().slice(0, 5);
+  const name = sorted.join(' ↔ ');
+  if (SB_URL) {
+    const existing = await sbQuery('rooms', `id=eq.${id}&limit=1`);
+    if (!existing.length) await sbInsert('rooms', { id, name });
+  }
+  res.json({ id, name });
+});
+
 // Create room
 app.post('/api/rooms', express.json(), async (req, res) => {
   const { name } = req.body;
@@ -511,8 +528,9 @@ wss.on('connection', (ws, req) => {
     const name  = params.get('name')  || 'אנונימי';
     const lang  = params.get('lang')  || 'he';
     const emoji = params.get('emoji') || '';
+    const phone = params.get('phone') || '';
     if (!room.members) room.members = new Map();
-    room.members.set(ws, { name, lang, emoji });
+    room.members.set(ws, { name, lang, emoji, phone });
     console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
 
     // Persist member in DB
@@ -520,20 +538,20 @@ wss.on('connection', (ws, req) => {
       if (rows.length) {
         fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}`, {
           method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ emoji, lang, last_seen: new Date().toISOString() })
+          body: JSON.stringify({ emoji, lang, phone, last_seen: new Date().toISOString() })
         }).catch(() => {});
       } else {
-        sbInsert('room_members', { room_id: roomId, name, emoji, lang }).catch(() => {});
+        sbInsert('room_members', { room_id: roomId, name, emoji, lang, phone }).catch(() => {});
       }
     }).catch(() => {});
 
     // Send current member list to newcomer (online only, from WS)
-    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji, online: true }));
+    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji, phone: m.phone || '', online: true }));
     send(ws, { type: 'joined', room: roomId, members: memberList });
 
     // Notify others that someone joined
     room.members.forEach((m, w) => {
-      if (w !== ws) send(w, { type: 'member_joined', name, lang, emoji });
+      if (w !== ws) send(w, { type: 'member_joined', name, lang, emoji, phone });
     });
 
     ws.on('close', () => {

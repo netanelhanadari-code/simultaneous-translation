@@ -74,8 +74,22 @@
     </div>
     <div class="field">
       <label>אימוג'י (אופציונלי — יופיע ברשימת החברים)</label>
-      <input id="emojiInput" type="text" placeholder="הדבק או הקלד אימוג'י 😊" maxlength="4" style="text-align:center;font-size:1.5rem;letter-spacing:.2rem;">
+      <div class="emoji-grid" id="emojiGrid">
+        <span class="emoji-opt">☮️</span><span class="emoji-opt">🕊️</span><span class="emoji-opt">✌️</span>
+        <span class="emoji-opt">❤️</span><span class="emoji-opt">💜</span><span class="emoji-opt">💚</span>
+        <span class="emoji-opt">🤝</span><span class="emoji-opt">🫂</span><span class="emoji-opt">🙏</span>
+        <span class="emoji-opt">🤲</span><span class="emoji-opt">🌍</span><span class="emoji-opt">🌈</span>
+        <span class="emoji-opt">✡️</span><span class="emoji-opt">☪️</span><span class="emoji-opt">✝️</span>
+        <span class="emoji-opt">☯️</span><span class="emoji-opt">🕉️</span><span class="emoji-opt">🔯</span>
+        <span class="emoji-opt">🌺</span><span class="emoji-opt">🌸</span><span class="emoji-opt">🌻</span>
+        <span class="emoji-opt">💫</span><span class="emoji-opt">🌟</span><span class="emoji-opt">🦋</span>
+      </div>
+      <input id="emojiInput" type="text" placeholder="או הדבק כל אימוג'י 😊" maxlength="4" style="text-align:center;font-size:1.5rem;letter-spacing:.2rem;">
       <span class="emoji-clear" onclick="clearEmoji()">ללא אימוג'י</span>
+    </div>
+    <div class="field">
+      <label>מספר טלפון (יוצג לחברים בקבוצה)</label>
+      <input id="phoneInput" type="tel" placeholder="05X-XXXXXXX" dir="ltr" style="text-align:left;">
     </div>
     <div class="field">
       <label>שפה מועדפת</label>
@@ -104,10 +118,26 @@
     nameInput.value = localStorage.getItem('bf_name') || '';
     langSelect.value = localStorage.getItem('bf_lang') || 'he';
 
-    // Emoji input
+    // Phone
+    const phoneInput = document.getElementById('phoneInput');
+    phoneInput.value = localStorage.getItem('bf_phone') || '';
+
+    // Emoji input + grid
     const emojiInput = document.getElementById('emojiInput');
     emojiInput.value = localStorage.getItem('bf_emoji') || '';
-    function clearEmoji() { emojiInput.value = ''; }
+    function clearEmoji() {
+      emojiInput.value = '';
+      document.querySelectorAll('.emoji-opt').forEach(o => o.classList.remove('selected'));
+    }
+    function markSelected() {
+      const cur = emojiInput.value.trim();
+      document.querySelectorAll('.emoji-opt').forEach(o => o.classList.toggle('selected', o.textContent.trim() === cur));
+    }
+    document.querySelectorAll('.emoji-opt').forEach(opt => {
+      opt.addEventListener('click', () => { emojiInput.value = opt.textContent.trim(); markSelected(); });
+    });
+    emojiInput.addEventListener('input', markSelected);
+    markSelected();
 
     // Back button — return to previous page
     const returnTo = new URLSearchParams(location.search).get('from') || '/home.html';
@@ -120,6 +150,7 @@
       localStorage.setItem('bf_name', name);
       localStorage.setItem('bf_lang', lang);
       localStorage.setItem('bf_emoji', emojiInput.value.trim());
+      localStorage.setItem('bf_phone', phoneInput.value.trim());
       savedMsg.textContent = '✓ נשמר';
       setTimeout(() => {
         savedMsg.textContent = '';
