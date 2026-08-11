@@ -428,7 +428,13 @@
         chip.innerHTML = `<span class="dot"></span>`
           + (emoji ? `<span class="chip-avatar">${emoji}</span>` : '')
           + `<span class="chip-label">${esc(shortName)}</span>`;
-        chip.addEventListener('click', () => showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`));
+        chip.addEventListener('click', () => {
+          showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`);
+          const utt = new SpeechSynthesisUtterance(name);
+          utt.lang = lang || 'he';
+          speechSynthesis.cancel();
+          speechSynthesis.speak(utt);
+        });
         bar.appendChild(chip);
 
         // panel row (expanded view)
