@@ -74,7 +74,8 @@
 </head>
 <body>
   <header>
-    <img class="logo" src="logo.png" alt="Babel Fish">
+    <img class="logo" src="logo.png" alt="עומדים ביחד">
+    <img class="logo" src="babel-fish.png" alt="Babel Fish">
     <div class="greeting" id="greeting"></div>
     <button class="settings-btn" onclick="location.href='/settings.html?from=/home.html'" title="הגדרות">⚙️</button>
   </header>
@@ -93,9 +94,11 @@
   </footer>
 
   <script>
-    const myName  = localStorage.getItem('bf_name')  || '';
-    const myEmoji = localStorage.getItem('bf_emoji') || '';
+    const myName   = localStorage.getItem('bf_name')    || '';
+    const myEmoji  = localStorage.getItem('bf_emoji')   || '';
+    const myUiLang = localStorage.getItem('bf_ui_lang') || localStorage.getItem('bf_lang') || 'he';
     if (!myName) { location.href = '/settings.html?from=/home.html'; }
+    if (myUiLang === 'ar') document.documentElement.setAttribute('lang', 'ar');
 
     document.getElementById('greeting').textContent =
       'שלום, ' + (myEmoji ? myEmoji + ' ' : '') + myName;

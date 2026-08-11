@@ -216,7 +216,7 @@
     <button id="members-toggle" onclick="toggleMembersBar()"><span id="members-count">0</span> ▾</button>
   </div>
   <div id="members-panel"></div>
-  <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
+  <div id="messages"><div class="empty" id="emptyMsg">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
 
   <div id="roomSettingsSheet" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeRoomSettings()">
     <div class="sheet" style="position:relative;">
@@ -239,10 +239,11 @@
   <script>
     const params  = new URLSearchParams(location.search);
     const roomId  = params.get('room');
-    const myName  = localStorage.getItem('bf_name')  || 'אנונימי';
-    const myLang  = localStorage.getItem('bf_lang')  || 'he';
-    const myEmoji = localStorage.getItem('bf_emoji') || '';
-    const myPhone = localStorage.getItem('bf_phone') || '';
+    const myName   = localStorage.getItem('bf_name')    || 'אנונימי';
+    const myLang   = localStorage.getItem('bf_lang')    || 'he';   // communication language
+    const myUiLang = localStorage.getItem('bf_ui_lang') || myLang; // UI language
+    const myEmoji  = localStorage.getItem('bf_emoji')   || '';
+    const myPhone  = localStorage.getItem('bf_phone')   || '';
 
     if (!roomId) { location.href = '/home.html'; }
     const isDM = roomId.startsWith('D') && roomId.length <= 7;
@@ -322,6 +323,19 @@
     }
 
     document.getElementById('langBadge').textContent = (myEmoji || '') + ' ' + (LANG_NAMES[myLang] || myLang);
+
+    // Apply UI language
+    const UI = {
+      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין\n<small>הקלד או לחץ והחזק לשליחה קולית</small>' },
+      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد\n<small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>' }
+    };
+    const ui = UI[myUiLang] || UI.he;
+    document.getElementById('textInput').placeholder = ui.placeholder;
+    if (myUiLang === 'ar') {
+      document.documentElement.setAttribute('lang', 'ar');
+      const emptyEl = document.getElementById('emptyMsg');
+      if (emptyEl) emptyEl.innerHTML = '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>';
+    }
     document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
 
     // ── Room code copy ─────────────────────────────────────────────────────

@@ -92,7 +92,7 @@
       <input id="phoneInput" type="tel" placeholder="05X-XXXXXXX" dir="ltr" style="text-align:left;">
     </div>
     <div class="field">
-      <label>שפה מועדפת</label>
+      <label>שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת</label>
       <select id="langSelect">
         <option value="ar">عربي</option>
         <option value="he">עברית</option>
@@ -105,18 +105,28 @@
         <option value="de">Deutsch</option>
       </select>
     </div>
+    <div class="field">
+      <label>שפת ממשק — שפת הכפתורים והתפריטים</label>
+      <select id="uiLangSelect">
+        <option value="he">עברית</option>
+        <option value="ar">العربية</option>
+      </select>
+      <small style="color:var(--muted);font-size:.72rem;">תרגום מלא של הממשק בקרוב</small>
+    </div>
     <button class="save-btn" onclick="save()">שמור</button>
     <p class="saved-msg" id="savedMsg"></p>
   </div>
 
   <script>
-    const nameInput = document.getElementById('nameInput');
-    const langSelect = document.getElementById('langSelect');
+    const nameInput   = document.getElementById('nameInput');
+    const langSelect  = document.getElementById('langSelect');
+    const uiLangSelect = document.getElementById('uiLangSelect');
     const savedMsg = document.getElementById('savedMsg');
 
     // Load current values
-    nameInput.value = localStorage.getItem('bf_name') || '';
-    langSelect.value = localStorage.getItem('bf_lang') || 'he';
+    nameInput.value    = localStorage.getItem('bf_name')    || '';
+    langSelect.value   = localStorage.getItem('bf_lang')    || 'he';
+    uiLangSelect.value = localStorage.getItem('bf_ui_lang') || localStorage.getItem('bf_lang') || 'he';
 
     // Phone
     const phoneInput = document.getElementById('phoneInput');
@@ -147,10 +157,11 @@
       const name = nameInput.value.trim();
       const lang = langSelect.value;
       if (!name) { nameInput.focus(); return; }
-      localStorage.setItem('bf_name', name);
-      localStorage.setItem('bf_lang', lang);
-      localStorage.setItem('bf_emoji', emojiInput.value.trim());
-      localStorage.setItem('bf_phone', phoneInput.value.trim());
+      localStorage.setItem('bf_name',    name);
+      localStorage.setItem('bf_lang',    lang);
+      localStorage.setItem('bf_ui_lang', uiLangSelect.value);
+      localStorage.setItem('bf_emoji',   emojiInput.value.trim());
+      localStorage.setItem('bf_phone',   phoneInput.value.trim());
       savedMsg.textContent = '✓ נשמר';
       setTimeout(() => {
         savedMsg.textContent = '';
