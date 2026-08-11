@@ -437,7 +437,10 @@
         chip.addEventListener('click', () => {
           showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`);
           const utt = new SpeechSynthesisUtterance(name);
-          utt.lang = lang || 'he';
+          // Detect script of the name itself — don't assume it matches the member's comm lang
+          if (/[؀-ۿ]/.test(name)) utt.lang = 'ar';
+          else if (/[֐-׿]/.test(name)) utt.lang = 'he';
+          else utt.lang = 'en';
           speechSynthesis.cancel();
           speechSynthesis.speak(utt);
         });
@@ -563,6 +566,9 @@
           const myAvatar = localStorage.getItem('bf_avatar') || '';
           if (myAvatar && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'set_avatar', avatar: myAvatar }));
+            // Update own entry locally (server doesn't echo back to sender)
+            const myEntry = allMembers.get(myName);
+            if (myEntry) { myEntry.avatar = myAvatar; renderMembers(); }
           }
           renderMembers();
         } else if (msg.type === 'member_joined') {
