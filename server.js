@@ -285,10 +285,14 @@ app.get('/api/dm', async (req, res) => {
 });
 
 // Translate a short name string (for room names only — lightweight prompt)
+// fromLang is optional — if omitted, GPT auto-detects source language
 async function translateRoomName(text, fromLang, toLang) {
-  if (!text || fromLang === toLang || !process.env.OPENAI_API_KEY) return text;
-  const fromName = LANG_NAMES[fromLang] || fromLang;
-  const toName   = LANG_NAMES[toLang]   || toLang;
+  if (!text || !process.env.OPENAI_API_KEY) return text;
+  if (fromLang && fromLang === toLang) return text;
+  const toName = LANG_NAMES[toLang] || toLang;
+  const systemPrompt = fromLang
+    ? `תרגם את שם הקבוצה הבא מ${LANG_NAMES[fromLang]||fromLang} ל${toName}. החזר רק את התרגום, ללא הסברים.`
+    : `תרגם את שם הקבוצה הבא ל${toName}. זהה את שפת המקור בעצמך. החזר רק את התרגום, ללא הסברים.`;
   try {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -296,7 +300,7 @@ async function translateRoomName(text, fromLang, toLang) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: `תרגם את שם הקבוצה הבא מ${fromName} ל${toName}. החזר רק את התרגום, ללא הסברים.` },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
         ],
         temperature: 0, max_tokens: 60
@@ -331,14 +335,62 @@ app.get('/api/rooms/:id', async (req, res) => {
   if (!SB_URL) return res.json({ id, name: id, messages: [] });
   try {
     const roomRows = await sbQuery('rooms', `id=eq.${id}&limit=1`);
-    const room = roomRows[0];
+    let room = roomRows[0];
     const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=4`)).reverse();
     const allMembers = await sbQuery('room_members', `room_id=eq.${id}&order=last_seen.desc`);
+
+    // Lazy backfill: translate names for existing rooms that don't have them yet
+    if (room && SB_URL && (!room.names || Object.keys(room.names).length === 0) && !id.startsWith('D')) {
+      const names = {};
+      await Promise.all(['he', 'ar', 'en'].map(async toLang => {
+        names[toLang] = await translateRoomName(room.name, null, toLang);
+      }));
+      fetch(`${SB_URL}/rest/v1/rooms?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ names })
+      }).catch(() => {});
+      room = { ...room, names };
+    }
+
     res.json({ id, name: room?.name || id, ...room, messages: messages || [], allMembers: allMembers || [] });
   } catch(e) {
     console.error('getRoom error:', e.message);
     res.json({ id, name: id, messages: [] });
   }
+});
+
+// Emoji reaction — toggle on/off
+app.post('/api/rooms/:id/messages/:msgId/react', express.json(), async (req, res) => {
+  const { id, msgId } = req.params;
+  const { emoji, name } = req.body;
+  if (!emoji || !name) return res.status(400).json({ error: 'Missing params' });
+
+  const msgs = await sbQuery('messages', `id=eq.${msgId}&select=reactions&limit=1`);
+  if (!msgs[0]) return res.status(404).json({ error: 'Not found' });
+
+  const reactions = msgs[0].reactions || {};
+  const users = reactions[emoji] || [];
+  if (users.includes(name)) {
+    reactions[emoji] = users.filter(u => u !== name);
+    if (!reactions[emoji].length) delete reactions[emoji];
+  } else {
+    reactions[emoji] = [...users, name];
+  }
+
+  if (SB_URL) {
+    await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msgId}`, {
+      method: 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ reactions })
+    }).catch(e => console.error('[reaction]', e.message));
+  }
+
+  const payload = JSON.stringify({ type: 'reaction_update', msg_id: msgId, reactions });
+  const roomWs = rooms.get(id);
+  if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+
+  res.json({ ok: true, reactions });
 });
 
 // Send text message

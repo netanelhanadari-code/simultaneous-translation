@@ -166,6 +166,25 @@
       font-size: .8rem; cursor: pointer; flex-shrink: 0;
     }
     .tts-toggle.on { border-color: var(--accent); color: var(--accent); }
+    .reactions { display: flex; flex-wrap: wrap; gap: .3rem; padding: .25rem .2rem 0; }
+    .reaction-chip {
+      background: var(--border); border-radius: 20px; padding: .15rem .5rem;
+      font-size: .82rem; cursor: pointer; display: flex; align-items: center; gap: .2rem;
+      border: 1px solid transparent; color: var(--text); transition: all .1s;
+    }
+    .reaction-chip.mine { border-color: var(--accent); background: rgba(139,47,201,.2); }
+    .reaction-chip:active { opacity: .8; }
+    .emoji-picker {
+      display: none; gap: .2rem; padding: .35rem .5rem; margin-top: .3rem;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.35);
+    }
+    .emoji-picker.open { display: flex; }
+    .emoji-pick-btn {
+      font-size: 1.3rem; cursor: pointer; padding: .2rem .25rem;
+      border-radius: 8px; background: none; border: none;
+    }
+    .emoji-pick-btn:hover, .emoji-pick-btn:active { background: var(--border); }
     .dm-badge {
       font-size: .7rem; background: var(--border); border-radius: 6px;
       padding: .15rem .45rem; color: var(--muted);
@@ -254,6 +273,43 @@
     let ttsOn = true;
     let latestMsgTs = null;
     const displayedIds = new Set();
+    const msgElements  = new Map(); // msgId → { reactionsEl, pickerEl }
+    const REACTION_EMOJIS = ['❤️','👍','😂','😢','🤯','🙏'];
+
+    function renderReactions(msgId, reactions) {
+      const el = msgElements.get(String(msgId));
+      if (!el) return;
+      el.reactionsEl.innerHTML = '';
+      Object.entries(reactions).forEach(([emoji, users]) => {
+        if (!users.length) return;
+        const chip = document.createElement('button');
+        chip.className = 'reaction-chip' + (users.includes(myName) ? ' mine' : '');
+        chip.innerHTML = `${emoji} <span>${users.length}</span>`;
+        chip.title = users.join(', ');
+        chip.addEventListener('click', () => sendReaction(msgId, emoji));
+        el.reactionsEl.appendChild(chip);
+      });
+    }
+
+    function togglePicker(msgId) {
+      const el = msgElements.get(String(msgId));
+      if (!el) return;
+      // close all others
+      msgElements.forEach((v, k) => { if (k !== String(msgId)) v.pickerEl.classList.remove('open'); });
+      el.pickerEl.classList.toggle('open');
+    }
+
+    async function sendReaction(msgId, emoji) {
+      const el = msgElements.get(String(msgId));
+      if (el) el.pickerEl.classList.remove('open');
+      try {
+        await fetch(`/api/rooms/${roomId}/messages/${msgId}/react`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emoji, name: myName })
+        });
+      } catch(e) { console.error('sendReaction:', e); }
+    }
     const activeMembers = new Map();  // name → {lang, emoji} — online only
     const allMembers    = new Map();  // name → {lang, emoji} — all known
 
@@ -409,6 +465,8 @@
         } else if (msg.type === 'member_left') {
           activeMembers.delete(msg.name);
           renderMembers();
+        } else if (msg.type === 'reaction_update') {
+          renderReactions(msg.msg_id, msg.reactions);
         } else if (msg.type === 'room_message') {
           document.querySelector('.empty')?.remove();
           addMessage(msg);
@@ -453,9 +511,32 @@
           <div style="display:flex;gap:.4rem;align-items:center;">
             <button class="icon-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
             ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
+            ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
           </div>
           <div class="bubble-time">${time}</div>
         </div>`;
+
+      // Reactions + picker
+      if (msg.id) {
+        const reactionsEl = document.createElement('div');
+        reactionsEl.className = 'reactions';
+        div.appendChild(reactionsEl);
+
+        const pickerEl = document.createElement('div');
+        pickerEl.className = 'emoji-picker';
+        REACTION_EMOJIS.forEach(em => {
+          const btn = document.createElement('button');
+          btn.className = 'emoji-pick-btn';
+          btn.textContent = em;
+          btn.addEventListener('click', e => { e.stopPropagation(); sendReaction(msg.id, em); });
+          pickerEl.appendChild(btn);
+        });
+        div.appendChild(pickerEl);
+
+        msgElements.set(String(msg.id), { reactionsEl, pickerEl });
+        if (msg.reactions && Object.keys(msg.reactions).length) renderReactions(msg.id, msg.reactions);
+      }
+
       document.getElementById('messages').appendChild(div);
     }
 
