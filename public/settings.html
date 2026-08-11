@@ -46,6 +46,19 @@
     }
     .save-btn:active { opacity: .85; }
     .saved-msg { text-align: center; color: #7fc47f; font-size: .85rem; min-height: 1.2em; }
+    .emoji-grid {
+      display: flex; flex-wrap: wrap; gap: .4rem; padding: .4rem 0;
+    }
+    .emoji-opt {
+      font-size: 1.5rem; cursor: pointer; border-radius: 8px;
+      padding: .2rem .3rem; border: 2px solid transparent;
+      transition: border-color .1s;
+    }
+    .emoji-opt.selected { border-color: var(--accent); background: rgba(139,47,201,.15); }
+    .emoji-clear {
+      font-size: .8rem; color: var(--muted); cursor: pointer;
+      text-decoration: underline; align-self: center;
+    }
   </style>
 </head>
 <body>
@@ -58,6 +71,11 @@
     <div class="field">
       <label>שם</label>
       <input id="nameInput" type="text" placeholder="שמך" maxlength="30" autocomplete="name">
+    </div>
+    <div class="field">
+      <label>אימוג'י (אופציונלי — יופיע במקום שמך)</label>
+      <div class="emoji-grid" id="emojiGrid"></div>
+      <span class="emoji-clear" onclick="clearEmoji()">ללא אימוג'י</span>
     </div>
     <div class="field">
       <label>שפה מועדפת</label>
@@ -86,6 +104,25 @@
     nameInput.value = localStorage.getItem('bf_name') || '';
     langSelect.value = localStorage.getItem('bf_lang') || 'he';
 
+    // Emoji picker
+    const EMOJIS = ['😊','😄','😎','🤓','🙂','😇','🤗','💪','🌟','🔥','🌈','🎵','🌺','🦁','🐬','🦋','🌙','⚡','🎯','✌️','🕊️','🌿','🧡','💜','❤️','🤝','🌍','✡️','☪️','🕌','🕍'];
+    let selectedEmoji = localStorage.getItem('bf_emoji') || '';
+    const grid = document.getElementById('emojiGrid');
+    EMOJIS.forEach(em => {
+      const btn = document.createElement('span');
+      btn.className = 'emoji-opt' + (em === selectedEmoji ? ' selected' : '');
+      btn.textContent = em;
+      btn.onclick = () => {
+        selectedEmoji = em;
+        grid.querySelectorAll('.emoji-opt').forEach(b => b.classList.toggle('selected', b.textContent === em));
+      };
+      grid.appendChild(btn);
+    });
+    function clearEmoji() {
+      selectedEmoji = '';
+      grid.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
+    }
+
     // Back button — return to previous page
     const returnTo = new URLSearchParams(location.search).get('from') || '/home.html';
     document.getElementById('backBtn').onclick = () => location.href = returnTo;
@@ -96,6 +133,7 @@
       if (!name) { nameInput.focus(); return; }
       localStorage.setItem('bf_name', name);
       localStorage.setItem('bf_lang', lang);
+      localStorage.setItem('bf_emoji', selectedEmoji);
       savedMsg.textContent = '✓ נשמר';
       setTimeout(() => {
         savedMsg.textContent = '';

@@ -166,7 +166,7 @@
       if (!name) { errEl.textContent = 'הכנס שם'; nameEl.focus(); return null; }
       localStorage.setItem('bf_name', name);
       localStorage.setItem('bf_lang', lang);
-      return { name, lang };
+      return { name, lang, emoji: localStorage.getItem('bf_emoji') || '' };
     }
 
     async function createRoom() {

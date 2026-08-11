@@ -283,10 +283,60 @@ app.get('/api/rooms/:id', async (req, res) => {
   }
 });
 
+// Send text message
+app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
+  const { id } = req.params;
+  const { sender_name, sender_emoji, sender_lang, text } = req.body;
+  if (!text?.trim()) return res.status(400).json({ error: 'No text' });
+  const original_text = text.trim();
+  const detected_lang = sender_lang || 'he';
+
+  const roomWs = rooms.get(id);
+  const memberLangs = new Set(['he', 'ar', detected_lang]);
+  if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
+
+  const translations = { [detected_lang]: original_text };
+  const targetLangs = [...memberLangs].filter(l => l !== detected_lang);
+  await Promise.all(targetLangs.map(async lang => {
+    const fromName = LANG_NAMES[detected_lang] || detected_lang;
+    const toName   = LANG_NAMES[lang] || lang;
+    const systemPrompt = `תרגם מ${fromName} ל${toName} בלבד. הפלט חייב להיות ב${toName} בלבד.\n\n` + TRANSLATION_SYSTEM_PROMPT;
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: `[${fromName}→${toName}]\n<text>\n${original_text}\n</text>` }],
+          temperature: 0, max_tokens: 250, frequency_penalty: 1.5, presence_penalty: 0.5
+        })
+      });
+      const d = await r.json();
+      let t = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
+      if (t && lang === 'he') t = t.replace(/[؀-ۿ]/g, '');
+      if (t && lang === 'ar') t = t.replace(/[א-ת]/g, '');
+      if (t && t.length > 0 && t.length <= original_text.length * 4 + 200) translations[lang] = t;
+    } catch(e) {}
+  }));
+
+  const msgId = Date.now().toString();
+  const msgCreatedAt = new Date().toISOString();
+  const payload = JSON.stringify({
+    type: 'room_message', id: msgId, sender_name, sender_emoji,
+    sender_lang: detected_lang, original_text, translations, created_at: msgCreatedAt
+  });
+  if (roomWs?.members) {
+    roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  }
+  res.json({ ok: true, id: msgId });
+  sbInsert('messages', { room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations })
+    .catch(e => console.error('[db] save failed:', e.message));
+});
+
 // Send voice message
 app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   const { id } = req.params;
-  const { sender_name, sender_lang } = req.body;
+  const { sender_name, sender_emoji, sender_lang } = req.body;
   if (!req.file) return res.status(400).json({ error: 'No audio' });
   if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'No API key' });
 
@@ -355,7 +405,7 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   const msgId = Date.now().toString();
   const msgCreatedAt = new Date().toISOString();
   const payload = JSON.stringify({
-    type: 'room_message', id: msgId, sender_name,
+    type: 'room_message', id: msgId, sender_name, sender_emoji,
     sender_lang: detected_lang, original_text, translations, created_at: msgCreatedAt
   });
   if (roomWs?.members) {
@@ -365,7 +415,7 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
 
   // 5. Save to DB in background (non-blocking)
   sbInsert('messages', {
-    room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
+    room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations
   }).catch(e => console.error('[db] save failed:', e.message));
 });
 
@@ -455,25 +505,25 @@ wss.on('connection', (ws, req) => {
     send(ws, { type: 'ready', count: room.listeners.size });
 
   } else if (role === 'member') {
-    const name = params.get('name') || 'אנונימי';
+    const name  = params.get('name')  || 'אנונימי';
     const lang  = params.get('lang')  || 'he';
+    const emoji = params.get('emoji') || '';
     if (!room.members) room.members = new Map();
-    room.members.set(ws, { name, lang });
+    room.members.set(ws, { name, lang, emoji });
     console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
 
     // Send current member list to newcomer
-    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang }));
+    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji }));
     send(ws, { type: 'joined', room: roomId, members: memberList });
 
     // Notify others that someone joined
     room.members.forEach((m, w) => {
-      if (w !== ws) send(w, { type: 'member_joined', name, lang });
+      if (w !== ws) send(w, { type: 'member_joined', name, lang, emoji });
     });
 
     ws.on('close', () => {
       if (room.members) room.members.delete(ws);
       console.log('[-] Member   room=' + roomId + ' name=' + name);
-      // Notify others that someone left
       if (room.members) {
         room.members.forEach((m, w) => send(w, { type: 'member_left', name }));
       }

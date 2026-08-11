@@ -39,53 +39,30 @@
       display: flex; flex-direction: column; gap: .65rem;
     }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; margin: auto; }
-    .bubble {
-      max-width: 80%; display: flex; flex-direction: column; gap: .18rem;
-    }
-    .bubble.mine { align-self: flex-start; }
+    .bubble { max-width: 82%; display: flex; flex-direction: column; gap: .18rem; }
+    .bubble.mine  { align-self: flex-start; }
     .bubble.other { align-self: flex-end; }
-    .bubble-inner {
-      padding: .55rem .85rem; border-radius: 12px; line-height: 1.5;
-    }
+    .bubble-inner { padding: .55rem .85rem; border-radius: 12px; line-height: 1.5; }
     .bubble.mine  .bubble-inner { background: var(--accent2); border-radius: 12px 4px 12px 12px; }
     .bubble.other .bubble-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
-    .bubble-sender { font-size: .7rem; color: var(--muted); padding: 0 .2rem; }
+    .bubble-sender { font-size: .7rem; color: var(--muted); padding: 0 .2rem; display: flex; align-items: center; gap: .3rem; }
+    .bubble-sender .avatar { font-size: 1rem; }
     .bubble-text { font-size: .95rem; }
-    .bubble-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 .2rem; }
+    .bubble-original {
+      font-size: .75rem; color: var(--muted); margin-top: .3rem;
+      padding-top: .3rem; border-top: 1px solid rgba(255,255,255,.08);
+      display: none;
+    }
+    .bubble-original.visible { display: block; }
+    .bubble-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 .2rem; gap: .4rem; }
     .bubble-time { font-size: .67rem; color: var(--muted); }
-    .speak-btn {
+    .icon-btn {
       background: none; border: none; cursor: pointer;
       color: var(--muted); font-size: .8rem; padding: 0; line-height: 1;
     }
-    .speak-btn:active { color: var(--text); }
-    footer {
-      background: var(--surface); border-top: 1px solid var(--border);
-      padding: .9rem 1rem; display: flex; align-items: center;
-      justify-content: center; gap: 1rem; flex-shrink: 0;
-    }
-    #recordBtn {
-      width: 62px; height: 62px; border-radius: 50%;
-      background: var(--accent); border: 3px solid rgba(255,255,255,.15);
-      cursor: pointer; font-size: 1.5rem;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform .1s, background .15s;
-      -webkit-user-select: none; user-select: none; touch-action: none;
-    }
-    #recordBtn.recording {
-      background: #c0392b; transform: scale(1.1);
-      animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-      0%,100% { box-shadow: 0 0 0 5px rgba(192,57,43,.3); }
-      50%      { box-shadow: 0 0 0 12px rgba(192,57,43,.1); }
-    }
-    #status { color: var(--muted); font-size: .82rem; min-width: 70px; text-align: center; }
-    .tts-toggle {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--muted); border-radius: 8px; padding: .35rem .65rem;
-      font-size: .8rem; cursor: pointer;
-    }
-    .tts-toggle.on { border-color: var(--accent); color: var(--accent); }
+    .icon-btn:active { color: var(--text); }
+
+    /* Members bar */
     #members-bar {
       background: var(--surface); border-bottom: 1px solid var(--border);
       padding: .35rem 1rem; display: flex; gap: .5rem; flex-wrap: wrap;
@@ -94,10 +71,64 @@
     .member-chip {
       background: var(--border); border-radius: 20px;
       padding: .2rem .6rem; font-size: .72rem; color: var(--muted);
-      display: flex; align-items: center; gap: .3rem;
+      display: flex; align-items: center; gap: .3rem; cursor: default;
+      position: relative;
     }
     .member-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; }
     .member-chip.me { background: var(--accent2); border: 1px solid var(--accent); color: var(--text); font-weight: 600; }
+    .member-chip .chip-avatar { font-size: 1rem; }
+    .member-chip .chip-name {
+      position: absolute; bottom: calc(100% + 4px); right: 50%; transform: translateX(50%);
+      background: #333; color: #fff; font-size: .7rem; border-radius: 5px;
+      padding: .15rem .4rem; white-space: nowrap; display: none; pointer-events: none; z-index: 10;
+    }
+    .member-chip:hover .chip-name { display: block; }
+
+    /* Footer / input area */
+    footer {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: .6rem .8rem; display: flex; align-items: center;
+      gap: .6rem; flex-shrink: 0;
+    }
+    #textInput {
+      flex: 1; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: .55rem 1rem; font-size: .95rem; outline: none;
+      font-family: inherit; resize: none; max-height: 100px;
+      direction: auto;
+    }
+    #textInput:focus { border-color: var(--accent); }
+    #textInput::placeholder { color: var(--muted); }
+    #sendBtn {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--accent); border: none; cursor: pointer;
+      font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: opacity .15s;
+    }
+    #sendBtn:disabled { opacity: .4; cursor: default; }
+    #recordBtn {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--border); border: 2px solid rgba(255,255,255,.1);
+      cursor: pointer; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .1s, background .15s;
+      -webkit-user-select: none; user-select: none; touch-action: none; flex-shrink: 0;
+    }
+    #recordBtn.recording {
+      background: #c0392b; transform: scale(1.1);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 4px rgba(192,57,43,.3); }
+      50%      { box-shadow: 0 0 0 9px rgba(192,57,43,.1); }
+    }
+    #status { color: var(--muted); font-size: .75rem; min-width: 50px; text-align: center; flex-shrink: 0; }
+    .tts-toggle {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 20px; padding: .35rem .6rem;
+      font-size: .8rem; cursor: pointer; flex-shrink: 0;
+    }
+    .tts-toggle.on { border-color: var(--accent); color: var(--accent); }
   </style>
 </head>
 <body>
@@ -112,10 +143,12 @@
   </header>
 
   <div id="members-bar"></div>
-  <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>לחץ והחזק את הכפתור כדי לשלוח הודעה קולית</small></div></div>
+  <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
 
   <footer>
     <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()">🔊 קול</button>
+    <textarea id="textInput" rows="1" placeholder="הקלד הודעה..."></textarea>
+    <button id="sendBtn" onclick="sendText()" disabled>➤</button>
     <button id="recordBtn">🎤</button>
     <div id="status"></div>
   </footer>
@@ -123,8 +156,9 @@
   <script>
     const params  = new URLSearchParams(location.search);
     const roomId  = params.get('room');
-    const myName  = localStorage.getItem('bf_name') || 'אנונימי';
-    const myLang  = localStorage.getItem('bf_lang') || 'he';
+    const myName  = localStorage.getItem('bf_name')  || 'אנונימי';
+    const myLang  = localStorage.getItem('bf_lang')  || 'he';
+    const myEmoji = localStorage.getItem('bf_emoji') || '';
 
     if (!roomId) { location.href = '/home.html'; }
 
@@ -133,20 +167,22 @@
 
     let ttsOn = true;
     const displayedIds = new Set();
-    const activeMembers = new Map(); // name → lang
+    const activeMembers = new Map(); // name → {lang, emoji}
 
+    // ── Member chip ────────────────────────────────────────────────────────
     function renderMembers() {
       const bar = document.getElementById('members-bar');
       bar.innerHTML = '';
-      activeMembers.forEach((lang, name) => {
+      activeMembers.forEach(({ lang, emoji }, name) => {
         const chip = document.createElement('div');
         chip.className = 'member-chip' + (name === myName ? ' me' : '');
-        chip.innerHTML = `<span class="dot"></span>${esc(name)} <span style="opacity:.6">${LANG_NAMES[lang]||lang}</span>`;
+        const display = emoji || name.charAt(0);
+        chip.innerHTML = `<span class="dot"></span><span class="chip-avatar">${emoji ? emoji : esc(display)}</span><span class="chip-name">${esc(name)} · ${LANG_NAMES[lang]||lang}</span>`;
         bar.appendChild(chip);
       });
     }
 
-    document.getElementById('langBadge').textContent = LANG_NAMES[myLang] || myLang;
+    document.getElementById('langBadge').textContent = (myEmoji || '') + ' ' + (LANG_NAMES[myLang] || myLang);
     document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
 
     // ── Room code copy ─────────────────────────────────────────────────────
@@ -186,16 +222,16 @@
 
     function connectWS() {
       ws = new WebSocket(
-        `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}`
+        `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}&emoji=${encodeURIComponent(myEmoji)}`
       );
       ws.onmessage = e => {
         const msg = JSON.parse(e.data);
         if (msg.type === 'joined') {
           activeMembers.clear();
-          (msg.members || []).forEach(m => activeMembers.set(m.name, m.lang));
+          (msg.members || []).forEach(m => activeMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' }));
           renderMembers();
         } else if (msg.type === 'member_joined') {
-          activeMembers.set(msg.name, msg.lang);
+          activeMembers.set(msg.name, { lang: msg.lang, emoji: msg.emoji || '' });
           renderMembers();
         } else if (msg.type === 'member_left') {
           activeMembers.delete(msg.name);
@@ -222,37 +258,51 @@
       if (msg.id && displayedIds.has(String(msg.id))) return;
       if (msg.id) displayedIds.add(String(msg.id));
       const isMine = msg.sender_name === myName;
-      const text = msg.translations?.[myLang] || msg.original_text || '';
-      console.log(`[msg] myLang=${myLang} keys=${JSON.stringify(Object.keys(msg.translations||{}))} showing="${text?.slice(0,30)}"`);
+      const translated = msg.translations?.[myLang] || msg.original_text || '';
+      const original  = msg.original_text || '';
+      const showOrig  = translated !== original && original;
       const time = msg.created_at
         ? new Date(msg.created_at).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
         : '';
+      const senderEmoji = msg.sender_emoji || '';
       const div = document.createElement('div');
       div.className = 'bubble ' + (isMine ? 'mine' : 'other');
       div.innerHTML =
-        (!isMine ? `<div class="bubble-sender">${esc(msg.sender_name)}</div>` : '') +
-        `<div class="bubble-inner"><div class="bubble-text">${esc(text)}</div></div>` +
+        (!isMine
+          ? `<div class="bubble-sender">${senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : ''}${esc(msg.sender_name)}</div>`
+          : '') +
+        `<div class="bubble-inner">
+          <div class="bubble-text">${esc(translated)}</div>
+          ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
+        </div>` +
         `<div class="bubble-footer">
-          <button class="speak-btn" data-text="${encodeURIComponent(text)}" data-lang="${myLang}" onclick="speakBtn(this)">🔊</button>
+          <div style="display:flex;gap:.4rem;align-items:center;">
+            <button class="icon-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
+            ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
+          </div>
           <div class="bubble-time">${time}</div>
         </div>`;
       document.getElementById('messages').appendChild(div);
     }
 
-    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function toggleOrig(btn) {
+      const orig = btn.closest('.bubble-inner')?.querySelector('.bubble-original');
+      if (orig) orig.classList.toggle('visible');
+    }
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
 
     // ── TTS ────────────────────────────────────────────────────────────────
     let _voices = [];
-    function loadVoices() { _voices = window.speechSynthesis.getVoices(); }
+    function loadVoices() { _voices = window.speechSynthesis?.getVoices() || []; }
     if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
       loadVoices();
     }
     function getBestVoice(bcp47) {
       if (!_voices.length) _voices = window.speechSynthesis?.getVoices() || [];
-      const lang = bcp47.toLowerCase();
-      const prefix = lang.split('-')[0];
+      const lang = bcp47.toLowerCase(), prefix = lang.split('-')[0];
       return _voices.find(v => v.lang.toLowerCase() === lang)
           || _voices.find(v => v.lang.toLowerCase().startsWith(prefix + '-'))
           || _voices.find(v => v.lang.toLowerCase().startsWith(prefix))
@@ -276,6 +326,34 @@
       if (!ttsOn) window.speechSynthesis?.cancel();
     }
 
+    // ── Text input ─────────────────────────────────────────────────────────
+    const textInput = document.getElementById('textInput');
+    const sendBtn   = document.getElementById('sendBtn');
+
+    textInput.addEventListener('input', () => {
+      sendBtn.disabled = !textInput.value.trim();
+      textInput.style.height = 'auto';
+      textInput.style.height = Math.min(textInput.scrollHeight, 100) + 'px';
+    });
+    textInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
+    });
+
+    async function sendText() {
+      const text = textInput.value.trim();
+      if (!text) return;
+      textInput.value = '';
+      textInput.style.height = 'auto';
+      sendBtn.disabled = true;
+      try {
+        await fetch('/api/rooms/' + roomId + '/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: myLang, text })
+        });
+      } catch(e) { console.error('sendText:', e); }
+    }
+
     // ── Recording ──────────────────────────────────────────────────────────
     let mediaRecorder, audioChunks = [], stream, recordStart, shouldSend = false;
     const recordBtn = document.getElementById('recordBtn');
@@ -286,7 +364,7 @@
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: {
           echoCancellation: true, noiseSuppression: true, autoGainControl: false
-        } });
+        }});
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
         shouldSend = true;
@@ -305,7 +383,7 @@
 
     function stopRec() {
       if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-      if (Date.now() - recordStart < 600) shouldSend = false; // too short
+      if (Date.now() - recordStart < 600) shouldSend = false;
       mediaRecorder.stop();
       stream?.getTracks().forEach(t => t.stop());
       recordBtn.classList.remove('recording');
@@ -320,6 +398,7 @@
       const form = new FormData();
       form.append('audio', blob, 'audio.webm');
       form.append('sender_name', myName);
+      form.append('sender_emoji', myEmoji);
       form.append('sender_lang', myLang);
       try {
         await fetch('/api/rooms/' + roomId + '/message', { method: 'POST', body: form });
