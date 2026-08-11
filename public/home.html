@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Babel Fish</title>
+  <title>Babel Fish | עומדים ביחד | نقف معاً</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,8 +22,7 @@
       transition: opacity .5s ease;
     }
     #splash.hidden { opacity: 0; pointer-events: none; }
-    #splash img { width: min(180px, 55vw); object-fit: contain; }
-    #splash .tagline { color: #9b7fc4; font-size: .9rem; letter-spacing: .05em; }
+    #splash img { width: min(220px, 62vw); object-fit: contain; }
 
     :root {
       --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
@@ -95,7 +94,6 @@
   <div id="splash">
     <img src="logo.png" alt="עומדים ביחד">
     <img src="babel-fish.png" alt="Babel Fish">
-    <span class="tagline">תרגום בזמן אמת</span>
   </div>
 
   <header>
@@ -234,7 +232,7 @@
       const splash = document.getElementById('splash');
       splash.classList.add('hidden');
       setTimeout(() => splash.remove(), 500);
-    }, 1400);
+    }, 2200);
   </script>
 </body>
 </html>

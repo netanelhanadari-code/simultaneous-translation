@@ -3,10 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>תרגום סימולטני – עומדים ביחד</title>
+  <title>תרגום סימולטני | עומדים ביחד | نقف معاً</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    #splash { position:fixed;inset:0;z-index:999;background:#12082a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;transition:opacity .5s ease; }
+    #splash.hidden { opacity:0;pointer-events:none; }
+    #splash img { width:min(220px,62vw);object-fit:contain; }
+    #langSwitcher { position:fixed;top:.75rem;left:.75rem;z-index:200; }
+    #langSwitcher button { background:rgba(30,15,58,.85);border:1px solid #3d1f6b;color:#9b7fc4;border-radius:8px;padding:.35rem .7rem;font-size:.95rem;cursor:pointer; }
+    #langSwitcher button:hover { color:#f0e8ff;border-color:#8B2FC9; }
+    #langMenu { display:none;position:absolute;top:110%;left:0;background:#1e0f3a;border:1px solid #3d1f6b;border-radius:10px;overflow:hidden;min-width:110px; }
+    #langMenu.open { display:block; }
+    #langMenu button { display:block;width:100%;background:none;border:none;color:#f0e8ff;padding:.55rem .9rem;text-align:right;cursor:pointer;font-size:.9rem; }
+    #langMenu button:hover { background:#3d1f6b; }
 
     :root {
       --bg:      #12082a;
@@ -145,17 +155,31 @@
 </head>
 <body>
 
+  <div id="langSwitcher">
+    <button onclick="document.getElementById('langMenu').classList.toggle('open')">🌐</button>
+    <div id="langMenu">
+      <button onclick="switchLang('he')">עברית</button>
+      <button onclick="switchLang('ar')">العربية</button>
+      <button onclick="switchLang('en')">English</button>
+    </div>
+  </div>
+
+  <div id="splash">
+    <img src="logo.png" alt="עומדים ביחד">
+    <img src="babel-fish.png" alt="Babel Fish">
+  </div>
+
   <div style="display:flex;align-items:center;gap:1rem;justify-content:center;">
     <img src="logo.png" class="logo" alt="עומדים ביחד">
     <img src="babel-fish.png" style="height:56px;object-fit:contain;" alt="Babel Fish">
   </div>
-  <h1>🎙️ תרגום סימולטני — משדר</h1>
+  <h1 id="pageTitle">🎙️ תרגום סימולטני — משדר</h1>
 
   <div class="tabs">
     <button class="tab active" id="tabHuman" onclick="setMode('human')">🎙️ מתרגם אנושי</button>
     <button class="tab"        id="tabAI"    onclick="setMode('ai')">🤖 תרגום AI</button>
   </div>
-  <a href="/recorder.html" style="display:block;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:.55rem 1.5rem;font-size:.9rem;text-decoration:none;text-align:center;">🔧 כלים</a>
+  <a id="toolsLink" href="/recorder.html" style="display:block;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:.55rem 1.5rem;font-size:.9rem;text-decoration:none;text-align:center;">🔧 כלים</a>
 
   <div class="pill">
     <div class="dot" id="dot"></div>
@@ -169,7 +193,7 @@
 
   <div class="ai-section hidden" id="aiSection">
     <div class="lang-row">
-      <label>שפת הדובר:</label>
+      <label id="srcLangLabel">שפת הדובר:</label>
       <select id="srcLang">
         <option value="he-IL|he">עברית</option>
         <option value="ar|ar">العربية</option>
@@ -186,17 +210,17 @@
   </div>
 
   <div class="transcript-box hidden" id="transcriptBox">
-    <div class="transcript-label">מזהה דיבור:</div>
+    <div class="transcript-label" id="transcriptLabel">מזהה דיבור:</div>
     <div class="transcript-text" id="origTxt">—</div>
   </div>
 
   <div class="counter-wrap">
     <div class="counter-num" id="count">0</div>
-    <div class="counter-lbl">מאזינים מחוברים</div>
+    <div class="counter-lbl" id="counterLbl">מאזינים מחוברים</div>
   </div>
 
   <div class="share-box">
-    <div class="share-title">שתף עם הקהל:</div>
+    <div class="share-title" id="shareTitle">שתף עם הקהל:</div>
     <div class="room-code" id="roomCodeDisplay"></div>
     <div id="qrcode"></div>
     <div class="url-row">
@@ -208,16 +232,55 @@
   <div class="error hidden" id="errMsg"></div>
 
   <div id="sessionWarning" class="hidden" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#7c2d12;color:#fff;border-radius:12px;padding:1rem 1.5rem;text-align:center;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:320px;width:90%;">
-    <div style="font-size:.95rem;margin-bottom:.75rem;">⏱ השידור פעיל כבר <strong>3 שעות</strong>.<br>להמשיך?</div>
+    <div id="sessionWarnTxt" style="font-size:.95rem;margin-bottom:.75rem;">⏱ השידור פעיל כבר <strong>3 שעות</strong>.<br>להמשיך?</div>
     <div style="display:flex;gap:.75rem;justify-content:center;">
-      <button onclick="continueSession()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-size:.9rem;cursor:pointer;">המשך</button>
-      <button onclick="stopAI()" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-size:.9rem;cursor:pointer;">עצור</button>
+      <button id="continueBtn" onclick="continueSession()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-size:.9rem;cursor:pointer;">המשך</button>
+      <button id="stopBtn" onclick="stopAI()" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-size:.9rem;cursor:pointer;">עצור</button>
     </div>
   </div>
 
   <div class="version">v0.6</div>
 
   <script>
+    // Splash
+    setTimeout(() => { const s=document.getElementById('splash'); s.classList.add('hidden'); setTimeout(()=>s.remove(),500); }, 2200);
+
+    // ── Localization ──────────────────────────────────────────────────────────
+    function switchLang(lang) {
+      localStorage.setItem('bf_bc_lang', lang);
+      document.getElementById('langMenu').classList.remove('open');
+      applyLang(lang);
+    }
+    function applyLang(lang) {
+      if (lang === 'ar') { document.documentElement.setAttribute('dir','rtl'); document.documentElement.setAttribute('lang','ar'); }
+      else if (lang === 'en') { document.documentElement.setAttribute('dir','ltr'); document.documentElement.setAttribute('lang','en'); }
+      else { document.documentElement.setAttribute('dir','rtl'); document.documentElement.setAttribute('lang','he'); }
+      const BT = BL[lang] || BL.he;
+      document.getElementById('pageTitle').textContent       = BT.title;
+      document.getElementById('tabHuman').textContent        = BT.tabHuman;
+      document.getElementById('tabAI').textContent           = BT.tabAI;
+      document.getElementById('toolsLink').textContent       = BT.tools;
+      document.getElementById('statusTxt').textContent       = (window._BT||BL.he).connected;
+      document.getElementById('btnLabel').textContent        = (window._BT||BL.he).startBroadcast;
+      document.getElementById('srcLangLabel').textContent    = BT.srcLang;
+      document.getElementById('aiBtn').textContent           = (window._BT||BL.he).startAI;
+      document.getElementById('transcriptLabel').textContent = BT.transcript;
+      document.getElementById('counterLbl').textContent      = BT.listeners;
+      document.getElementById('shareTitle').textContent      = BT.share;
+      document.getElementById('copyBtn').textContent         = (window._BT||BL.he).copy;
+      document.getElementById('sessionWarnTxt').innerHTML    = BT.sessionWarn;
+      document.getElementById('continueBtn').textContent     = BT.continueBtn;
+      document.getElementById('stopBtn').textContent         = BT.stopBtn;
+      window._BT = BT; // make available to dynamic JS
+    }
+    const myUiLang = localStorage.getItem('bf_bc_lang') || localStorage.getItem('bf_ui_lang') || 'he';
+    const BL = {
+      he: { title:'🎙️ תרגום סימולטני — משדר', tabHuman:'🎙️ מתרגם אנושי', tabAI:'🤖 תרגום AI', tools:'🔧 כלים', connected:'מחובר לשרת', startBroadcast:'לחץ להתחיל שידור', stopBroadcast:'לחץ לעצור שידור', broadcastingNow:'● משדר עכשיו', aiActive:'● תרגום AI פעיל', srcLang:'שפת הדובר:', startAI:'▶ התחל תרגום AI', stopAI:'⏹ עצור תרגום AI', transcript:'מזהה דיבור:', listeners:'מאזינים מחוברים', share:'שתף עם הקהל:', copy:'העתק', copied:'✓ הועתק', sessionWarn:'⏱ השידור פעיל כבר <strong>3 שעות</strong>.<br>להמשיך?', continueBtn:'המשך', stopBtn:'עצור', autoStop:'השידור הופסק אוטומטית אחרי 3 שעות' },
+      ar: { title:'🎙️ ترجمة فورية — المذيع', tabHuman:'🎙️ مترجم بشري', tabAI:'🤖 ترجمة AI', tools:'🔧 أدوات', connected:'متصل بالخادم', startBroadcast:'اضغط لبدء البث', stopBroadcast:'اضغط لإيقاف البث', broadcastingNow:'● يبث الآن', aiActive:'● ترجمة AI نشطة', srcLang:'لغة المتحدث:', startAI:'▶ بدء ترجمة AI', stopAI:'⏹ إيقاف ترجمة AI', transcript:'التعرف على الكلام:', listeners:'مستمعون متصلون', share:'شارك مع الجمهور:', copy:'نسخ', copied:'✓ تم النسخ', sessionWarn:'⏱ البث نشط منذ <strong>3 ساعات</strong>.<br>هل تريد المتابعة?', continueBtn:'متابعة', stopBtn:'إيقاف', autoStop:'تم إيقاف البث تلقائياً بعد 3 ساعات' },
+      en: { title:'🎙️ Simultaneous Translation — Broadcaster', tabHuman:'🎙️ Human Translator', tabAI:'🤖 AI Translation', tools:'🔧 Tools', connected:'Connected to server', startBroadcast:'Press to start broadcasting', stopBroadcast:'Press to stop broadcasting', broadcastingNow:'● Broadcasting now', aiActive:'● AI translation active', srcLang:'Speaker language:', startAI:'▶ Start AI translation', stopAI:'⏹ Stop AI translation', transcript:'Speech recognition:', listeners:'Connected listeners', share:'Share with audience:', copy:'Copy', copied:'✓ Copied', sessionWarn:'⏱ Broadcast has been active for <strong>3 hours</strong>.<br>Continue?', continueBtn:'Continue', stopBtn:'Stop', autoStop:'Broadcast stopped automatically after 3 hours' },
+    };
+    applyLang(myUiLang);
+
     // ── Room ID ───────────────────────────────────────────────────────────────
     function generateRoomId() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -248,7 +311,7 @@
       navigator.clipboard.writeText(listenerUrl).then(() => {
         const b = document.getElementById('copyBtn');
         b.textContent = '✓ הועתק';
-        setTimeout(() => b.textContent = 'העתק', 2200);
+        setTimeout(() => b.textContent = (window._BT||BL.he).copy, 2200);
       });
     }
 
@@ -473,7 +536,7 @@
 
       recognition.start();
       aiOn = true;
-      document.getElementById('aiBtn').textContent = '⏹ עצור תרגום AI';
+      document.getElementById('aiBtn').textContent = (window._BT||BL.he).stopAI;
       document.getElementById('aiBtn').classList.add('on');
       document.getElementById('transcriptBox').classList.remove('hidden');
       renderStatus(true); requestWakeLock();
@@ -510,7 +573,7 @@
       };
       whisperRecorder.start(8000); // send every 8 seconds
       aiOn = true;
-      document.getElementById('aiBtn').textContent = '⏹ עצור תרגום AI';
+      document.getElementById('aiBtn').textContent = (window._BT||BL.he).stopAI;
       document.getElementById('aiBtn').classList.add('on');
       document.getElementById('transcriptBox').classList.remove('hidden');
       renderStatus(true); requestWakeLock();
@@ -535,7 +598,7 @@
       sessionWarningTimer = setTimeout(() => {
         banner.classList.add('hidden');
         stopAI();
-        showErr('השידור הופסק אוטומטית אחרי 3 שעות');
+        showErr((window._BT||BL.he).autoStop);
       }, WARNING_TIMEOUT_MS);
     }
 
@@ -552,7 +615,7 @@
       if (whisperStream)   { whisperStream.getTracks().forEach(t => t.stop()); whisperStream = null; }
       recognition && recognition.stop(); recognition = null;
       aiOn = false; releaseWakeLock();
-      document.getElementById('aiBtn').textContent = '▶ התחל תרגום AI';
+      document.getElementById('aiBtn').textContent = (window._BT||BL.he).startAI;
       document.getElementById('aiBtn').classList.remove('on');
       document.getElementById('transcriptBox').classList.add('hidden');
       renderStatus(false);
@@ -567,10 +630,10 @@
       if (currentMode === 'human') {
         btn.textContent = active ? '⏹' : '🎙️';
         btn.classList.toggle('on', active);
-        lbl.textContent = active ? 'לחץ לעצור שידור' : 'לחץ להתחיל שידור';
-        st.textContent  = active ? '● משדר עכשיו' : 'מחובר לשרת';
+        lbl.textContent = active ? (window._BT||BL.he).stopBroadcast : (window._BT||BL.he).startBroadcast;
+        st.textContent  = active ? (window._BT||BL.he).broadcastingNow : (window._BT||BL.he).connected;
       } else {
-        st.textContent = active ? '● תרגום AI פעיל' : 'מחובר לשרת';
+        st.textContent = active ? (window._BT||BL.he).aiActive : (window._BT||BL.he).connected;
       }
     }
     function showErr(msg) { const el = document.getElementById('errMsg'); el.textContent = msg; el.classList.remove('hidden'); }

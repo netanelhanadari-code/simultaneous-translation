@@ -3,9 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>תרגום סימולטני – עומדים ביחד</title>
+  <title>תרגום סימולטני | עומדים ביחד | نقف معاً</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    #splash { position:fixed;inset:0;z-index:999;background:#12082a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;transition:opacity .5s ease; }
+    #splash.hidden { opacity:0;pointer-events:none; }
+    #splash img { width:min(220px,62vw);object-fit:contain; }
+    #langSwitcher { position:fixed;top:.75rem;left:.75rem;z-index:200; }
+    #langSwitcher button { background:rgba(30,15,58,.85);border:1px solid #3d1f6b;color:#9b7fc4;border-radius:8px;padding:.35rem .7rem;font-size:.95rem;cursor:pointer; }
+    #langSwitcher button:hover { color:#f0e8ff;border-color:#8B2FC9; }
+    #langMenu { display:none;position:absolute;top:110%;left:0;background:#1e0f3a;border:1px solid #3d1f6b;border-radius:10px;overflow:hidden;min-width:110px; }
+    #langMenu.open { display:block; }
+    #langMenu button { display:block;width:100%;background:none;border:none;color:#f0e8ff;padding:.55rem .9rem;text-align:right;cursor:pointer;font-size:.9rem; }
+    #langMenu button:hover { background:#3d1f6b; }
 
     :root {
       --bg:      #12082a;
@@ -173,11 +183,25 @@
 </head>
 <body>
 
+  <div id="langSwitcher">
+    <button onclick="document.getElementById('langMenu').classList.toggle('open')">🌐</button>
+    <div id="langMenu">
+      <button onclick="switchLang('he')">עברית</button>
+      <button onclick="switchLang('ar')">العربية</button>
+      <button onclick="switchLang('en')">English</button>
+    </div>
+  </div>
+
+  <div id="splash">
+    <img src="logo.png" alt="עומדים ביחד">
+    <img src="babel-fish.png" alt="Babel Fish">
+  </div>
+
   <div style="display:flex;align-items:center;gap:1rem;justify-content:center;">
     <img src="logo.png" class="logo" alt="עומדים ביחד">
     <img src="babel-fish.png" style="height:56px;object-fit:contain;" alt="Babel Fish">
   </div>
-  <h1>🎧 תרגום סימולטני</h1>
+  <h1 id="pageTitle">🎧 תרגום סימולטני</h1>
 
   <div class="no-room hidden" id="noRoom">
     <div style="font-size:2.5rem">🔗</div>
@@ -246,6 +270,42 @@
   <div class="version">v0.6</div>
 
   <script>
+    // Splash
+    setTimeout(() => { const s=document.getElementById('splash'); s.classList.add('hidden'); setTimeout(()=>s.remove(),500); }, 2200);
+
+    // ── Localization ─────────────────────────────────────────────────────────
+    const L10N = {
+      he: { title:'🎧 תרגום סימולטני', noRoom:'סרוק את קוד ה-QR מהמשדר, או בקש קישור ישיר.', langLabel:'בחר את השפה שלך:', connecting:'מתחבר...', waiting:'ממתין לשרת', vol:'🔊 עוצמת קול', translation:'תרגום:', original:'מקור:', tts:'קריאה בקול', tip:'🎧 מומלץ להשתמש באוזניות', log:'📋 לוג תרגום', clear:'נקה', waitBroadcast:'ממתין לשידור…' },
+      ar: { title:'🎧 ترجمة فورية', noRoom:'امسح رمز QR من المذيع، أو اطلب رابطاً مباشراً.', langLabel:'اختر لغتك:', connecting:'جارٍ الاتصال...', waiting:'في انتظار الخادم', vol:'🔊 مستوى الصوت', translation:'الترجمة:', original:'الأصل:', tts:'قراءة بصوت عالٍ', tip:'🎧 يُنصح باستخدام سماعات الأذن', log:'📋 سجل الترجمة', clear:'مسح', waitBroadcast:'في انتظار البث…' },
+      en: { title:'🎧 Simultaneous Translation', noRoom:'Scan the QR code from the broadcaster, or ask for a direct link.', langLabel:'Choose your language:', connecting:'Connecting...', waiting:'Waiting for server', vol:'🔊 Volume', translation:'Translation:', original:'Original:', tts:'Read aloud', tip:'🎧 Headphones recommended', log:'📋 Translation log', clear:'Clear', waitBroadcast:'Waiting for broadcast…' },
+    };
+    function switchLang(lang) {
+      localStorage.setItem('bf_ls_lang', lang);
+      document.getElementById('langMenu').classList.remove('open');
+      applyLang(lang);
+    }
+    function applyLang(lang) {
+      if (lang === 'ar') { document.documentElement.setAttribute('dir','rtl'); document.documentElement.setAttribute('lang','ar'); }
+      else if (lang === 'en') { document.documentElement.setAttribute('dir','ltr'); document.documentElement.setAttribute('lang','en'); }
+      else { document.documentElement.setAttribute('dir','rtl'); document.documentElement.setAttribute('lang','he'); }
+      const L = L10N[lang] || L10N.he;
+      document.getElementById('pageTitle').textContent                    = L.title;
+      document.querySelector('#noRoom p').textContent                     = L.noRoom;
+      document.querySelector('#langPick label').textContent               = L.langLabel;
+      document.getElementById('statusTxt').textContent                    = L.connecting;
+      document.getElementById('subTxt').textContent                       = L.waiting;
+      document.querySelector('.vol-label').textContent                    = L.vol;
+      document.querySelector('.card-label').textContent                   = L.translation;
+      document.querySelector('.original-card .card-label').textContent    = L.original;
+      document.getElementById('translatedCard').textContent               = L.waitBroadcast;
+      document.querySelector('.tts-row span').textContent                 = L.tts;
+      document.getElementById('tip').textContent                          = L.tip;
+      document.querySelector('.log-header span').textContent              = L.log;
+      document.querySelector('.log-toggle-btn').textContent               = L.clear;
+    }
+    const myUiLang = localStorage.getItem('bf_ls_lang') || localStorage.getItem('bf_ui_lang') || 'he';
+    applyLang(myUiLang);
+
     // ── Room ID ───────────────────────────────────────────────────────────────
     const roomId = new URLSearchParams(location.search).get('room');
 
