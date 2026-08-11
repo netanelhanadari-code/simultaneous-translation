@@ -97,6 +97,7 @@
       display: flex; align-items: center; gap: .3rem;
     }
     .member-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; }
+    .member-chip.me { background: var(--accent2); border: 1px solid var(--accent); color: var(--text); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -106,6 +107,7 @@
       <div class="room-name" id="roomNameEl">טוען...</div>
       <span class="room-code" id="codeEl" title="לחץ להעתיק">📋 ...</span>
     </div>
+    <button class="back-btn" onclick="loadRoom()" title="רענן" style="font-size:1.1rem;">↻</button>
     <div class="lang-badge" id="langBadge" style="cursor:pointer;" onclick="location.href='/settings.html?from='+encodeURIComponent(location.href)" title="הגדרות"></div>
   </header>
 
@@ -138,7 +140,7 @@
       bar.innerHTML = '';
       activeMembers.forEach((lang, name) => {
         const chip = document.createElement('div');
-        chip.className = 'member-chip';
+        chip.className = 'member-chip' + (name === myName ? ' me' : '');
         chip.innerHTML = `<span class="dot"></span>${esc(name)} <span style="opacity:.6">${LANG_NAMES[lang]||lang}</span>`;
         bar.appendChild(chip);
       });
@@ -180,32 +182,40 @@
 
     // ── WebSocket ──────────────────────────────────────────────────────────
     const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(
-      `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}`
-    );
-    ws.onmessage = e => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'joined') {
-        activeMembers.clear();
-        (msg.members || []).forEach(m => activeMembers.set(m.name, m.lang));
-        renderMembers();
-      } else if (msg.type === 'member_joined') {
-        activeMembers.set(msg.name, msg.lang);
-        renderMembers();
-      } else if (msg.type === 'member_left') {
-        activeMembers.delete(msg.name);
-        renderMembers();
-      } else if (msg.type === 'room_message') {
-        document.querySelector('.empty')?.remove();
-        addMessage(msg);
-        scrollBottom();
-        if (ttsOn && msg.sender_name !== myName) {
-          const text = msg.translations?.[myLang] || msg.original_text;
-          speak(text, myLang);
+    let ws, wsAlive = true;
+
+    function connectWS() {
+      ws = new WebSocket(
+        `${wsProto}://${location.host}/ws?role=member&room=${roomId}&name=${encodeURIComponent(myName)}&lang=${myLang}`
+      );
+      ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'joined') {
+          activeMembers.clear();
+          (msg.members || []).forEach(m => activeMembers.set(m.name, m.lang));
+          renderMembers();
+        } else if (msg.type === 'member_joined') {
+          activeMembers.set(msg.name, msg.lang);
+          renderMembers();
+        } else if (msg.type === 'member_left') {
+          activeMembers.delete(msg.name);
+          renderMembers();
+        } else if (msg.type === 'room_message') {
+          document.querySelector('.empty')?.remove();
+          addMessage(msg);
+          scrollBottom();
+          if (ttsOn && msg.sender_name !== myName) {
+            const text = msg.translations?.[myLang] || msg.original_text;
+            speak(text, myLang);
+          }
         }
-      }
-    };
-    ws.onerror = () => console.warn('WS error');
+      };
+      ws.onerror = () => console.warn('WS error');
+      ws.onclose = () => {
+        if (wsAlive) setTimeout(() => { connectWS(); loadRoom(); }, 2000);
+      };
+    }
+    connectWS();
 
     // ── Add message bubble ─────────────────────────────────────────────────
     function addMessage(msg) {
@@ -213,6 +223,7 @@
       if (msg.id) displayedIds.add(String(msg.id));
       const isMine = msg.sender_name === myName;
       const text = msg.translations?.[myLang] || msg.original_text || '';
+      console.log(`[msg] myLang=${myLang} keys=${JSON.stringify(Object.keys(msg.translations||{}))} showing="${text?.slice(0,30)}"`);
       const time = msg.created_at
         ? new Date(msg.created_at).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
         : '';
@@ -273,7 +284,9 @@
     async function startRec() {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ audio: {
+          echoCancellation: true, noiseSuppression: true, autoGainControl: false
+        } });
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
         shouldSend = true;
@@ -319,6 +332,8 @@
     recordBtn.addEventListener('mouseleave', () => stopRec());
     recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRec(); }, { passive: false });
     recordBtn.addEventListener('touchend',   e => { e.preventDefault(); stopRec(); },  { passive: false });
+
+    window.addEventListener('pagehide', () => { wsAlive = false; ws?.close(); });
 
     loadRoom();
   </script>
