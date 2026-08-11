@@ -43,8 +43,9 @@
     .bubble.mine  { align-self: flex-start; }
     .bubble.other { align-self: flex-end; }
     .bubble-inner { padding: .55rem .85rem; border-radius: 12px; line-height: 1.5; }
-    .bubble.mine  .bubble-inner { background: var(--accent2); border-radius: 12px 4px 12px 12px; }
+    .bubble.mine  .bubble-inner { background: var(--accent2); border-radius: 12px 4px 12px 12px; border: 1px solid var(--accent); }
     .bubble.other .bubble-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
+    .bubble.mine .bubble-text { font-weight: 500; }
     .bubble-sender { font-size: .7rem; color: var(--muted); padding: 0 .2rem; display: flex; align-items: center; gap: .3rem; }
     .bubble-sender .avatar { font-size: 1rem; }
     .bubble-text { font-size: .95rem; }
@@ -74,8 +75,9 @@
       display: flex; align-items: center; gap: .3rem; cursor: pointer;
       position: relative; user-select: none;
     }
-    .member-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
-    .member-chip.me { background: var(--accent2); border: 1px solid var(--accent); color: var(--text); font-weight: 600; }
+    .member-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #555; flex-shrink: 0; }
+    .member-chip.online .dot { background: #4caf50; }
+    .member-chip.me { background: var(--accent2); border: 1px solid var(--accent); color: var(--text); font-weight: 600; order: -1; }
     .member-chip .chip-avatar { font-size: 1rem; line-height: 1; }
     .member-chip .chip-label { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chip-tooltip {
@@ -169,7 +171,8 @@
 
     let ttsOn = true;
     const displayedIds = new Set();
-    const activeMembers = new Map(); // name → {lang, emoji}
+    const activeMembers = new Map();  // name → {lang, emoji} — online only
+    const allMembers    = new Map();  // name → {lang, emoji} — all known
 
     // ── Member chip ────────────────────────────────────────────────────────
     const tooltip = document.getElementById('chip-tooltip');
@@ -187,9 +190,20 @@
     function renderMembers() {
       const bar = document.getElementById('members-bar');
       bar.innerHTML = '';
-      activeMembers.forEach(({ lang, emoji }, name) => {
+      // merge: all known members, mark online ones
+      const merged = new Map([...allMembers]);
+      activeMembers.forEach((v, k) => merged.set(k, { ...v, online: true }));
+      // sort: me first, then online, then offline
+      const sorted = [...merged.entries()].sort(([a], [b]) => {
+        if (a === myName) return -1; if (b === myName) return 1;
+        const ao = activeMembers.has(a), bo = activeMembers.has(b);
+        return ao === bo ? 0 : ao ? -1 : 1;
+      });
+      sorted.forEach(([name, { lang, emoji, online }]) => {
         const chip = document.createElement('div');
-        chip.className = 'member-chip' + (name === myName ? ' me' : '');
+        chip.className = 'member-chip'
+          + (online ? ' online' : '')
+          + (name === myName ? ' me' : '');
         const shortName = name.length > 10 ? name.slice(0, 10) + '…' : name;
         chip.innerHTML = `<span class="dot"></span>`
           + (emoji ? `<span class="chip-avatar">${emoji}</span>` : `<span class="chip-label">${esc(shortName)}</span>`);
@@ -224,6 +238,10 @@
           rooms.unshift({ id: roomId, name: data.name, ts: Date.now() });
           localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
         } catch(e) {}
+        if (data.allMembers) {
+          data.allMembers.forEach(m => allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' }));
+          renderMembers();
+        }
         if (data.messages && data.messages.length > 0) {
           document.querySelector('.empty')?.remove();
           data.messages.forEach(addMessage);
@@ -244,10 +262,15 @@
         const msg = JSON.parse(e.data);
         if (msg.type === 'joined') {
           activeMembers.clear();
-          (msg.members || []).forEach(m => activeMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' }));
+          (msg.members || []).forEach(m => {
+            activeMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' });
+            allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '' });
+          });
           renderMembers();
         } else if (msg.type === 'member_joined') {
-          activeMembers.set(msg.name, { lang: msg.lang, emoji: msg.emoji || '' });
+          const info = { lang: msg.lang, emoji: msg.emoji || '' };
+          activeMembers.set(msg.name, info);
+          allMembers.set(msg.name, info);
           renderMembers();
         } else if (msg.type === 'member_left') {
           activeMembers.delete(msg.name);
