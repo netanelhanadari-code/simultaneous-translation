@@ -310,10 +310,9 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   } catch(e) { console.error('Whisper error:', e.message); }
   if (!original_text) return res.json({ ok: true, text: '' });
 
-  // 2. Translate to all core languages + any connected member languages
+  // 2. Translate to languages of connected members (+ always he+ar for org core)
   const roomWs = rooms.get(id);
-  const memberLangs = new Set(['he', 'ar', 'en', 'ru', 'am']);
-  memberLangs.add(detected_lang);
+  const memberLangs = new Set(['he', 'ar', detected_lang]);
   if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
 
   // 3. Translate to each language — in parallel
