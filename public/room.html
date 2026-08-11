@@ -559,14 +559,14 @@
           ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
         </div>` +
         `<div class="bubble-footer">
+          <div style="display:flex;align-items:center;gap:.45rem;">
+            <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
+            <div class="bubble-time">${time}</div>
+          </div>
           <div style="display:flex;gap:.4rem;align-items:center;">
             ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
             ${msg.id ? `<button class="icon-btn reply-btn" data-mid="${msg.id}" data-sender="${encodeURIComponent(msg.sender_name)}" data-text="${encodeURIComponent(translated)}" title="השב">↩️</button>` : ''}
             ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
-          </div>
-          <div style="display:flex;align-items:center;gap:.45rem;">
-            <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
-            <div class="bubble-time">${time}</div>
           </div>
         </div>`;
 
@@ -711,6 +711,7 @@
 
     async function startRec() {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+      document.getElementById('textInput').blur(); // prevent keyboard on mobile
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: {
           echoCancellation: true, noiseSuppression: true, autoGainControl: false
