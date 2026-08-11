@@ -258,6 +258,20 @@ function makeRoomId() {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
+// Latest message timestamp per room (for unread detection)
+app.get('/api/rooms/latest', async (req, res) => {
+  const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 20);
+  if (!ids.length || !SB_URL) return res.json({});
+  const result = {};
+  await Promise.all(ids.map(async id => {
+    try {
+      const msgs = await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=1&select=created_at`);
+      if (msgs[0]?.created_at) result[id] = msgs[0].created_at;
+    } catch(e) {}
+  }));
+  res.json(result);
+});
+
 // DM room — deterministic ID for a pair of users
 app.get('/api/dm', async (req, res) => {
   const { from, to } = req.query;

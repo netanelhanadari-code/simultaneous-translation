@@ -202,6 +202,7 @@
     const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET' };
 
     let ttsOn = true;
+    let latestMsgTs = null;
     const displayedIds = new Set();
     const activeMembers = new Map();  // name → {lang, emoji} — online only
     const allMembers    = new Map();  // name → {lang, emoji} — all known
@@ -360,6 +361,7 @@
       const translated = msg.translations?.[myLang] || msg.original_text || '';
       const original  = msg.original_text || '';
       const showOrig  = translated !== original && original;
+      if (msg.created_at && (!latestMsgTs || msg.created_at > latestMsgTs)) latestMsgTs = msg.created_at;
       const time = msg.created_at
         ? new Date(msg.created_at).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
         : '';
@@ -519,7 +521,16 @@
     recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRec(); }, { passive: false });
     recordBtn.addEventListener('touchend',   e => { e.preventDefault(); stopRec(); },  { passive: false });
 
-    window.addEventListener('pagehide', () => { wsAlive = false; ws?.close(); });
+    window.addEventListener('pagehide', () => {
+      wsAlive = false; ws?.close();
+      if (latestMsgTs) {
+        try {
+          const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
+          const idx = rooms.findIndex(r => r.id === roomId);
+          if (idx >= 0) { rooms[idx].lastSeen = latestMsgTs; localStorage.setItem('bf_rooms', JSON.stringify(rooms)); }
+        } catch(e) {}
+      }
+    });
 
     loadRoom();
   </script>

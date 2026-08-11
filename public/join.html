@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>קבוצה — Babel Fish</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
+      --accent: #8B2FC9; --text: #f0e8ff; --muted: #9b7fc4;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100dvh; display: flex; flex-direction: column;
+      align-items: center; padding: 0 1.25rem 2rem; gap: 1rem;
+    }
+    header {
+      width: 100%; max-width: 360px;
+      display: flex; align-items: center; gap: .75rem;
+      padding: 1rem 0 .5rem;
+    }
+    .back-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 1.6rem; cursor: pointer; line-height: 1; padding: 0 .2rem;
+    }
+    h1 { font-size: 1.05rem; }
+    .tabs {
+      display: flex; width: 100%; max-width: 360px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: .3rem; gap: .3rem;
+    }
+    .tab {
+      flex: 1; background: none; border: none; color: var(--muted);
+      border-radius: 9px; padding: .55rem; font-size: .88rem;
+      cursor: pointer; font-weight: 600; transition: background .15s, color .15s;
+    }
+    .tab.active { background: var(--accent); color: #fff; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.3rem; width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: .8rem;
+    }
+    input {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .65rem .9rem; font-size: .95rem; outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+    .code-input { text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 1.1rem; }
+    .primary-btn {
+      width: 100%; background: var(--accent); color: white;
+      border: none; border-radius: 10px; padding: .75rem;
+      font-size: 1rem; cursor: pointer; font-weight: 600;
+    }
+    .primary-btn:active { opacity: .85; }
+    #err { color: #e07070; font-size: .85rem; min-height: 1.1em; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="back-btn" onclick="history.back()">‹</button>
+    <h1 id="pageTitle">קבוצה</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab" id="tabCreate" onclick="setMode('create')">➕ קבוצה חדשה</button>
+    <button class="tab" id="tabJoin"   onclick="setMode('join')">🔗 הצטרף</button>
+  </div>
+
+  <div class="card" id="cardCreate">
+    <input id="roomName" type="text" placeholder="שם הקבוצה" maxlength="40">
+    <button class="primary-btn" onclick="createRoom()">צור קבוצה</button>
+  </div>
+
+  <div class="card" id="cardJoin" style="display:none;">
+    <input id="roomCode" class="code-input" type="text" placeholder="ABCDE" maxlength="6">
+    <button class="primary-btn" onclick="joinRoom()">הצטרף</button>
+  </div>
+
+  <p id="err"></p>
+
+  <script>
+    const myName = localStorage.getItem('bf_name') || '';
+    if (!myName) { location.href = '/settings.html?from=' + encodeURIComponent(location.href); }
+
+    const mode = new URLSearchParams(location.search).get('mode') || 'create';
+    setMode(mode);
+
+    function setMode(m) {
+      const isCreate = m === 'create';
+      document.getElementById('tabCreate').classList.toggle('active', isCreate);
+      document.getElementById('tabJoin').classList.toggle('active', !isCreate);
+      document.getElementById('cardCreate').style.display = isCreate ? '' : 'none';
+      document.getElementById('cardJoin').style.display  = isCreate ? 'none' : '';
+      document.getElementById('pageTitle').textContent   = isCreate ? 'קבוצה חדשה' : 'הצטרף לקבוצה';
+      document.getElementById('err').textContent = '';
+    }
+
+    function addMyRoom(id, name) {
+      const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]').filter(r => r.id !== id);
+      rooms.unshift({ id, name, ts: Date.now() });
+      localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
+    }
+
+    async function createRoom() {
+      const name = document.getElementById('roomName').value.trim();
+      if (!name) { document.getElementById('err').textContent = 'הכנס שם קבוצה'; return; }
+      document.getElementById('err').textContent = '';
+      try {
+        const r = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const { id } = await r.json();
+        addMyRoom(id, name);
+        location.href = `/room.html?room=${id}`;
+      } catch(e) { document.getElementById('err').textContent = 'שגיאה ביצירת הקבוצה'; }
+    }
+
+    function joinRoom() {
+      const code = document.getElementById('roomCode').value.trim().toUpperCase();
+      if (!code) { document.getElementById('err').textContent = 'הכנס קוד קבוצה'; return; }
+      location.href = `/room.html?room=${code}`;
+    }
+
+    document.getElementById('roomCode').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+    document.getElementById('roomName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') createRoom();
+    });
+    document.getElementById('roomCode').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinRoom();
+    });
+  </script>
+</body>
+</html>
