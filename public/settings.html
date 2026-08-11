@@ -68,19 +68,25 @@
   </header>
 
   <div class="card">
+    <!-- Avatar -->
     <div class="field" style="align-items:center;">
       <div id="avatarPreview" style="width:80px;height:80px;border-radius:50%;background:var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem;cursor:pointer;border:2px solid var(--border);flex-shrink:0;" onclick="document.getElementById('avatarFile').click()">
         📷
       </div>
       <input type="file" id="avatarFile" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
       <span id="avatarClear" style="font-size:.8rem;color:var(--muted);cursor:pointer;text-decoration:underline;display:none;" onclick="clearAvatar()">הסר תמונה</span>
+      <span style="font-size:.75rem;color:var(--muted);margin-top:.2rem;" id="avatarHint">תמונה מחליפה אימוג'י</span>
     </div>
     <canvas id="avatarCanvas" style="display:none;"></canvas>
+
+    <!-- Name -->
     <div class="field">
       <label id="labelName">שם</label>
       <input id="nameInput" type="text" placeholder="שמך" maxlength="30" autocomplete="name">
     </div>
-    <div class="field">
+
+    <!-- Emoji (hidden when avatar exists) -->
+    <div class="field" id="emojiField">
       <label id="labelEmoji">אימוג'י (אופציונלי — יופיע ברשימת החברים)</label>
       <div class="emoji-grid" id="emojiGrid">
         <span class="emoji-opt">☮️</span><span class="emoji-opt">🕊️</span><span class="emoji-opt">✌️</span>
@@ -95,10 +101,14 @@
       <input id="emojiInput" type="text" placeholder="או הדבק כל אימוג'י 😊" maxlength="4" style="text-align:center;font-size:1.5rem;letter-spacing:.2rem;">
       <span class="emoji-clear" id="emojiClear" onclick="clearEmoji()">ללא אימוג'י</span>
     </div>
+
+    <!-- Phone -->
     <div class="field">
       <label id="labelPhone">מספר טלפון <span style="color:#e07070;">*</span></label>
       <input id="phoneInput" type="tel" placeholder="05X-XXXXXXX" dir="ltr" style="text-align:left;">
     </div>
+
+    <!-- Communication language -->
     <div class="field">
       <label id="labelLang">שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת</label>
       <select id="langSelect">
@@ -113,6 +123,8 @@
         <option value="de">Deutsch</option>
       </select>
     </div>
+
+    <!-- UI language -->
     <div class="field">
       <label id="labelUiLang">שפת ממשק — שפת הכפתורים והתפריטים</label>
       <select id="uiLangSelect">
@@ -121,6 +133,7 @@
         <option value="en">English</option>
       </select>
     </div>
+
     <button class="save-btn" id="saveBtn" onclick="save()">שמור</button>
     <p class="saved-msg" id="savedMsg"></p>
   </div>
@@ -136,41 +149,43 @@
     if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
 
     const SETT_UI = {
-      he: { title: '⚙️ הגדרות', name: 'שם', namePh: 'שמך', emoji: "אימוג'י (אופציונלי — יופיע ברשימת החברים)", emojiPh: "או הדבק כל אימוג'י 😊", emojiClear: "ללא אימוג'י", phone: 'מספר טלפון', phoneSub: 'משמש לזיהוי ייחודי + מוצג לחברים', lang: 'שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת', uiLang: 'שפת ממשק — שפת הכפתורים והתפריטים', save: 'שמור', saved: '✓ נשמר' },
-      ar: { title: '⚙️ الإعدادات', name: 'الاسم', namePh: 'اسمك', emoji: 'إيموجي (اختياري — يظهر في قائمة الأعضاء)', emojiPh: 'أو الصق أي إيموجي 😊', emojiClear: 'بدون إيموجي', phone: 'رقم الهاتف', phoneSub: 'يُستخدم للتعريف الفريد + يُعرض للأعضاء', lang: 'لغة التواصل — اللغة التي أكتب وأتحدث بها', uiLang: 'لغة الواجهة — لغة الأزرار والقوائم', save: 'حفظ', saved: '✓ تم الحفظ' },
-      en: { title: '⚙️ Settings', name: 'Name', namePh: 'Your name', emoji: 'Emoji (optional — shown in members list)', emojiPh: 'Or paste any emoji 😊', emojiClear: 'No emoji', phone: 'Phone number', phoneSub: 'Used for unique ID + shown to members', lang: 'Communication language — language I write and speak in', uiLang: 'Interface language — language of buttons and menus', save: 'Save', saved: '✓ Saved' },
+      he: { title: '⚙️ הגדרות', name: 'שם', namePh: 'שמך', emoji: "אימוג'י (אופציונלי — יופיע ברשימת החברים)", emojiPh: "או הדבק כל אימוג'י 😊", emojiClear: "ללא אימוג'י", phone: 'מספר טלפון', phoneSub: 'משמש לזיהוי ייחודי + מוצג לחברים', lang: 'שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת', uiLang: 'שפת ממשק — שפת הכפתורים והתפריטים', save: 'שמור', saved: '✓ נשמר', avatarHint: 'תמונה מחליפה אימוג\'י' },
+      ar: { title: '⚙️ الإعدادات', name: 'الاسم', namePh: 'اسمك', emoji: 'إيموجي (اختياري — يظهر في قائمة الأعضاء)', emojiPh: 'أو الصق أي إيموجي 😊', emojiClear: 'بدون إيموجي', phone: 'رقم الهاتف', phoneSub: 'يُستخدم للتعريف الفريد + يُعرض للأعضاء', lang: 'لغة التواصل — اللغة التي أكتب وأتحدث بها', uiLang: 'لغة الواجهة — لغة الأزرار والقوائم', save: 'حفظ', saved: '✓ تم الحفظ', avatarHint: 'الصورة تحل محل الإيموجي' },
+      en: { title: '⚙️ Settings', name: 'Name', namePh: 'Your name', emoji: 'Emoji (optional — shown in members list)', emojiPh: 'Or paste any emoji 😊', emojiClear: 'No emoji', phone: 'Phone number', phoneSub: 'Used for unique ID + shown to members', lang: 'Communication language — language I write and speak in', uiLang: 'Interface language — language of buttons and menus', save: 'Save', saved: '✓ Saved', avatarHint: 'Photo replaces emoji' },
     };
     const su = SETT_UI[myUiLang] || SETT_UI.he;
-    document.querySelector('h1').textContent                   = su.title;
-    document.getElementById('labelName').textContent           = su.name;
-    nameInput.placeholder                                      = su.namePh;
-    document.getElementById('labelEmoji').textContent          = su.emoji;
-    document.getElementById('emojiInput').placeholder          = su.emojiPh;
-    document.getElementById('emojiClear').textContent          = su.emojiClear;
-    document.getElementById('labelPhone').innerHTML            = `${su.phone} <span style="color:#e07070;">*</span> <small style="font-weight:normal;color:var(--muted)">(${su.phoneSub})</small>`;
-    document.getElementById('labelLang').textContent           = su.lang;
-    document.getElementById('labelUiLang').textContent         = su.uiLang;
-    document.getElementById('saveBtn').textContent             = su.save;
+    document.querySelector('h1').textContent          = su.title;
+    document.getElementById('labelName').textContent  = su.name;
+    nameInput.placeholder                             = su.namePh;
+    document.getElementById('labelEmoji').textContent = su.emoji;
+    document.getElementById('emojiInput').placeholder = su.emojiPh;
+    document.getElementById('emojiClear').textContent = su.emojiClear;
+    document.getElementById('labelPhone').innerHTML   = `${su.phone} <span style="color:#e07070;">*</span> <small style="font-weight:normal;color:var(--muted)">(${su.phoneSub})</small>`;
+    document.getElementById('labelLang').textContent  = su.lang;
+    document.getElementById('labelUiLang').textContent= su.uiLang;
+    document.getElementById('saveBtn').textContent    = su.save;
+    document.getElementById('avatarHint').textContent = su.avatarHint;
 
     // Load current values
-    nameInput.value    = localStorage.getItem('bf_name')    || '';
-    langSelect.value   = localStorage.getItem('bf_lang')    || 'he';
+    nameInput.value    = localStorage.getItem('bf_name') || '';
+    langSelect.value   = localStorage.getItem('bf_lang') || 'he';
     uiLangSelect.value = myUiLang;
+    document.getElementById('phoneInput').value = localStorage.getItem('bf_phone') || '';
 
-    // Avatar
-    const phoneInput = document.getElementById('phoneInput');
-    phoneInput.value = localStorage.getItem('bf_phone') || '';
-
+    // ── Avatar ────────────────────────────────────────────────────────────────
     function loadAvatarPreview() {
       const av = localStorage.getItem('bf_avatar');
-      const preview = document.getElementById('avatarPreview');
+      const preview  = document.getElementById('avatarPreview');
       const clearBtn = document.getElementById('avatarClear');
+      const emojiField = document.getElementById('emojiField');
       if (av) {
         preview.innerHTML = `<img src="${av}" style="width:100%;height:100%;object-fit:cover;">`;
         clearBtn.style.display = '';
+        emojiField.style.display = 'none'; // photo replaces emoji
       } else {
         preview.textContent = '📷';
         clearBtn.style.display = 'none';
+        emojiField.style.display = ''; // show emoji picker
       }
     }
     loadAvatarPreview();
@@ -185,7 +200,6 @@
           const canvas = document.getElementById('avatarCanvas');
           canvas.width = canvas.height = 80;
           const ctx = canvas.getContext('2d');
-          // Crop center square
           const size = Math.min(img.width, img.height);
           const ox = (img.width - size) / 2;
           const oy = (img.height - size) / 2;
@@ -204,9 +218,7 @@
       loadAvatarPreview();
     }
 
-    // Phone
-
-    // Emoji input + grid
+    // ── Emoji ─────────────────────────────────────────────────────────────────
     const emojiInput = document.getElementById('emojiInput');
     emojiInput.value = localStorage.getItem('bf_emoji') || '';
     function clearEmoji() {
@@ -223,34 +235,32 @@
     emojiInput.addEventListener('input', markSelected);
     markSelected();
 
-    // Back button — return to previous page
+    // ── Back button ───────────────────────────────────────────────────────────
     const returnTo = new URLSearchParams(location.search).get('from') || '/home.html';
     document.getElementById('backBtn').onclick = () => location.href = returnTo;
 
+    // ── Save ──────────────────────────────────────────────────────────────────
     function save() {
-      const name = nameInput.value.trim();
-      const lang = langSelect.value;
-      const phone = phoneInput.value.trim();
+      const name  = nameInput.value.trim();
+      const lang  = langSelect.value;
+      const phone = document.getElementById('phoneInput').value.trim();
       if (!name) { nameInput.focus(); return; }
       if (!phone) {
-        phoneInput.focus();
-        phoneInput.style.borderColor = '#e07070';
-        setTimeout(() => phoneInput.style.borderColor = '', 2000);
+        const pi = document.getElementById('phoneInput');
+        pi.focus();
+        pi.style.borderColor = '#e07070';
+        setTimeout(() => pi.style.borderColor = '', 2000);
         return;
       }
       localStorage.setItem('bf_name',    name);
       localStorage.setItem('bf_lang',    lang);
       localStorage.setItem('bf_ui_lang', uiLangSelect.value);
       localStorage.setItem('bf_emoji',   emojiInput.value.trim());
-      localStorage.setItem('bf_phone',   phoneInput.value.trim());
+      localStorage.setItem('bf_phone',   phone);
       savedMsg.textContent = su.saved;
-      setTimeout(() => {
-        savedMsg.textContent = '';
-        location.href = returnTo;
-      }, 800);
+      setTimeout(() => { savedMsg.textContent = ''; location.href = returnTo; }, 800);
     }
 
-    // Save on Enter
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
   </script>
 </body>

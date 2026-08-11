@@ -397,7 +397,7 @@
       if (msg.type === 'original') {
         if (!started) return;
         if (mode === null) switchMode('ai');
-        const tgtFull = document.getElementById('langSelect').value;
+        const tgtFull = document.getElementById('langSelect').value || 'he';
         const tgtLang = tgtFull.split('-')[0]; // strip dialect for translation API
         const srcLang = msg.sourceLang || 'he';
         queueTranslation(msg.text, srcLang, tgtLang, tgtFull);
@@ -467,6 +467,11 @@
     // ── Tap to start ──────────────────────────────────────────────────────────
     function startListening() {
       if (started) return;
+      // If no language selected yet, focus the select and bail
+      if (!document.getElementById('langSelect').value) {
+        document.getElementById('langSelect').focus();
+        return;
+      }
       started = true;
       initMediaSource();
       pendingChunks.forEach(c => enqueue(c));
