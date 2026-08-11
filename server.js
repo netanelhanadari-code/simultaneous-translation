@@ -94,7 +94,9 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 const TRANSLATION_SYSTEM_PROMPT = `אתה מתורגמן סימולטני של עומדים ביחד / نقف معاً, תנועה יהודית-ערבית משותפת בישראל.
 
 כללים:
-- תרגם מילולי ונאמן — לא לפרפרז, לא להוסיף, לא להחסיר
+- תרגם לפי משמעות ולא מילה במילה — שמור על כוונת הדובר ועל הזרימה הטבעית בשפת היעד
+- ביטויים דיבוריים וסלנג — תרגם לביטוי מקביל בשפת היעד, לא לפי הפירוש המילולי
+- לא להוסיף מידע שלא נאמר, לא לקצר תוכן
 - שמות פרטיים, מקומות, וארגונים — השאר אותם כמו שהם
 - שמור על טון המדבר — אם נרגש, תרגם נרגש; אם קז'ואל, תרגם קז'ואל
 - תרגם לכל שפה שתתבקש — לא רק עברית וערבית
@@ -273,7 +275,7 @@ app.get('/api/rooms/:id', async (req, res) => {
     const rooms = await sbQuery('rooms', `id=eq.${id}&limit=1`);
     const room = rooms[0];
     if (!room) return res.json({ id, name: id, messages: [] });
-    const messages = await sbQuery('messages', `room_id=eq.${id}&order=created_at.asc&limit=100`);
+    const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=4`)).reverse();
     res.json({ ...room, messages: messages || [] });
   } catch(e) {
     console.error('getRoom error:', e.message);
@@ -308,15 +310,16 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   } catch(e) { console.error('Whisper error:', e.message); }
   if (!original_text) return res.json({ ok: true, text: '' });
 
-  // 2. Find languages of active room members
+  // 2. Translate to all core languages + any connected member languages
   const roomWs = rooms.get(id);
-  const memberLangs = new Set([detected_lang]);
+  const memberLangs = new Set(['he', 'ar', 'en', 'ru', 'am']);
+  memberLangs.add(detected_lang);
   if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
 
-  // 3. Translate to each language
-  const translations = {};
-  for (const lang of memberLangs) {
-    if (lang === detected_lang) { translations[lang] = original_text; continue; }
+  // 3. Translate to each language — in parallel
+  const translations = { [detected_lang]: original_text };
+  const targetLangs = [...memberLangs].filter(l => l !== detected_lang);
+  await Promise.all(targetLangs.map(async lang => {
     const fromName = LANG_NAMES[detected_lang] || detected_lang;
     const toName   = LANG_NAMES[lang] || lang;
     const systemPrompt =
@@ -331,26 +334,27 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `[${fromName}→${toName}]\n<text>\n${original_text}\n</text>` }
           ],
-          temperature: 0, max_tokens: 500
+          temperature: 0, max_tokens: 250, frequency_penalty: 1.5, presence_penalty: 0.5
         })
       });
       const d = await r.json();
       let t = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
       if (t && lang === 'he') t = t.replace(/[؀-ۿ]/g, '');
       if (t && lang === 'ar') t = t.replace(/[א-ת]/g, '');
-      translations[lang] = t || original_text;
-    } catch(e) { translations[lang] = original_text; }
-  }
+      // sanity check: reject if suspiciously long (hallucination) or empty
+      if (t && t.length > 0 && t.length <= original_text.length * 4 + 200) {
+        translations[lang] = t;
+      } else if (t) {
+        console.warn(`[translate] ${detected_lang}→${lang}: rejected (len=${t.length})`);
+      }
+    } catch(e) { console.error(`[translate] ${detected_lang}→${lang}:`, e.message); }
+  }));
 
-  // 4. Save to DB
-  let msgId = Date.now().toString();
+  console.log(`[translate] ${detected_lang} → ${JSON.stringify(Object.fromEntries(Object.entries(translations).map(([k,v])=>[k,v?.slice(0,30)])))}`);
+
+  // 4. Broadcast immediately — don't wait for DB
+  const msgId = Date.now().toString();
   const msgCreatedAt = new Date().toISOString();
-  const saved = await sbInsert('messages', {
-    room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
-  });
-  if (saved?.id) msgId = saved.id;
-
-  // 5. Broadcast to room members via WebSocket
   const payload = JSON.stringify({
     type: 'room_message', id: msgId, sender_name,
     sender_lang: detected_lang, original_text, translations, created_at: msgCreatedAt
@@ -358,8 +362,12 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   if (roomWs?.members) {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
-
   res.json({ ok: true, id: msgId, translations });
+
+  // 5. Save to DB in background (non-blocking)
+  sbInsert('messages', {
+    room_id: id, sender_name, sender_lang: detected_lang, original_text, translations
+  }).catch(e => console.error('[db] save failed:', e.message));
 });
 
 const rooms = new Map();
