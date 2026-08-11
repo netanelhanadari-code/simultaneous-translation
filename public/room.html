@@ -601,25 +601,23 @@
           renderReactions(msg.msg_id, msg.reactions);
         } else if (msg.type === 'room_message') {
           document.querySelector('.empty')?.remove();
+          const msgEl = document.getElementById('messages');
+          const atBottom = msgEl.scrollHeight - msgEl.scrollTop - msgEl.clientHeight < 60;
           addMessage(msg);
-          scrollBottom();
-          if (msg.sender_name !== myName) {
-            const msgEl = document.getElementById('messages');
-            const atBottom = msgEl.scrollHeight - msgEl.scrollTop - msgEl.clientHeight < 60;
-            if (!atBottom) {
-              unreadCount++;
-              document.title = `(${unreadCount}) ${baseTitle}`;
-              // Mark first unread message for separator
-              if (unreadCount === 1) {
-                const lastBubble = msgEl.lastElementChild;
-                if (lastBubble) lastBubble.dataset.firstUnread = '1';
-              }
-              showUnreadBadge();
+          if (atBottom) {
+            scrollBottom();
+          } else if (msg.sender_name !== myName) {
+            unreadCount++;
+            document.title = `(${unreadCount}) ${baseTitle}`;
+            if (unreadCount === 1) {
+              const lastBubble = msgEl.lastElementChild;
+              if (lastBubble) lastBubble.dataset.firstUnread = '1';
             }
-            if (ttsOn) {
-              const text = msg.translations?.[myLang] || msg.original_text;
-              speak(text, myLang);
-            }
+            showUnreadBadge();
+          }
+          if (msg.sender_name !== myName && ttsOn) {
+            const text = msg.translations?.[myLang] || msg.original_text;
+            speak(text, myLang);
           }
         }
       };
