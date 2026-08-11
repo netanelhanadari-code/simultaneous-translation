@@ -202,6 +202,7 @@
     <img src="babel-fish.png" style="height:56px;object-fit:contain;" alt="Babel Fish">
   </div>
   <h1 id="pageTitle">🎧 תרגום סימולטני</h1>
+  <div id="roomBadge" style="display:none;background:#2a1550;border:1px solid #5a2fa0;border-radius:10px;padding:.4rem .9rem;font-size:.85rem;color:#c9a0ff;letter-spacing:.08em;font-family:monospace;font-weight:600;"></div>
 
   <div class="no-room hidden" id="noRoom">
     <div style="font-size:2.5rem">🔗</div>
@@ -312,6 +313,9 @@
     if (!roomId) {
       document.getElementById('noRoom').classList.remove('hidden');
     } else {
+      const badge = document.getElementById('roomBadge');
+      badge.textContent = '📍 ' + roomId;
+      badge.style.display = '';
       document.getElementById('langPick').classList.remove('hidden');
       document.getElementById('iconWrap').classList.remove('hidden');
       document.getElementById('statusBlock').classList.remove('hidden');

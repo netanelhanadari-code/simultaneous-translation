@@ -566,9 +566,11 @@
           const myAvatar = localStorage.getItem('bf_avatar') || '';
           if (myAvatar && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'set_avatar', avatar: myAvatar }));
-            // Update own entry locally (server doesn't echo back to sender)
-            const myEntry = allMembers.get(myName);
-            if (myEntry) { myEntry.avatar = myAvatar; renderMembers(); }
+            // Update both maps — activeMembers overwrites allMembers in renderMembers
+            const myAll    = allMembers.get(myName);
+            const myActive = activeMembers.get(myName);
+            if (myAll)    myAll.avatar    = myAvatar;
+            if (myActive) myActive.avatar = myAvatar;
           }
           renderMembers();
         } else if (msg.type === 'member_joined') {
