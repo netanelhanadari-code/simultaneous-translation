@@ -800,6 +800,11 @@ wss.on('connection', (ws, req) => {
                 send(w, { type: 'member_avatar', name: member.name, avatar: member.avatar });
               }
             });
+            // Persist avatar to DB so offline members also show it
+            fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(member.name)}`, {
+              method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ avatar: member.avatar })
+            }).catch(() => {});
           }
         }
       } catch(_) {}
