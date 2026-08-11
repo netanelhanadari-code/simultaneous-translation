@@ -152,10 +152,11 @@
         const chip = document.createElement('div');
         chip.className = 'room-chip' + (r.hasNew ? ' has-new' : '');
         const isDM = r.type === 'dm' || (r.id?.startsWith('D') && r.id.length <= 7);
+        const displayName = isDM ? r.name : (r.names?.[myUiLang] || r.name);
         chip.innerHTML =
           (r.hasNew ? '<span class="unread-dot"></span>' : '') +
           `<div class="room-chip-info">
-            <div class="room-chip-name">${isDM ? '👤 ' : '💬 '}${esc(r.name)}</div>
+            <div class="room-chip-name">${isDM ? '👤 ' : '💬 '}${esc(displayName)}</div>
             <div class="room-chip-code">${isDM ? 'שיחה פרטית' : r.id}</div>
           </div>
           <button class="room-chip-leave" title="הסר">✕</button>`;

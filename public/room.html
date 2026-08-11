@@ -352,8 +352,10 @@
         const r = await fetch('/api/rooms/' + roomId);
         if (!r.ok) { location.href = '/home.html'; return; }
         const data = await r.json();
-        const displayName = (data.name && data.name !== roomId) ? data.name
-          : (isDM ? (localStorage.getItem('bf_dm_peer_' + roomId) || roomId) : roomId);
+        const names = data.names || {};
+        const displayName = isDM
+          ? (localStorage.getItem('bf_dm_peer_' + roomId) || data.name || roomId)
+          : (names[myUiLang] || names.he || data.name || roomId);
         document.getElementById('roomNameEl').textContent = displayName;
         document.title = 'Babel Fish — ' + displayName;
         if (isDM) {
@@ -366,7 +368,7 @@
         try {
           const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]').filter(r => r.id !== roomId);
           const type = isDM ? 'dm' : 'group';
-          rooms.unshift({ id: roomId, name: displayName, type, ts: Date.now() });
+          rooms.unshift({ id: roomId, name: displayName, names: isDM ? {} : names, type, ts: Date.now() });
           localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
         } catch(e) {}
         if (data.allMembers) {

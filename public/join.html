@@ -107,9 +107,9 @@
       document.getElementById('err').textContent = '';
     }
 
-    function addMyRoom(id, name) {
+    function addMyRoom(id, name, names) {
       const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]').filter(r => r.id !== id);
-      rooms.unshift({ id, name, ts: Date.now() });
+      rooms.unshift({ id, name, names: names || {}, type: 'group', ts: Date.now() });
       localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
     }
 
@@ -121,10 +121,11 @@
         const r = await fetch('/api/rooms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
+          body: JSON.stringify({ name, lang: localStorage.getItem('bf_lang') || 'he' })
         });
-        const { id } = await r.json();
-        addMyRoom(id, name);
+        const data = await r.json();
+        const { id, names } = data;
+        addMyRoom(id, name, names);
         location.href = `/room.html?room=${id}`;
       } catch(e) { document.getElementById('err').textContent = 'שגיאה ביצירת הקבוצה'; }
     }

@@ -284,13 +284,45 @@ app.get('/api/dm', async (req, res) => {
   res.json({ id });
 });
 
+// Translate a short name string (for room names only — lightweight prompt)
+async function translateRoomName(text, fromLang, toLang) {
+  if (!text || fromLang === toLang || !process.env.OPENAI_API_KEY) return text;
+  const fromName = LANG_NAMES[fromLang] || fromLang;
+  const toName   = LANG_NAMES[toLang]   || toLang;
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: `תרגם את שם הקבוצה הבא מ${fromName} ל${toName}. החזר רק את התרגום, ללא הסברים.` },
+          { role: 'user', content: text }
+        ],
+        temperature: 0, max_tokens: 60
+      })
+    });
+    const d = await r.json();
+    return d.choices?.[0]?.message?.content?.trim() || text;
+  } catch(e) { return text; }
+}
+
 // Create room
 app.post('/api/rooms', express.json(), async (req, res) => {
-  const { name } = req.body;
+  const { name, lang } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = makeRoomId();
-  await sbInsert('rooms', { id, name });
-  res.json({ id, name });
+  const fromLang = lang || 'he';
+
+  // Translate name to ar + en + he (whichever are missing) in parallel
+  const names = { [fromLang]: name };
+  const targets = ['he', 'ar', 'en'].filter(l => l !== fromLang);
+  await Promise.all(targets.map(async toLang => {
+    names[toLang] = await translateRoomName(name, fromLang, toLang);
+  }));
+
+  await sbInsert('rooms', { id, name, names });
+  res.json({ id, name, names });
 });
 
 // Get room + history
