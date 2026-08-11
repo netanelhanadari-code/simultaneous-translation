@@ -66,9 +66,17 @@
     /* Members bar */
     #members-bar {
       background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: .35rem 1rem; display: flex; gap: .5rem; flex-wrap: wrap;
-      flex-shrink: 0; max-height: 6rem; overflow-y: auto;
+      padding: .35rem .6rem .35rem 1rem; display: flex; gap: .5rem; flex-wrap: nowrap;
+      flex-shrink: 0; overflow: hidden; align-items: center;
     }
+    #members-bar.expanded { flex-wrap: wrap; overflow-y: auto; max-height: 8rem; }
+    #members-toggle {
+      flex-shrink: 0; order: 999; margin-right: auto;
+      background: none; border: 1px solid var(--border); border-radius: 10px;
+      color: var(--muted); font-size: .7rem; padding: .18rem .5rem;
+      cursor: pointer; white-space: nowrap; line-height: 1.4;
+    }
+    #members-toggle:hover { border-color: var(--accent); color: var(--accent); }
     .member-chip {
       background: var(--border); border-radius: 20px;
       padding: .2rem .65rem; font-size: .72rem; color: var(--muted);
@@ -146,7 +154,9 @@
   </header>
 
   <div id="chip-tooltip" class="chip-tooltip"></div>
-  <div id="members-bar"></div>
+  <div id="members-bar">
+    <button id="members-toggle" onclick="toggleMembersBar()"><span id="members-count">0</span> ▾</button>
+  </div>
   <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
 
   <footer>
@@ -187,9 +197,17 @@
       tooltipTimer = setTimeout(() => { tooltip.style.display = 'none'; }, 2000);
     }
 
+    function toggleMembersBar() {
+      const bar = document.getElementById('members-bar');
+      const expanded = bar.classList.toggle('expanded');
+      const btn = document.getElementById('members-toggle');
+      const count = document.getElementById('members-count').textContent;
+      btn.innerHTML = `<span id="members-count">${count}</span> ${expanded ? '▴' : '▾'}`;
+    }
+
     function renderMembers() {
       const bar = document.getElementById('members-bar');
-      bar.innerHTML = '';
+      [...bar.querySelectorAll('.member-chip')].forEach(c => c.remove());
       // merge: all known members, mark online ones
       const merged = new Map([...allMembers]);
       activeMembers.forEach((v, k) => merged.set(k, { ...v, online: true }));
@@ -199,6 +217,7 @@
         const ao = activeMembers.has(a), bo = activeMembers.has(b);
         return ao === bo ? 0 : ao ? -1 : 1;
       });
+      document.getElementById('members-count').textContent = merged.size;
       sorted.forEach(([name, { lang, emoji, online }]) => {
         const chip = document.createElement('div');
         chip.className = 'member-chip'

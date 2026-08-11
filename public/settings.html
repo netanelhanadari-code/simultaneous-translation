@@ -73,8 +73,8 @@
       <input id="nameInput" type="text" placeholder="שמך" maxlength="30" autocomplete="name">
     </div>
     <div class="field">
-      <label>אימוג'י (אופציונלי — יופיע במקום שמך)</label>
-      <div class="emoji-grid" id="emojiGrid"></div>
+      <label>אימוג'י (אופציונלי — יופיע ברשימת החברים)</label>
+      <input id="emojiInput" type="text" placeholder="הדבק או הקלד אימוג'י 😊" maxlength="4" style="text-align:center;font-size:1.5rem;letter-spacing:.2rem;">
       <span class="emoji-clear" onclick="clearEmoji()">ללא אימוג'י</span>
     </div>
     <div class="field">
@@ -104,24 +104,10 @@
     nameInput.value = localStorage.getItem('bf_name') || '';
     langSelect.value = localStorage.getItem('bf_lang') || 'he';
 
-    // Emoji picker
-    const EMOJIS = ['😊','😄','😎','🤓','🙂','😇','🤗','💪','🌟','🔥','🌈','🎵','🌺','🦁','🐬','🦋','🌙','⚡','🎯','✌️','🕊️','🌿','🧡','💜','❤️','🤝','🌍','✡️','☪️','🕌','🕍'];
-    let selectedEmoji = localStorage.getItem('bf_emoji') || '';
-    const grid = document.getElementById('emojiGrid');
-    EMOJIS.forEach(em => {
-      const btn = document.createElement('span');
-      btn.className = 'emoji-opt' + (em === selectedEmoji ? ' selected' : '');
-      btn.textContent = em;
-      btn.onclick = () => {
-        selectedEmoji = em;
-        grid.querySelectorAll('.emoji-opt').forEach(b => b.classList.toggle('selected', b.textContent === em));
-      };
-      grid.appendChild(btn);
-    });
-    function clearEmoji() {
-      selectedEmoji = '';
-      grid.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
-    }
+    // Emoji input
+    const emojiInput = document.getElementById('emojiInput');
+    emojiInput.value = localStorage.getItem('bf_emoji') || '';
+    function clearEmoji() { emojiInput.value = ''; }
 
     // Back button — return to previous page
     const returnTo = new URLSearchParams(location.search).get('from') || '/home.html';
@@ -133,7 +119,7 @@
       if (!name) { nameInput.focus(); return; }
       localStorage.setItem('bf_name', name);
       localStorage.setItem('bf_lang', lang);
-      localStorage.setItem('bf_emoji', selectedEmoji);
+      localStorage.setItem('bf_emoji', emojiInput.value.trim());
       savedMsg.textContent = '✓ נשמר';
       setTimeout(() => {
         savedMsg.textContent = '';

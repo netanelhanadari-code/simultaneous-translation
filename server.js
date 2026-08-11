@@ -276,7 +276,8 @@ app.get('/api/rooms/:id', async (req, res) => {
     const room = rooms[0];
     if (!room) return res.json({ id, name: id, messages: [] });
     const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=4`)).reverse();
-    res.json({ ...room, messages: messages || [] });
+    const allMembers = await sbQuery('room_members', `room_id=eq.${id}&order=last_seen.desc`);
+    res.json({ ...room, messages: messages || [], allMembers: allMembers || [] });
   } catch(e) {
     console.error('getRoom error:', e.message);
     res.json({ id, name: id, messages: [] });
@@ -514,8 +515,20 @@ wss.on('connection', (ws, req) => {
     room.members.set(ws, { name, lang, emoji });
     console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
 
-    // Send current member list to newcomer
-    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji }));
+    // Persist member in DB
+    sbQuery('room_members', `room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}&limit=1`).then(rows => {
+      if (rows.length) {
+        fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}`, {
+          method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ emoji, lang, last_seen: new Date().toISOString() })
+        }).catch(() => {});
+      } else {
+        sbInsert('room_members', { room_id: roomId, name, emoji, lang }).catch(() => {});
+      }
+    }).catch(() => {});
+
+    // Send current member list to newcomer (online only, from WS)
+    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji, online: true }));
     send(ws, { type: 'joined', room: roomId, members: memberList });
 
     // Notify others that someone joined
@@ -526,6 +539,11 @@ wss.on('connection', (ws, req) => {
     ws.on('close', () => {
       if (room.members) room.members.delete(ws);
       console.log('[-] Member   room=' + roomId + ' name=' + name);
+      // update last_seen
+      fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}`, {
+        method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ last_seen: new Date().toISOString() })
+      }).catch(() => {});
       if (room.members) {
         room.members.forEach((m, w) => send(w, { type: 'member_left', name }));
       }
