@@ -336,7 +336,7 @@ app.get('/api/rooms/:id', async (req, res) => {
   try {
     const roomRows = await sbQuery('rooms', `id=eq.${id}&limit=1`);
     let room = roomRows[0];
-    const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=4`)).reverse();
+    const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=500`)).reverse();
     const allMembers = await sbQuery('room_members', `room_id=eq.${id}&order=last_seen.desc`);
 
     // Lazy backfill: translate names for existing rooms that don't have them yet
@@ -477,7 +477,16 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
     original_text = (wData.text || '').trim();
     detected_lang = wData.language || sender_lang || 'ar';
   } catch(e) { console.error('Whisper error:', e.message); }
-  if (!original_text) return res.json({ ok: true, text: '' });
+  // Strip punctuation + Arabic diacritics, then check against known hallucinations
+  const normalizeHallucination = t => t.trim().toLowerCase()
+    .replace(/[ً-ٰٟ]/g, '') // Arabic diacritics
+    .replace(/[.,!?؟،]/g, '').trim();
+  const WHISPER_HALLUCINATIONS = new Set([
+    'תודה','תודה רבה','שוקראן','شكرا','شكراً','شكرًا',
+    'thank you','thanks','you','','.',
+  ]);
+  if (!original_text || WHISPER_HALLUCINATIONS.has(normalizeHallucination(original_text)))
+    return res.json({ ok: true, text: '' });
 
   // 2. Translate to languages of connected members (+ always he+ar for org core)
   const roomWs = rooms.get(id);

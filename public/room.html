@@ -35,7 +35,7 @@
       padding: .2rem .55rem; font-size: .72rem; color: var(--muted); flex-shrink: 0;
     }
     #messages {
-      flex: 1; overflow-y: auto; padding: .9rem 1rem;
+      flex: 1; overflow-y: auto; overflow-x: hidden; padding: .9rem 1rem;
       display: flex; flex-direction: column; gap: .65rem;
     }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; margin: auto; }
@@ -48,8 +48,8 @@
     .bubble.mine .bubble-text { font-weight: 500; }
     .bubble-sender { font-size: .7rem; color: var(--muted); padding: 0 .2rem; display: flex; align-items: center; gap: .3rem; }
     .bubble-sender .avatar { font-size: 1rem; }
-    .bubble-main-row { display: flex; align-items: center; gap: .6rem; }
-    .bubble-main-row .bubble-text { flex: 1; }
+    .bubble-main-row { display: flex; align-items: center; gap: .6rem; width: 100%; }
+    .bubble-main-row .bubble-text { flex: 1; min-width: 0; }
     .bubble-text { font-size: .95rem; }
     .bubble-original {
       font-size: .75rem; color: var(--muted); margin-top: .3rem;
@@ -555,8 +555,8 @@
         `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
           ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
           <div class="bubble-main-row">
-            <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
             <div class="bubble-text">${esc(translated)}</div>
+            <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
           </div>
           ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
         </div>` +
@@ -733,7 +733,7 @@
 
     function stopRec() {
       if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-      if (Date.now() - recordStart < 600) shouldSend = false;
+      if (Date.now() - recordStart < 1000) shouldSend = false;
       mediaRecorder.stop();
       stream?.getTracks().forEach(t => t.stop());
       recordBtn.classList.remove('recording');
