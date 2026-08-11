@@ -95,8 +95,8 @@
   <div class="rooms-list" id="rooms-list"></div>
 
   <footer>
-    <p class="notice warn">⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.</p>
-    <p class="notice">בשימוש באפליקציה אני מסכים/ה <a href="/terms.html">לתנאי השימוש</a></p>
+    <p class="notice warn" id="noticeWarn"></p>
+    <p class="notice" id="noticeTerms"></p>
   </footer>
 
   <script>
@@ -108,9 +108,9 @@
     if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
 
     const HOME_UI = {
-      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️' },
-      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️' },
-      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️' },
+      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️', warn: '⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.', terms: 'בשימוש באפליקציה אני מסכים/ה', termsLink: 'לתנאי השימוש' },
+      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️', warn: '⚠️ Babel Fish غير محمية من الاختراق أو انتهاك الخصوصية. لا تشاركوا معلومات حساسة عن أشخاص أو نشاط الحركة.', terms: 'باستخدام التطبيق أوافق', termsLink: 'على شروط الاستخدام' },
+      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️', warn: '⚠️ Babel Fish is not protected against hacking or privacy breaches. Do not share sensitive information about people or movement activity.', terms: 'By using this app I agree', termsLink: 'to the Terms of Use' },
     };
     const homeUi = HOME_UI[myUiLang] || HOME_UI.he;
 
@@ -118,6 +118,8 @@
       homeUi.greeting + (myEmoji ? myEmoji + ' ' : '') + myName;
     document.querySelector('.action-btn.primary').textContent = homeUi.newGroup;
     document.querySelectorAll('.action-btn')[1].textContent   = homeUi.join;
+    document.getElementById('noticeWarn').textContent = homeUi.warn;
+    document.getElementById('noticeTerms').innerHTML = `${homeUi.terms} <a href="/terms.html">${homeUi.termsLink}</a>`;
 
     function getMyRooms() {
       try { return JSON.parse(localStorage.getItem('bf_rooms') || '[]'); } catch { return []; }
