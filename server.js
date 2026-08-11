@@ -3,6 +3,15 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const multer = require('multer');
+const webpush = require('web-push');
+
+// ── Web Push (VAPID) ─────────────────────────────────────────────────────────
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || '';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_EMAIL   = process.env.VAPID_EMAIL       || 'mailto:admin@example.com';
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+}
 // ── Supabase REST helpers ────────────────────────────────────────────────────
 const SB_RAW = process.env.SUPABASE_URL || '';
 const SB_URL = SB_RAW.replace(/\/rest\/v1\/?$/, ''); // strip trailing /rest/v1 if user pasted full URL
@@ -494,6 +503,7 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
   if (roomWs?.members) {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
+  sendPushToRoom(id, roomWs, sender_name, { sender_name, sender_emoji, translations, original_text }).catch(() => {});
   res.json({ ok: true, id: msgId });
 });
 
@@ -596,8 +606,70 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   if (roomWs?.members) {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
+  sendPushToRoom(id, roomWs, sender_name, { sender_name, sender_emoji, translations, original_text }).catch(() => {});
   res.json({ ok: true, id: msgId, translations });
 });
+
+// ── Push notifications ───────────────────────────────────────────────────────
+app.get('/api/vapid-public-key', (req, res) => {
+  res.json({ key: VAPID_PUBLIC });
+});
+
+app.post('/api/push-subscribe', express.json(), async (req, res) => {
+  const { room_id, name, lang, subscription } = req.body;
+  if (!room_id || !name || !subscription) return res.status(400).json({ error: 'missing fields' });
+  if (!SB_URL) return res.json({ ok: true });
+  await fetch(`${SB_URL}/rest/v1/push_subscriptions`, {
+    method: 'POST',
+    headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ room_id, name, lang: lang || 'he', subscription })
+  }).catch(e => console.error('[push] subscribe:', e.message));
+  res.json({ ok: true });
+});
+
+app.delete('/api/push-subscribe', express.json(), async (req, res) => {
+  const { room_id, name } = req.body;
+  if (!SB_URL || !room_id || !name) return res.json({ ok: true });
+  await fetch(`${SB_URL}/rest/v1/push_subscriptions?room_id=eq.${room_id}&name=eq.${encodeURIComponent(name)}`, {
+    method: 'DELETE', headers: sbHeaders()
+  }).catch(() => {});
+  res.json({ ok: true });
+});
+
+// Send push to all room subscribers not currently connected via WS
+async function sendPushToRoom(roomId, roomWs, senderName, msgData) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE || !SB_URL) return;
+  // Get connected WS member names
+  const connectedNames = new Set();
+  roomWs?.members?.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) connectedNames.add(m.name); });
+
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/push_subscriptions?room_id=eq.${roomId}`, { headers: sbHeaders() });
+    if (!r.ok) return;
+    const subs = await r.json();
+    await Promise.all(subs.map(async sub => {
+      if (sub.name === senderName) return; // don't push to self
+      if (connectedNames.has(sub.name)) return; // already getting WS
+      const lang = sub.lang || 'he';
+      const body = msgData.translations?.[lang] || msgData.original_text;
+      try {
+        await webpush.sendNotification(sub.subscription, JSON.stringify({
+          title: `${msgData.sender_emoji || '💬'} ${msgData.sender_name}`,
+          body,
+          roomId,
+          url: `/room.html?room=${roomId}`
+        }));
+      } catch(e) {
+        // Subscription expired → remove it
+        if (e.statusCode === 410 || e.statusCode === 404) {
+          fetch(`${SB_URL}/rest/v1/push_subscriptions?room_id=eq.${roomId}&name=eq.${encodeURIComponent(sub.name)}`, {
+            method: 'DELETE', headers: sbHeaders()
+          }).catch(() => {});
+        }
+      }
+    }));
+  } catch(e) { console.error('[push] sendPushToRoom:', e.message); }
+}
 
 const rooms = new Map();
 
