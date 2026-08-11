@@ -273,10 +273,10 @@
   <div id="roomSettingsSheet" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeRoomSettings()">
     <div class="sheet" style="position:relative;">
       <button class="sheet-close" onclick="closeRoomSettings()">✕</button>
-      <h3>הגדרות קבוצה</h3>
+      <h3 id="settingsTitle">הגדרות קבוצה</h3>
       <div class="qr-wrap"><img id="qrImg" src="" alt="QR"></div>
       <div class="join-url" id="joinUrl"></div>
-      <button class="copy-btn" onclick="copyJoinLink()">📋 העתק קישור</button>
+      <button class="copy-btn" id="copyLinkBtn" onclick="copyJoinLink()">📋 העתק קישור</button>
       <button class="copy-btn" id="notifBtn" onclick="togglePushNotifications()"
         style="margin-top:.5rem;background:var(--surface);border:1px solid var(--border);color:var(--text);">
         🔔 טוען...
@@ -284,13 +284,13 @@
       <p id="notifMsg" style="font-size:.78rem;color:var(--muted);text-align:center;min-height:1em;margin-top:.2rem;"></p>
       <div id="renameSection" style="display:none;">
         <hr style="border-color:var(--border);margin:.8rem 0;">
-        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">✏️ עריכת שם הקבוצה</p>
+        <p id="editNameLabel" style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">✏️ עריכת שם הקבוצה</p>
         <div style="display:flex;flex-direction:column;gap:.5rem;">
           <input id="nameHe" placeholder="עברית" style="direction:rtl;">
           <input id="nameAr" placeholder="عربي" style="direction:rtl;">
           <input id="nameEn" placeholder="English" style="direction:ltr;text-align:left;">
         </div>
-        <button class="copy-btn" style="margin-top:.6rem;background:var(--accent);color:#fff;border-color:var(--accent);" onclick="saveRoomName()">שמור שם</button>
+        <button class="copy-btn" id="saveNameBtn" style="margin-top:.6rem;background:var(--accent);color:#fff;border-color:var(--accent);" onclick="saveRoomName()">שמור שם</button>
         <p id="nameMsg" style="font-size:.8rem;color:#7fc47f;text-align:center;min-height:1em;margin-top:.3rem;"></p>
       </div>
     </div>
@@ -453,9 +453,9 @@
 
     // Apply UI language
     const UI = {
-      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה' },
-      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل' },
-      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record' },
+      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה', settingsTitle: 'הגדרות קבוצה', copyLink: '📋 העתק קישור', linkCopied: '✓ הועתק!', notifOn: '🔔 התראות פעילות — לחץ לביטול', notifOff: '🔕 הפעל התראות לחדר זה', notifUnsupported: '🔕 לא נתמך בדפדפן זה', notifDenied: 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן', notifCancelled: 'התראות בוטלו', notifActive: '✓ תקבל התראות כשמגיעות הודעות', notifNoKey: 'שרת לא מוגדר לפוש', notifNoPerm: 'לא אושרה הרשאה', editName: '✏️ עריכת שם הקבוצה', saveName: 'שמור שם', nameSaved: '✓ נשמר', nameError: 'שגיאה', iosBanner: '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה' },
+      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل', settingsTitle: 'إعدادات المجموعة', copyLink: '📋 نسخ الرابط', linkCopied: '✓ تم النسخ!', notifOn: '🔔 التنبيهات مفعّلة — اضغط للإلغاء', notifOff: '🔕 تفعيل التنبيهات لهذه الغرفة', notifUnsupported: '🔕 غير مدعوم في هذا المتصفح', notifDenied: 'إذن التنبيهات محظور — غيّر في إعدادات المتصفح', notifCancelled: 'تم إلغاء التنبيهات', notifActive: '✓ ستصلك تنبيهات عند وصول رسائل', notifNoKey: 'الخادم غير مهيأ للإشعارات', notifNoPerm: 'لم يتم منح الإذن', editName: '✏️ تعديل اسم المجموعة', saveName: 'حفظ الاسم', nameSaved: '✓ تم الحفظ', nameError: 'خطأ', iosBanner: '📲 لإضافة Babel Fish إلى الشاشة الرئيسية: اضغط <strong style="color:var(--text)">مشاركة ↑</strong> ← "إضافة إلى الشاشة الرئيسية" — ثم ستصلك التنبيهات حتى عند إغلاق التطبيق' },
+      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record', settingsTitle: 'Group Settings', copyLink: '📋 Copy Link', linkCopied: '✓ Copied!', notifOn: '🔔 Notifications on — tap to disable', notifOff: '🔕 Enable notifications for this room', notifUnsupported: '🔕 Not supported in this browser', notifDenied: 'Notification permission blocked — change in browser settings', notifCancelled: 'Notifications disabled', notifActive: '✓ You will receive notifications when messages arrive', notifNoKey: 'Server not configured for push', notifNoPerm: 'Permission not granted', editName: '✏️ Edit Group Name', saveName: 'Save Name', nameSaved: '✓ Saved', nameError: 'Error', iosBanner: '📲 To add Babel Fish to your home screen: tap <strong style="color:var(--text)">Share ↑</strong> → "Add to Home Screen" — then you\'ll get notifications even when the app is closed' },
     };
     const ui = UI[myUiLang] || UI.he;
     document.getElementById('textInput').placeholder = ui.placeholder;
@@ -660,6 +660,10 @@
     let currentRoomNames = {};
     function openRoomSettings() {
       initPushUI();
+      document.getElementById('settingsTitle').textContent  = ui.settingsTitle;
+      document.getElementById('copyLinkBtn').textContent    = ui.copyLink;
+      document.getElementById('editNameLabel').textContent  = ui.editName;
+      document.getElementById('saveNameBtn').textContent    = ui.saveName;
       const joinUrl = `${location.origin}/join.html?code=${roomId}`;
       document.getElementById('joinUrl').textContent = joinUrl;
       document.getElementById('qrImg').src =
@@ -694,8 +698,8 @@
           const idx = rooms.findIndex(r => r.id === roomId);
           if (idx >= 0) { rooms[idx].names = names; rooms[idx].name = displayName; localStorage.setItem('bf_rooms', JSON.stringify(rooms)); }
         } catch(e) {}
-        document.getElementById('nameMsg').textContent = '✓ נשמר';
-      } catch(e) { document.getElementById('nameMsg').textContent = 'שגיאה'; }
+        document.getElementById('nameMsg').textContent = ui.nameSaved;
+      } catch(e) { document.getElementById('nameMsg').textContent = ui.nameError; }
     }
     function closeRoomSettings() {
       document.getElementById('roomSettingsSheet').style.display = 'none';
@@ -703,9 +707,9 @@
     function copyJoinLink() {
       const url = document.getElementById('joinUrl').textContent;
       navigator.clipboard.writeText(url).catch(() => {});
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = '✓ הועתק!';
-      setTimeout(() => { btn.textContent = '📋 העתק קישור'; }, 2000);
+      const btn = document.getElementById('copyLinkBtn');
+      btn.textContent = ui.linkCopied;
+      setTimeout(() => { btn.textContent = ui.copyLink; }, 2000);
     }
     function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
 
@@ -867,7 +871,7 @@
       const btn = document.getElementById('notifBtn');
       const msg = document.getElementById('notifMsg');
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        btn.textContent = '🔕 לא נתמך בדפדפן זה';
+        btn.textContent = ui.notifUnsupported;
         btn.disabled = true; return;
       }
       try {
@@ -875,7 +879,7 @@
         const sub = await swReg.pushManager.getSubscription();
         updateNotifBtn(!!sub);
         if (Notification.permission === 'denied') {
-          msg.textContent = 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן';
+          msg.textContent = ui.notifDenied;
         }
       } catch(e) { btn.textContent = '🔕 שגיאה'; }
     }
@@ -883,11 +887,11 @@
     function updateNotifBtn(subscribed) {
       const btn = document.getElementById('notifBtn');
       if (subscribed) {
-        btn.textContent = '🔔 התראות פעילות — לחץ לביטול';
+        btn.textContent = ui.notifOn;
         btn.style.borderColor = 'var(--accent)';
         btn.style.color = 'var(--accent)';
       } else {
-        btn.textContent = '🔕 הפעל התראות לחדר זה';
+        btn.textContent = ui.notifOff;
         btn.style.borderColor = 'var(--border)';
         btn.style.color = 'var(--text)';
       }
@@ -908,14 +912,14 @@
             body: JSON.stringify({ room_id: roomId, name: myName })
           });
           updateNotifBtn(false);
-          msg.textContent = 'התראות בוטלו';
+          msg.textContent = ui.notifCancelled;
         } else {
           // Subscribe
           const perm = await Notification.requestPermission();
-          if (perm !== 'granted') { msg.textContent = 'לא אושרה הרשאה'; return; }
+          if (perm !== 'granted') { msg.textContent = ui.notifNoPerm; return; }
           const keyRes = await fetch('/api/vapid-public-key');
           const { key } = await keyRes.json();
-          if (!key) { msg.textContent = 'שרת לא מוגדר לפוש'; return; }
+          if (!key) { msg.textContent = ui.notifNoKey; return; }
           const sub = await swReg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(key)
@@ -926,7 +930,7 @@
             body: JSON.stringify({ room_id: roomId, name: myName, lang: myLang, subscription: sub.toJSON() })
           });
           updateNotifBtn(true);
-          msg.textContent = '✓ תקבל התראות כשמגיעות הודעות';
+          msg.textContent = ui.notifActive;
         }
       } catch(e) { msg.textContent = 'שגיאה: ' + e.message; }
     }
@@ -935,13 +939,19 @@
     if (navigator.standalone === false && /iPhone|iPad/.test(navigator.userAgent)) {
       const banner = document.createElement('div');
       banner.style.cssText = 'position:fixed;bottom:80px;right:0;left:0;margin:0 1rem;background:#2a1050;border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;font-size:.82rem;color:var(--muted);text-align:center;z-index:50;';
-      banner.innerHTML = '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה';
+      banner.innerHTML = ui.iosBanner;
       banner.innerHTML += '<button onclick="this.parentElement.remove()" style="position:absolute;top:.4rem;left:.6rem;background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;">✕</button>';
       document.body.appendChild(banner);
       setTimeout(() => banner.remove(), 12000);
     }
 
-    initPushUI();
+    initPushUI().then(async () => {
+      if (!swReg) return;
+      const sub = await swReg.pushManager.getSubscription();
+      if (!sub && Notification.permission === 'default') {
+        togglePushNotifications();
+      }
+    });
   </script>
 </body>
 </html>
