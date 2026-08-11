@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Babel Fish</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Babel Fish">
+  <link rel="apple-touch-icon" href="/babel-fish.png">
+  <meta name="theme-color" content="#8B2FC9">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -271,6 +277,11 @@
       <div class="qr-wrap"><img id="qrImg" src="" alt="QR"></div>
       <div class="join-url" id="joinUrl"></div>
       <button class="copy-btn" onclick="copyJoinLink()">📋 העתק קישור</button>
+      <button class="copy-btn" id="notifBtn" onclick="togglePushNotifications()"
+        style="margin-top:.5rem;background:var(--surface);border:1px solid var(--border);color:var(--text);">
+        🔔 טוען...
+      </button>
+      <p id="notifMsg" style="font-size:.78rem;color:var(--muted);text-align:center;min-height:1em;margin-top:.2rem;"></p>
       <div id="renameSection" style="display:none;">
         <hr style="border-color:var(--border);margin:.8rem 0;">
         <p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">✏️ עריכת שם הקבוצה</p>
@@ -648,6 +659,7 @@
 
     let currentRoomNames = {};
     function openRoomSettings() {
+      initPushUI();
       const joinUrl = `${location.origin}/join.html?code=${roomId}`;
       document.getElementById('joinUrl').textContent = joinUrl;
       document.getElementById('qrImg').src =
@@ -841,40 +853,95 @@
 
     loadRoom();
 
-    // ── Web Push registration ─────────────────────────────────────────────────
-    async function registerPush() {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-      try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        const keyRes = await fetch('/api/vapid-public-key');
-        const { key } = await keyRes.json();
-        if (!key) return;
+    // ── Web Push ──────────────────────────────────────────────────────────────
+    let swReg = null;
 
-        // Request notification permission (silently if already granted/denied)
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-
-        const existing = await reg.pushManager.getSubscription();
-        const sub = existing || await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(key)
-        });
-        await fetch('/api/push-subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room_id: roomId, name: myName, lang: myLang, subscription: sub.toJSON() })
-        });
-      } catch(e) { console.warn('[push] register failed:', e.message); }
-    }
-
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    function urlBase64ToUint8Array(b64) {
+      const padding = '='.repeat((4 - b64.length % 4) % 4);
+      const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
       const raw = atob(base64);
       return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
     }
 
-    registerPush();
+    async function initPushUI() {
+      const btn = document.getElementById('notifBtn');
+      const msg = document.getElementById('notifMsg');
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        btn.textContent = '🔕 לא נתמך בדפדפן זה';
+        btn.disabled = true; return;
+      }
+      try {
+        swReg = await navigator.serviceWorker.register('/sw.js');
+        const sub = await swReg.pushManager.getSubscription();
+        updateNotifBtn(!!sub);
+        if (Notification.permission === 'denied') {
+          msg.textContent = 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן';
+        }
+      } catch(e) { btn.textContent = '🔕 שגיאה'; }
+    }
+
+    function updateNotifBtn(subscribed) {
+      const btn = document.getElementById('notifBtn');
+      if (subscribed) {
+        btn.textContent = '🔔 התראות פעילות — לחץ לביטול';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--accent)';
+      } else {
+        btn.textContent = '🔕 הפעל התראות לחדר זה';
+        btn.style.borderColor = 'var(--border)';
+        btn.style.color = 'var(--text)';
+      }
+    }
+
+    async function togglePushNotifications() {
+      const msg = document.getElementById('notifMsg');
+      msg.textContent = '';
+      if (!swReg) return;
+      try {
+        const existing = await swReg.pushManager.getSubscription();
+        if (existing) {
+          // Unsubscribe
+          await existing.unsubscribe();
+          await fetch('/api/push-subscribe', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ room_id: roomId, name: myName })
+          });
+          updateNotifBtn(false);
+          msg.textContent = 'התראות בוטלו';
+        } else {
+          // Subscribe
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') { msg.textContent = 'לא אושרה הרשאה'; return; }
+          const keyRes = await fetch('/api/vapid-public-key');
+          const { key } = await keyRes.json();
+          if (!key) { msg.textContent = 'שרת לא מוגדר לפוש'; return; }
+          const sub = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(key)
+          });
+          await fetch('/api/push-subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ room_id: roomId, name: myName, lang: myLang, subscription: sub.toJSON() })
+          });
+          updateNotifBtn(true);
+          msg.textContent = '✓ תקבל התראות כשמגיעות הודעות';
+        }
+      } catch(e) { msg.textContent = 'שגיאה: ' + e.message; }
+    }
+
+    // Also add iOS install banner hint
+    if (navigator.standalone === false && /iPhone|iPad/.test(navigator.userAgent)) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;bottom:80px;right:0;left:0;margin:0 1rem;background:#2a1050;border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;font-size:.82rem;color:var(--muted);text-align:center;z-index:50;';
+      banner.innerHTML = '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה';
+      banner.innerHTML += '<button onclick="this.parentElement.remove()" style="position:absolute;top:.4rem;left:.6rem;background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;">✕</button>';
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 12000);
+    }
+
+    initPushUI();
   </script>
 </body>
 </html>

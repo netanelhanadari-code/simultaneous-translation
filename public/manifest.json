@@ -1,0 +1,16 @@
+{
+  "name": "Babel Fish — עומדים ביחד",
+  "short_name": "Babel Fish",
+  "description": "תרגום בזמן אמת",
+  "start_url": "/home.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12082a",
+  "theme_color": "#8B2FC9",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/babel-fish.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/babel-fish.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
