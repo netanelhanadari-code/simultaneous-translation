@@ -132,6 +132,9 @@
     .member-chip.online .dot { background: #4caf50; }
     .member-chip.me { background: var(--accent2); border: 1px solid var(--accent); color: var(--text); font-weight: 600; order: -1; }
     .member-chip .chip-avatar { font-size: 1rem; line-height: 1; }
+    .chip-avatar img, .row-avatar img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+    .member-chip .chip-avatar { width:22px;height:22px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .member-row .row-avatar { width:28px;height:28px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
     .member-chip .chip-label { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chip-tooltip {
       position: fixed; background: #222; color: #fff; font-size: .75rem;
@@ -420,13 +423,16 @@
       });
       document.getElementById('members-count').textContent = merged.size;
 
-      sorted.forEach(([name, { lang, emoji, phone, online }]) => {
+      sorted.forEach(([name, { lang, emoji, phone, avatar, online }]) => {
         // chip (one-line bar)
         const chip = document.createElement('div');
         chip.className = 'member-chip' + (online ? ' online' : '') + (name === myName ? ' me' : '');
         const shortName = name.length > 8 ? name.slice(0, 8) + '…' : name;
+        const chipAvatar = avatar
+          ? `<span class="chip-avatar"><img src="${avatar}" alt="${esc(name)}"></span>`
+          : (emoji ? `<span class="chip-avatar">${emoji}</span>` : '');
         chip.innerHTML = `<span class="dot"></span>`
-          + (emoji ? `<span class="chip-avatar">${emoji}</span>` : '')
+          + chipAvatar
           + `<span class="chip-label">${esc(shortName)}</span>`;
         chip.addEventListener('click', () => {
           showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`);

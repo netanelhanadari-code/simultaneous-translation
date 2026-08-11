@@ -762,7 +762,7 @@ wss.on('connection', (ws, req) => {
     const emoji = params.get('emoji') || '';
     const phone = params.get('phone') || '';
     if (!room.members) room.members = new Map();
-    room.members.set(ws, { name, lang, emoji, phone });
+    room.members.set(ws, { name, lang, emoji, phone, avatar: '' });
     console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
 
     // Persist member in DB
@@ -778,12 +778,31 @@ wss.on('connection', (ws, req) => {
     }).catch(() => {});
 
     // Send current member list to newcomer (online only, from WS)
-    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji, phone: m.phone || '', online: true }));
+    const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji, phone: m.phone || '', avatar: m.avatar || '', online: true }));
     send(ws, { type: 'joined', room: roomId, members: memberList });
 
     // Notify others that someone joined
     room.members.forEach((m, w) => {
-      if (w !== ws) send(w, { type: 'member_joined', name, lang, emoji, phone });
+      if (w !== ws) send(w, { type: 'member_joined', name, lang, emoji, phone, avatar: '' });
+    });
+
+    // Handle messages from member (e.g. avatar updates)
+    ws.on('message', data => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'set_avatar') {
+          const member = room.members.get(ws);
+          if (member) {
+            member.avatar = msg.avatar || '';
+            // Broadcast avatar to all other members
+            room.members.forEach((m, w) => {
+              if (w !== ws && w.readyState === WebSocket.OPEN) {
+                send(w, { type: 'member_avatar', name: member.name, avatar: member.avatar });
+              }
+            });
+          }
+        }
+      } catch(_) {}
     });
 
     ws.on('close', () => {
