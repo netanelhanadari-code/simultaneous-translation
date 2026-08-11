@@ -342,7 +342,7 @@ async function translateRoomName(text, fromLang, toLang) {
 
 // Create room
 app.post('/api/rooms', express.json(), async (req, res) => {
-  const { name, lang } = req.body;
+  const { name, lang, creator_phone } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = makeRoomId();
   const fromLang = lang || 'he';
@@ -354,8 +354,8 @@ app.post('/api/rooms', express.json(), async (req, res) => {
     names[toLang] = await translateRoomName(name, fromLang, toLang);
   }));
 
-  await sbInsert('rooms', { id, name, names });
-  res.json({ id, name, names });
+  await sbInsert('rooms', { id, name, names, ...(creator_phone ? { creator_phone } : {}) });
+  res.json({ id, name, names, creator_phone: creator_phone || '' });
 });
 
 // Get room + history
@@ -387,6 +387,23 @@ app.get('/api/rooms/:id', async (req, res) => {
     console.error('getRoom error:', e.message);
     res.json({ id, name: id, messages: [] });
   }
+});
+
+// Rename room — update names JSONB
+app.patch('/api/rooms/:id/name', express.json(), async (req, res) => {
+  const { id } = req.params;
+  const { names } = req.body; // { he, ar, en }
+  if (!names || typeof names !== 'object') return res.status(400).json({ error: 'Missing names' });
+  if (!SB_URL) return res.status(503).json({ error: 'No DB' });
+  await fetch(`${SB_URL}/rest/v1/rooms?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ names })
+  });
+  // Broadcast so all connected clients update the header
+  const payload = JSON.stringify({ type: 'room_renamed', names });
+  rooms.get(id)?.members?.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  res.json({ ok: true });
 });
 
 // Emoji reaction — toggle on/off

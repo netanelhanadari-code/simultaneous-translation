@@ -181,7 +181,7 @@
         const r = await fetch('/api/rooms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, lang: localStorage.getItem('bf_lang') || 'he' })
+          body: JSON.stringify({ name, lang: localStorage.getItem('bf_lang') || 'he', creator_phone: localStorage.getItem('bf_phone') || '' })
         });
         const data = await r.json();
         const { id, names } = data;

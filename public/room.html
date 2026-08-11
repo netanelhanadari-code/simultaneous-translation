@@ -267,10 +267,21 @@
   <div id="roomSettingsSheet" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeRoomSettings()">
     <div class="sheet" style="position:relative;">
       <button class="sheet-close" onclick="closeRoomSettings()">✕</button>
-      <h3>הצטרפות לקבוצה</h3>
+      <h3>הגדרות קבוצה</h3>
       <div class="qr-wrap"><img id="qrImg" src="" alt="QR"></div>
       <div class="join-url" id="joinUrl"></div>
       <button class="copy-btn" onclick="copyJoinLink()">📋 העתק קישור</button>
+      <div id="renameSection" style="display:none;">
+        <hr style="border-color:var(--border);margin:.8rem 0;">
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">✏️ עריכת שם הקבוצה</p>
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          <input id="nameHe" placeholder="עברית" style="direction:rtl;">
+          <input id="nameAr" placeholder="عربي" style="direction:rtl;">
+          <input id="nameEn" placeholder="English" style="direction:ltr;text-align:left;">
+        </div>
+        <button class="copy-btn" style="margin-top:.6rem;background:var(--accent);color:#fff;border-color:var(--accent);" onclick="saveRoomName()">שמור שם</button>
+        <p id="nameMsg" style="font-size:.8rem;color:#7fc47f;text-align:center;min-height:1em;margin-top:.3rem;"></p>
+      </div>
     </div>
   </div>
 
@@ -458,6 +469,13 @@
         if (!r.ok) { location.href = '/home.html'; return; }
         const data = await r.json();
         const names = data.names || {};
+        if (!isDM) currentRoomNames = names;
+        // Show rename section only for room creator
+        if (!isDM) {
+          const creatorPhone = data.creator_phone || '';
+          const isCreator = myPhone && creatorPhone && myPhone === creatorPhone;
+          document.getElementById('renameSection').style.display = isCreator ? '' : 'none';
+        }
         const displayName = isDM
           ? (localStorage.getItem('bf_dm_peer_' + roomId) || data.name || roomId)
           : (names[myUiLang] || names.he || data.name || roomId);
@@ -518,6 +536,10 @@
         } else if (msg.type === 'member_left') {
           activeMembers.delete(msg.name);
           renderMembers();
+        } else if (msg.type === 'room_renamed') {
+          currentRoomNames = msg.names;
+          const dn = msg.names[myUiLang] || msg.names.he || msg.names.ar || msg.names.en;
+          if (dn) { document.getElementById('roomNameEl').textContent = dn; document.title = 'Babel Fish — ' + dn; }
         } else if (msg.type === 'reaction_update') {
           renderReactions(msg.msg_id, msg.reactions);
         } else if (msg.type === 'room_message') {
@@ -618,12 +640,44 @@
       } catch(e) { console.error('openDM:', e); }
     }
 
+    let currentRoomNames = {};
     function openRoomSettings() {
       const joinUrl = `${location.origin}/join.html?code=${roomId}`;
       document.getElementById('joinUrl').textContent = joinUrl;
       document.getElementById('qrImg').src =
         `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
+      // Pre-fill name fields from current names
+      document.getElementById('nameHe').value = currentRoomNames.he || '';
+      document.getElementById('nameAr').value = currentRoomNames.ar || '';
+      document.getElementById('nameEn').value = currentRoomNames.en || '';
+      document.getElementById('nameMsg').textContent = '';
       document.getElementById('roomSettingsSheet').style.display = '';
+    }
+    async function saveRoomName() {
+      const names = {
+        he: document.getElementById('nameHe').value.trim(),
+        ar: document.getElementById('nameAr').value.trim(),
+        en: document.getElementById('nameEn').value.trim(),
+      };
+      if (!names.he && !names.ar && !names.en) return;
+      try {
+        await fetch(`/api/rooms/${roomId}/name`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ names })
+        });
+        currentRoomNames = names;
+        const displayName = names[myUiLang] || names.he || names.ar || names.en;
+        document.getElementById('roomNameEl').textContent = displayName;
+        document.title = 'Babel Fish — ' + displayName;
+        // Update bf_rooms
+        try {
+          const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
+          const idx = rooms.findIndex(r => r.id === roomId);
+          if (idx >= 0) { rooms[idx].names = names; rooms[idx].name = displayName; localStorage.setItem('bf_rooms', JSON.stringify(rooms)); }
+        } catch(e) {}
+        document.getElementById('nameMsg').textContent = '✓ נשמר';
+      } catch(e) { document.getElementById('nameMsg').textContent = 'שגיאה'; }
     }
     function closeRoomSettings() {
       document.getElementById('roomSettingsSheet').style.display = 'none';
