@@ -61,6 +61,15 @@
     }
     .room-chip-leave:hover { color: #e07070; background: rgba(224,112,112,.1); }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; padding: 2.5rem 1rem; line-height: 1.7; }
+    footer {
+      margin-top: auto; padding: 1.2rem 1.2rem 1.8rem;
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .notice {
+      font-size: .72rem; color: var(--muted); line-height: 1.5; text-align: center;
+    }
+    .notice.warn { color: #c0845a; }
+    .notice a { color: inherit; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -77,6 +86,11 @@
 
   <p class="section-label" id="rooms-label" style="display:none;">הקבוצות שלי</p>
   <div class="rooms-list" id="rooms-list"></div>
+
+  <footer>
+    <p class="notice warn">⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.</p>
+    <p class="notice">בשימוש באפליקציה אני מסכים/ה <a href="/terms.html">לתנאי השימוש</a></p>
+  </footer>
 
   <script>
     const myName  = localStorage.getItem('bf_name')  || '';

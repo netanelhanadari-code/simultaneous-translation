@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>תנאי שימוש — Babel Fish</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
+      --accent: #8B2FC9; --text: #f0e8ff; --muted: #9b7fc4;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100dvh; display: flex; flex-direction: column;
+    }
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: .75rem 1.2rem; display: flex; align-items: center; gap: .8rem;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 1.5rem; cursor: pointer; line-height: 1;
+    }
+    h1 { font-size: 1rem; }
+    .tabs {
+      display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+      position: sticky; top: 53px; z-index: 9;
+    }
+    .tab {
+      flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); padding: .7rem; font-size: .9rem; cursor: pointer;
+      font-family: inherit; transition: color .15s, border-color .15s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .section { display: none; padding: 1.5rem 1.2rem 3rem; max-width: 680px; margin: 0 auto; }
+    .section.active { display: block; }
+    .section[dir="rtl"] { text-align: right; }
+    .section[dir="ltr"] { text-align: left; }
+    h2 { font-size: 1rem; margin-bottom: 1.2rem; color: var(--muted); }
+    p { font-size: .88rem; line-height: 1.75; color: #d8ccf0; margin-bottom: 1rem; }
+    a { color: var(--accent); }
+    .org { font-size: .82rem; color: var(--muted); border-top: 1px solid var(--border); padding-top: 1rem; margin-top: .5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="back-btn" onclick="history.back()">‹</button>
+    <h1>תנאי שימוש / شروط الاستخدام</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showLang('he')" id="tab-he">עברית</button>
+    <button class="tab"        onclick="showLang('ar')" id="tab-ar">العربية</button>
+  </div>
+
+  <!-- Hebrew -->
+  <div class="section active" id="sec-he" dir="rtl">
+    <h2>הצהרת הסכמה לשימוש במידע אישי</h2>
+    <p>בעצם מסירת פרטיי לתנועת "עומדים ביחד" (להלן: "התנועה"), אני מסכים/ה כי המידע האישי שאמסור — לרבות פרטים מזהים כגון שם, כתובת, מספר טלפון ודוא"ל, מידע על עמדותיי, דעותיי הפוליטיות, דפוס הצבעתי והשתתפותי בפעילויות שונות של התנועה (כגון סקרים, חתימה על עצומות או פעילות התנדבותית) — ייאסף, יישמר ויעובד על ידי התנועה לצורך ניהול מאגרי מידע, יצירת קשר עימי, משלוח עדכונים, קידום מטרות ציבוריות, וניתוח מידע לשם שיפור פעולתה של התנועה.</p>
+    <p>ככל שתרמתי לתנועה ומסרתי פרטים אישיים במסגרת זו, אני מסכים/ה כי גם מידע זה ייכלל במאגר המידע ויעובד למטרות האמורות. המידע ישמש גם לדיוור ישיר, ובכלל זה שליחת עדכונים מותאמים אישית באמצעי התקשורת שמסרתי — כגון דוא"ל, מסרונים (SMS), שיחות טלפון, או פנייה באמצעים דיגיטליים נוספים, לרבות ברשתות החברתיות.</p>
+    <p>ידוע לי כי ייתכן שהמידע יועבר, במידת הצורך בלבד, לגורמים חיצוניים המספקים שירותים לתנועה — לרבות שירותי דיוור, ניתוח מידע, ואחסון נתונים — וכן לגורמים בעלי מטרות דומות למטרות התנועה, וכל זאת תוך שמירה על סודיות המידע ובהתאם להוראות כל דין.</p>
+    <p>ידוע לי שמסירת המידע נעשית בהסכמתי, ולא חלה עלי כל חובה חוקית למסור את המידע; עם זאת, אני מבין/ה כי סירוב למסור את המידע עלול למנוע ממני קבלת עדכונים או מידע מהתנועה.</p>
+    <p class="org">בעלת השליטה במאגר המידע היא תנועת עומדים ביחד. לבירורים: <a href="mailto:info@standing-together.org">info@standing-together.org</a><br><br>
+    אני מודע/ת לזכותי לעיין בכל מידע שנאסף אודותיי, לדרוש את תיקונו או עדכונו, לבקש את מחיקתו בכפוף להוראות החוק, ולבטל את הסכמתי לקבלת דיוור ישיר בכל עת.<br><br>
+    בהצהרתי זו אני מאשר/ת כי קראתי והבנתי את תוכן כתב ההסכמה, וכי אני מסכים/ה לשימוש האמור במידע.</p>
+  </div>
+
+  <!-- Arabic -->
+  <div class="section" id="sec-ar" dir="rtl">
+    <h2>إقرار الموافقة على استخدام البيانات الشخصية</h2>
+    <p>في الواقع، بتسليمي لبياناتي الشخصية إلى حراك "نقف معًا" (المشار إليه فيما بعد بـ"الحراك")، أوافق على أن البيانات الشخصية التي سأقدّمها — بما في ذلك المعلومات التعريفية مثل الاسم، العنوان، رقم الهاتف والبريد الإلكتروني، المعلومات عن مواقفي وآرائي السياسية، نمط تصويتي، ومشاركتي في أنشطة مختلفة للحراك (مثل الاستطلاعات، التوقيع على العرائض، أو النشاط التطوعي) — سيتم جمعها، تخزينها، ومعالجتها من قبل الحراك لأغراض إدارة قواعد البيانات، التواصل معي، إرسال التحديثات، تعزيز الأهداف العامة، وتحليل المعلومات لتحسين أداء الحراك.</p>
+    <p>كما أوافق على أن أي معلومات قد قدمتها للحراك في سياق مساهمتي ستدرج أيضًا في قاعدة البيانات وسيتم معالجتها للأغراض المذكورة أعلاه. ستُستخدم المعلومات أيضًا في الإرسال المباشر، بما في ذلك إرسال تحديثات مخصّصة عبر وسائل الاتصال التي قدمتها — مثل البريد الإلكتروني، الرسائل النصية (SMS)، المكالمات الهاتفية، أو التواصل عبر وسائل رقمية أخرى، بما في ذلك شبكات التواصل الاجتماعي.</p>
+    <p>وأُعلم بأن المعلومات قد تُنقل، عند الحاجة فقط، إلى أطراف خارجية تقدم خدمات للحراك — بما في ذلك خدمات الإرسال، تحليل البيانات، وتخزين البيانات — وكذلك إلى أطراف تهدف إلى أهداف مشابهة لأهداف الحراك، وكل ذلك مع الحفاظ على سرية المعلومات ووفقًا لأحكام القانون.</p>
+    <p>وأُعلم أن تقديم البيانات يتم بموافقتي، ولا يوجد عليّ أي التزام قانوني بتقديمها؛ ومع ذلك، أفهم أن رفض تقديم البيانات قد يمنعني من تلقي التحديثات أو المعلومات من الحراك.</p>
+    <p class="org">مالك قاعدة البيانات هو حراك "نقف معًا". للاستفسارات: <a href="mailto:info@standing-together.org">info@standing-together.org</a><br><br>
+    أنا مُدرك/ة لحقّي في الاطلاع على جميع المعلومات التي جُمعت عني، وطلب تصحيحها أو تحديثها عند الحاجة، وطلب حذفها وفقًا لأحكام القانون، وكذلك إلغاء موافقتي لتلقي الإرسال المباشر في أي وقت.<br><br>
+    وبموجب هذا التصريح، أؤكد أنني قرأت وفهمت محتوى نموذج الموافقة، وأوافق على الاستخدام المذكور للمعلومات.</p>
+  </div>
+
+  <script>
+    function showLang(lang) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('sec-' + lang).classList.add('active');
+      document.getElementById('tab-' + lang).classList.add('active');
+    }
+    // Auto-show user's preferred language
+    const pref = localStorage.getItem('bf_lang') || 'he';
+    if (pref === 'ar') showLang('ar');
+  </script>
+</body>
+</html>
