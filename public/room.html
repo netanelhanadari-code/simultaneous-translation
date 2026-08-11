@@ -56,6 +56,23 @@
     }
     .bubble-original.visible { display: block; }
     .bubble-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 .2rem; gap: .4rem; }
+    .reply-quote {
+      font-size: .75rem; color: var(--muted);
+      border-right: 3px solid var(--accent); padding: .25rem .55rem;
+      margin-bottom: .3rem; border-radius: 0 4px 4px 0;
+      background: rgba(139,47,201,.08); cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    .reply-quote strong { color: var(--text); display: block; font-size: .7rem; }
+    .reply-bar {
+      display: none; align-items: center; gap: .5rem;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: .4rem .8rem; font-size: .8rem; color: var(--muted);
+    }
+    .reply-bar.open { display: flex; }
+    .reply-bar-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .reply-bar strong { color: var(--text); }
+    .reply-cancel { background: none; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; flex-shrink: 0; }
     .bubble-time { font-size: .67rem; color: var(--muted); }
     .icon-btn {
       background: none; border: none; cursor: pointer;
@@ -248,10 +265,16 @@
   </div>
 
   <footer>
+    <div class="reply-bar" id="replyBar">
+      <span class="reply-bar-text" id="replyBarText"></span>
+      <button class="reply-cancel" onclick="cancelReply()" title="בטל">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:.4rem;width:100%;">
     <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()">🔊 קול</button>
     <textarea id="textInput" rows="1" placeholder="הקלד הודעה..."></textarea>
     <button id="sendBtn" onclick="sendText()" disabled>➤</button>
     <button id="recordBtn">🎤</button>
+    </div>
     <div id="status"></div>
   </footer>
 
@@ -274,7 +297,23 @@
     let latestMsgTs = null;
     const displayedIds = new Set();
     const msgElements  = new Map(); // msgId → { reactionsEl, pickerEl }
-    const REACTION_EMOJIS = ['❤️','👍','😂','😢','🤯','🙏'];
+    const REACTION_EMOJIS = ['❤️','👍','😂','😢','🤯','🙏','🦖'];
+
+    // ── Reply state ────────────────────────────────────────────────────────
+    let replyingTo = null; // { id, sender_name, text }
+    const replyBar     = document.getElementById('replyBar');
+    const replyBarText = document.getElementById('replyBarText');
+
+    function startReply(msgId, senderName, text) {
+      replyingTo = { id: msgId, sender_name: senderName, text };
+      replyBarText.innerHTML = `<strong>${esc(senderName)}:</strong> ${esc(text.slice(0, 80))}${text.length > 80 ? '…' : ''}`;
+      replyBar.classList.add('open');
+      document.getElementById('textInput').focus();
+    }
+    function cancelReply() {
+      replyingTo = null;
+      replyBar.classList.remove('open');
+    }
 
     function renderReactions(msgId, reactions) {
       const el = msgElements.get(String(msgId));
@@ -503,7 +542,8 @@
         (!isMine
           ? `<div class="bubble-sender">${senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : ''}${esc(msg.sender_name)}</div>`
           : '') +
-        `<div class="bubble-inner">
+        `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
+          ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
           <div class="bubble-text">${esc(translated)}</div>
           ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
         </div>` +
@@ -511,6 +551,7 @@
           <div style="display:flex;gap:.4rem;align-items:center;">
             <button class="icon-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
             ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
+            ${msg.id ? `<button class="icon-btn" onclick="startReply('${msg.id}','${esc(msg.sender_name)}',${JSON.stringify(translated)})" title="השב">↩️</button>` : ''}
             ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
           </div>
           <div class="bubble-time">${time}</div>
@@ -632,11 +673,13 @@
       textInput.value = '';
       textInput.style.height = 'auto';
       sendBtn.disabled = true;
+      const reply_to = replyingTo;
+      cancelReply();
       try {
         await fetch('/api/rooms/' + roomId + '/text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: myLang, text })
+          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: myLang, text, reply_to })
         });
       } catch(e) { console.error('sendText:', e); }
     }
@@ -687,6 +730,8 @@
       form.append('sender_name', myName);
       form.append('sender_emoji', myEmoji);
       form.append('sender_lang', myLang);
+      if (replyingTo) form.append('reply_to', JSON.stringify(replyingTo));
+      cancelReply();
       try {
         await fetch('/api/rooms/' + roomId + '/message', { method: 'POST', body: form });
       } catch(e) { console.error('send error:', e); }
