@@ -551,7 +551,7 @@
           <div style="display:flex;gap:.4rem;align-items:center;">
             <button class="icon-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
             ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
-            ${msg.id ? `<button class="icon-btn" onclick="startReply('${msg.id}','${esc(msg.sender_name)}',${JSON.stringify(translated)})" title="השב">↩️</button>` : ''}
+            ${msg.id ? `<button class="icon-btn reply-btn" data-mid="${msg.id}" data-sender="${encodeURIComponent(msg.sender_name)}" data-text="${encodeURIComponent(translated)}" title="השב">↩️</button>` : ''}
             ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
           </div>
           <div class="bubble-time">${time}</div>
@@ -657,6 +657,13 @@
     // ── Text input ─────────────────────────────────────────────────────────
     const textInput = document.getElementById('textInput');
     const sendBtn   = document.getElementById('sendBtn');
+
+    // Reply button delegation
+    document.getElementById('messages').addEventListener('click', e => {
+      const btn = e.target.closest('.reply-btn');
+      if (!btn) return;
+      startReply(btn.dataset.mid, decodeURIComponent(btn.dataset.sender), decodeURIComponent(btn.dataset.text));
+    });
 
     textInput.addEventListener('input', () => {
       sendBtn.disabled = !textInput.value.trim();
