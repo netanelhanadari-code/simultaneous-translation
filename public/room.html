@@ -70,19 +70,20 @@
     }
     .member-chip {
       background: var(--border); border-radius: 20px;
-      padding: .2rem .6rem; font-size: .72rem; color: var(--muted);
-      display: flex; align-items: center; gap: .3rem; cursor: default;
-      position: relative;
+      padding: .2rem .65rem; font-size: .72rem; color: var(--muted);
+      display: flex; align-items: center; gap: .3rem; cursor: pointer;
+      position: relative; user-select: none;
     }
-    .member-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; }
+    .member-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
     .member-chip.me { background: var(--accent2); border: 1px solid var(--accent); color: var(--text); font-weight: 600; }
-    .member-chip .chip-avatar { font-size: 1rem; }
-    .member-chip .chip-name {
-      position: absolute; bottom: calc(100% + 4px); right: 50%; transform: translateX(50%);
-      background: #333; color: #fff; font-size: .7rem; border-radius: 5px;
-      padding: .15rem .4rem; white-space: nowrap; display: none; pointer-events: none; z-index: 10;
+    .member-chip .chip-avatar { font-size: 1rem; line-height: 1; }
+    .member-chip .chip-label { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip-tooltip {
+      position: fixed; background: #222; color: #fff; font-size: .75rem;
+      border-radius: 6px; padding: .25rem .55rem; white-space: nowrap;
+      pointer-events: none; z-index: 100; display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
     }
-    .member-chip:hover .chip-name { display: block; }
 
     /* Footer / input area */
     footer {
@@ -142,6 +143,7 @@
     <div class="lang-badge" id="langBadge" style="cursor:pointer;" onclick="location.href='/settings.html?from='+encodeURIComponent(location.href)" title="הגדרות"></div>
   </header>
 
+  <div id="chip-tooltip" class="chip-tooltip"></div>
   <div id="members-bar"></div>
   <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
 
@@ -170,14 +172,28 @@
     const activeMembers = new Map(); // name → {lang, emoji}
 
     // ── Member chip ────────────────────────────────────────────────────────
+    const tooltip = document.getElementById('chip-tooltip');
+    let tooltipTimer;
+    function showTooltip(chip, text) {
+      const r = chip.getBoundingClientRect();
+      tooltip.textContent = text;
+      tooltip.style.display = 'block';
+      tooltip.style.top  = (r.top - 32) + 'px';
+      tooltip.style.right = (window.innerWidth - r.right) + 'px';
+      clearTimeout(tooltipTimer);
+      tooltipTimer = setTimeout(() => { tooltip.style.display = 'none'; }, 2000);
+    }
+
     function renderMembers() {
       const bar = document.getElementById('members-bar');
       bar.innerHTML = '';
       activeMembers.forEach(({ lang, emoji }, name) => {
         const chip = document.createElement('div');
         chip.className = 'member-chip' + (name === myName ? ' me' : '');
-        const display = emoji || name.charAt(0);
-        chip.innerHTML = `<span class="dot"></span><span class="chip-avatar">${emoji ? emoji : esc(display)}</span><span class="chip-name">${esc(name)} · ${LANG_NAMES[lang]||lang}</span>`;
+        const shortName = name.length > 10 ? name.slice(0, 10) + '…' : name;
+        chip.innerHTML = `<span class="dot"></span>`
+          + (emoji ? `<span class="chip-avatar">${emoji}</span>` : `<span class="chip-label">${esc(shortName)}</span>`);
+        chip.addEventListener('click', () => showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`));
         bar.appendChild(chip);
       });
     }
@@ -286,7 +302,7 @@
     }
 
     function toggleOrig(btn) {
-      const orig = btn.closest('.bubble-inner')?.querySelector('.bubble-original');
+      const orig = btn.closest('.bubble')?.querySelector('.bubble-original');
       if (orig) orig.classList.toggle('visible');
     }
 

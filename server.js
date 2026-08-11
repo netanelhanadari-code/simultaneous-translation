@@ -319,8 +319,12 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
     } catch(e) {}
   }));
 
-  const msgId = Date.now().toString();
-  const msgCreatedAt = new Date().toISOString();
+  // Save to DB first so history is ready if client reconnects
+  const saved = await sbInsert('messages', { room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations })
+    .catch(e => { console.error('[db] save failed:', e.message); return null; });
+  const msgId = saved?.id || Date.now().toString();
+  const msgCreatedAt = saved?.created_at || new Date().toISOString();
+
   const payload = JSON.stringify({
     type: 'room_message', id: msgId, sender_name, sender_emoji,
     sender_lang: detected_lang, original_text, translations, created_at: msgCreatedAt
@@ -329,8 +333,6 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
   res.json({ ok: true, id: msgId });
-  sbInsert('messages', { room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations })
-    .catch(e => console.error('[db] save failed:', e.message));
 });
 
 // Send voice message
@@ -401,9 +403,14 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
 
   console.log(`[translate] ${detected_lang} → ${JSON.stringify(Object.fromEntries(Object.entries(translations).map(([k,v])=>[k,v?.slice(0,30)])))}`);
 
-  // 4. Broadcast immediately — don't wait for DB
-  const msgId = Date.now().toString();
-  const msgCreatedAt = new Date().toISOString();
+  // 4. Save to DB first so history is ready on reconnect
+  const saved = await sbInsert('messages', {
+    room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations
+  }).catch(e => { console.error('[db] save failed:', e.message); return null; });
+  const msgId = saved?.id || Date.now().toString();
+  const msgCreatedAt = saved?.created_at || new Date().toISOString();
+
+  // 5. Broadcast
   const payload = JSON.stringify({
     type: 'room_message', id: msgId, sender_name, sender_emoji,
     sender_lang: detected_lang, original_text, translations, created_at: msgCreatedAt
@@ -412,11 +419,6 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
   res.json({ ok: true, id: msgId, translations });
-
-  // 5. Save to DB in background (non-blocking)
-  sbInsert('messages', {
-    room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations
-  }).catch(e => console.error('[db] save failed:', e.message));
 });
 
 const rooms = new Map();
