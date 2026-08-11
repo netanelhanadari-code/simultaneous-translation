@@ -83,8 +83,23 @@
   <p id="err"></p>
 
   <script>
-    const myName = localStorage.getItem('bf_name') || '';
+    const myName   = localStorage.getItem('bf_name') || '';
+    const myUiLang = localStorage.getItem('bf_ui_lang') || localStorage.getItem('bf_lang') || 'he';
     if (!myName) { location.href = '/settings.html?from=' + encodeURIComponent(location.href); }
+    if (myUiLang === 'ar') { document.documentElement.setAttribute('lang', 'ar'); }
+    if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
+
+    const JOIN_UI = {
+      he: { tabCreate: '➕ קבוצה חדשה', tabJoin: '🔗 הצטרף', titleCreate: 'קבוצה חדשה', titleJoin: 'הצטרף לקבוצה', namePlaceholder: 'שם הקבוצה', createBtn: 'צור קבוצה', joinBtn: 'הצטרף', errName: 'הכנס שם קבוצה', errCode: 'הכנס קוד קבוצה', errCreate: 'שגיאה ביצירת הקבוצה' },
+      ar: { tabCreate: '➕ مجموعة جديدة', tabJoin: '🔗 انضم', titleCreate: 'مجموعة جديدة', titleJoin: 'انضم إلى مجموعة', namePlaceholder: 'اسم المجموعة', createBtn: 'إنشاء مجموعة', joinBtn: 'انضم', errName: 'أدخل اسم المجموعة', errCode: 'أدخل رمز المجموعة', errCreate: 'خطأ في إنشاء المجموعة' },
+      en: { tabCreate: '➕ New Group', tabJoin: '🔗 Join', titleCreate: 'New Group', titleJoin: 'Join a Group', namePlaceholder: 'Group name', createBtn: 'Create Group', joinBtn: 'Join', errName: 'Enter a group name', errCode: 'Enter a group code', errCreate: 'Error creating group' },
+    };
+    const jui = JOIN_UI[myUiLang] || JOIN_UI.he;
+    document.getElementById('tabCreate').textContent     = jui.tabCreate;
+    document.getElementById('tabJoin').textContent       = jui.tabJoin;
+    document.getElementById('roomName').placeholder      = jui.namePlaceholder;
+    document.querySelector('#cardCreate .primary-btn').textContent = jui.createBtn;
+    document.querySelector('#cardJoin .primary-btn').textContent   = jui.joinBtn;
 
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
@@ -102,7 +117,7 @@
       document.getElementById('tabJoin').classList.toggle('active', !isCreate);
       document.getElementById('cardCreate').style.display = isCreate ? '' : 'none';
       document.getElementById('cardJoin').style.display  = isCreate ? 'none' : '';
-      document.getElementById('pageTitle').textContent   = isCreate ? 'קבוצה חדשה' : 'הצטרף לקבוצה';
+      document.getElementById('pageTitle').textContent   = isCreate ? jui.titleCreate : jui.titleJoin;
       document.getElementById('err').textContent = '';
     }
 
@@ -114,7 +129,7 @@
 
     async function createRoom() {
       const name = document.getElementById('roomName').value.trim();
-      if (!name) { document.getElementById('err').textContent = 'הכנס שם קבוצה'; return; }
+      if (!name) { document.getElementById('err').textContent = jui.errName; return; }
       document.getElementById('err').textContent = '';
       try {
         const r = await fetch('/api/rooms', {
@@ -126,12 +141,12 @@
         const { id, names } = data;
         addMyRoom(id, name, names);
         location.href = `/room.html?room=${id}`;
-      } catch(e) { document.getElementById('err').textContent = 'שגיאה ביצירת הקבוצה'; }
+      } catch(e) { document.getElementById('err').textContent = jui.errCreate; }
     }
 
     function joinRoom() {
       const code = document.getElementById('roomCode').value.trim().toUpperCase();
-      if (!code) { document.getElementById('err').textContent = 'הכנס קוד קבוצה'; return; }
+      if (!code) { document.getElementById('err').textContent = jui.errCode; return; }
       location.href = `/room.html?room=${code}`;
     }
 

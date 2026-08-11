@@ -98,10 +98,20 @@
     const myEmoji  = localStorage.getItem('bf_emoji')   || '';
     const myUiLang = localStorage.getItem('bf_ui_lang') || localStorage.getItem('bf_lang') || 'he';
     if (!myName) { location.href = '/settings.html?from=/home.html'; }
-    if (myUiLang === 'ar') document.documentElement.setAttribute('lang', 'ar');
+    if (myUiLang === 'ar') { document.documentElement.setAttribute('lang', 'ar'); }
+    if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
+
+    const HOME_UI = {
+      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️' },
+      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️' },
+      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️' },
+    };
+    const homeUi = HOME_UI[myUiLang] || HOME_UI.he;
 
     document.getElementById('greeting').textContent =
-      'שלום, ' + (myEmoji ? myEmoji + ' ' : '') + myName;
+      homeUi.greeting + (myEmoji ? myEmoji + ' ' : '') + myName;
+    document.querySelector('.action-btn.primary').textContent = homeUi.newGroup;
+    document.querySelectorAll('.action-btn')[1].textContent   = homeUi.join;
 
     function getMyRooms() {
       try { return JSON.parse(localStorage.getItem('bf_rooms') || '[]'); } catch { return []; }
@@ -131,10 +141,12 @@
 
       if (rooms.length === 0) {
         label.style.display = 'none';
-        list.innerHTML = '<div class="empty">אין קבוצות עדיין<br><small>צור קבוצה חדשה או הצטרף לקבוצה קיימת</small></div>';
+        const [line1, line2] = homeUi.empty.split('\n');
+        list.innerHTML = `<div class="empty">${esc(line1)}<br><small>${esc(line2)}</small></div>`;
         return;
       }
       label.style.display = '';
+      label.textContent = homeUi.myGroups;
 
       const enriched = rooms.map(r => {
         const latest = latestMap[r.id];
@@ -157,7 +169,7 @@
           (r.hasNew ? '<span class="unread-dot"></span>' : '') +
           `<div class="room-chip-info">
             <div class="room-chip-name">${isDM ? '👤 ' : '💬 '}${esc(displayName)}</div>
-            <div class="room-chip-code">${isDM ? 'שיחה פרטית' : r.id}</div>
+            <div class="room-chip-code">${isDM ? homeUi.dm : r.id}</div>
           </div>
           <button class="room-chip-leave" title="הסר">✕</button>`;
         chip.addEventListener('click', () => enterRoom(r.id));

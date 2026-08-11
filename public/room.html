@@ -442,15 +442,21 @@
 
     // Apply UI language
     const UI = {
-      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין\n<small>הקלד או לחץ והחזק לשליחה קולית</small>' },
-      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد\n<small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>' }
+      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה' },
+      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل' },
+      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record' },
     };
     const ui = UI[myUiLang] || UI.he;
     document.getElementById('textInput').placeholder = ui.placeholder;
     if (myUiLang === 'ar') {
       document.documentElement.setAttribute('lang', 'ar');
       const emptyEl = document.getElementById('emptyMsg');
-      if (emptyEl) emptyEl.innerHTML = '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>';
+      if (emptyEl) emptyEl.innerHTML = ui.empty;
+    } else if (myUiLang === 'en') {
+      document.documentElement.setAttribute('dir', 'ltr');
+      document.documentElement.setAttribute('lang', 'en');
+      const emptyEl = document.getElementById('emptyMsg');
+      if (emptyEl) emptyEl.innerHTML = ui.empty;
     }
     document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
 
