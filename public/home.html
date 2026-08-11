@@ -12,6 +12,19 @@
   <meta name="theme-color" content="#8B2FC9">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Splash screen */
+    #splash {
+      position: fixed; inset: 0; z-index: 999;
+      background: #12082a;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1.5rem;
+      transition: opacity .5s ease;
+    }
+    #splash.hidden { opacity: 0; pointer-events: none; }
+    #splash img { width: min(180px, 55vw); object-fit: contain; }
+    #splash .tagline { color: #9b7fc4; font-size: .9rem; letter-spacing: .05em; }
+
     :root {
       --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
       --accent: #8B2FC9; --text: #f0e8ff; --muted: #9b7fc4;
@@ -79,6 +92,12 @@
   </style>
 </head>
 <body>
+  <div id="splash">
+    <img src="logo.png" alt="עומדים ביחד">
+    <img src="babel-fish.png" alt="Babel Fish">
+    <span class="tagline">תרגום בזמן אמת</span>
+  </div>
+
   <header>
     <img class="logo" src="logo.png" alt="עומדים ביחד">
     <img class="logo" src="babel-fish.png" alt="Babel Fish">
@@ -209,6 +228,13 @@
       } catch(e) { renderRooms({}); }
     }
     init();
+
+    // Splash fade-out
+    setTimeout(() => {
+      const splash = document.getElementById('splash');
+      splash.classList.add('hidden');
+      setTimeout(() => splash.remove(), 500);
+    }, 1400);
   </script>
 </body>
 </html>
