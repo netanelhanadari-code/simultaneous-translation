@@ -272,7 +272,7 @@ app.get('/api/rooms/latest', async (req, res) => {
   res.json(result);
 });
 
-// DM room — deterministic ID for a pair of users
+// DM room — deterministic ID for a pair of users (lazy: no DB creation until first message)
 app.get('/api/dm', async (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) return res.status(400).json({ error: 'Missing params' });
@@ -281,12 +281,7 @@ app.get('/api/dm', async (req, res) => {
   const str = sorted.join('|');
   for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
   const id = 'D' + Math.abs(hash).toString(36).toUpperCase().slice(0, 5);
-  const name = sorted.join(' ↔ ');
-  if (SB_URL) {
-    const existing = await sbQuery('rooms', `id=eq.${id}&limit=1`);
-    if (!existing.length) await sbInsert('rooms', { id, name });
-  }
-  res.json({ id, name });
+  res.json({ id });
 });
 
 // Create room
@@ -303,12 +298,11 @@ app.get('/api/rooms/:id', async (req, res) => {
   const { id } = req.params;
   if (!SB_URL) return res.json({ id, name: id, messages: [] });
   try {
-    const rooms = await sbQuery('rooms', `id=eq.${id}&limit=1`);
-    const room = rooms[0];
-    if (!room) return res.json({ id, name: id, messages: [] });
+    const roomRows = await sbQuery('rooms', `id=eq.${id}&limit=1`);
+    const room = roomRows[0];
     const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=4`)).reverse();
     const allMembers = await sbQuery('room_members', `room_id=eq.${id}&order=last_seen.desc`);
-    res.json({ ...room, messages: messages || [], allMembers: allMembers || [] });
+    res.json({ id, name: room?.name || id, ...room, messages: messages || [], allMembers: allMembers || [] });
   } catch(e) {
     console.error('getRoom error:', e.message);
     res.json({ id, name: id, messages: [] });
@@ -351,6 +345,11 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
     } catch(e) {}
   }));
 
+  // Lazy-create room in DB if first message (e.g. DM)
+  if (SB_URL) {
+    const existing = await sbQuery('rooms', `id=eq.${id}&limit=1`).catch(() => []);
+    if (!existing.length) await sbInsert('rooms', { id, name: id }).catch(() => {});
+  }
   // Save to DB first so history is ready if client reconnects
   const saved = await sbInsert('messages', { room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations })
     .catch(e => { console.error('[db] save failed:', e.message); return null; });
@@ -435,7 +434,11 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
 
   console.log(`[translate] ${detected_lang} → ${JSON.stringify(Object.fromEntries(Object.entries(translations).map(([k,v])=>[k,v?.slice(0,30)])))}`);
 
-  // 4. Save to DB first so history is ready on reconnect
+  // 4. Lazy-create room in DB if first message (e.g. DM), then save
+  if (SB_URL) {
+    const existing = await sbQuery('rooms', `id=eq.${id}&limit=1`).catch(() => []);
+    if (!existing.length) await sbInsert('rooms', { id, name: id }).catch(() => {});
+  }
   const saved = await sbInsert('messages', {
     room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations
   }).catch(e => { console.error('[db] save failed:', e.message); return null; });

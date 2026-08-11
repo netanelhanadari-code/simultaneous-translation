@@ -86,8 +86,16 @@
     const myName = localStorage.getItem('bf_name') || '';
     if (!myName) { location.href = '/settings.html?from=' + encodeURIComponent(location.href); }
 
-    const mode = new URLSearchParams(location.search).get('mode') || 'create';
-    setMode(mode);
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    if (code) {
+      // came from QR / shared link — auto-navigate
+      document.getElementById('roomCode').value = code.toUpperCase();
+      setMode('join');
+      joinRoom();
+    } else {
+      setMode(params.get('mode') || 'create');
+    }
 
     function setMode(m) {
       const isCreate = m === 'create';

@@ -160,6 +160,37 @@
       font-size: .8rem; cursor: pointer; flex-shrink: 0;
     }
     .tts-toggle.on { border-color: var(--accent); color: var(--accent); }
+    .dm-badge {
+      font-size: .7rem; background: var(--border); border-radius: 6px;
+      padding: .15rem .45rem; color: var(--muted);
+    }
+
+    /* QR / room settings sheet */
+    .sheet-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .sheet {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0; border-bottom: none;
+      padding: 1.4rem 1.5rem 2.5rem; width: 100%; max-width: 420px;
+      display: flex; flex-direction: column; align-items: center; gap: 1rem;
+    }
+    .sheet h3 { font-size: 1rem; align-self: flex-start; }
+    .sheet-close {
+      position: absolute; top: 1rem; left: 1rem;
+      background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer;
+    }
+    .qr-wrap { background: #fff; border-radius: 12px; padding: .7rem; }
+    .qr-wrap img { display: block; width: 180px; height: 180px; }
+    .join-url {
+      font-size: .78rem; color: var(--muted); word-break: break-all; text-align: center;
+      background: var(--bg); border-radius: 8px; padding: .5rem .8rem; width: 100%;
+    }
+    .copy-btn {
+      width: 100%; background: var(--accent); color: #fff; border: none;
+      border-radius: 10px; padding: .65rem; font-size: .95rem; cursor: pointer; font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -170,6 +201,7 @@
       <span class="room-code" id="codeEl" title="לחץ להעתיק">📋 ...</span>
     </div>
     <button class="back-btn" onclick="loadRoom()" title="רענן" style="font-size:1.1rem;">↻</button>
+    <button class="back-btn" id="roomSettingsBtn" onclick="openRoomSettings()" title="הגדרות קבוצה" style="display:none;">⚙️</button>
     <div class="lang-badge" id="langBadge" style="cursor:pointer;" onclick="location.href='/settings.html?from='+encodeURIComponent(location.href)" title="הגדרות"></div>
   </header>
 
@@ -179,6 +211,16 @@
   </div>
   <div id="members-panel"></div>
   <div id="messages"><div class="empty">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
+
+  <div id="roomSettingsSheet" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeRoomSettings()">
+    <div class="sheet" style="position:relative;">
+      <button class="sheet-close" onclick="closeRoomSettings()">✕</button>
+      <h3>הצטרפות לקבוצה</h3>
+      <div class="qr-wrap"><img id="qrImg" src="" alt="QR"></div>
+      <div class="join-url" id="joinUrl"></div>
+      <button class="copy-btn" onclick="copyJoinLink()">📋 העתק קישור</button>
+    </div>
+  </div>
 
   <footer>
     <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()">🔊 קול</button>
@@ -197,6 +239,7 @@
     const myPhone = localStorage.getItem('bf_phone') || '';
 
     if (!roomId) { location.href = '/home.html'; }
+    const isDM = roomId.startsWith('D') && roomId.length <= 7;
 
     const LANG_NAMES = { he:'עברית', ar:'ערבית', en:'English', ru:'Русский', am:'አማርኛ' };
     const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET' };
@@ -289,13 +332,21 @@
         const r = await fetch('/api/rooms/' + roomId);
         if (!r.ok) { location.href = '/home.html'; return; }
         const data = await r.json();
-        document.getElementById('roomNameEl').textContent = data.name;
-        document.title = 'Babel Fish — ' + data.name;
-        codeEl.textContent = '📋 ' + roomId;
+        const displayName = (data.name && data.name !== roomId) ? data.name
+          : (isDM ? (localStorage.getItem('bf_dm_peer_' + roomId) || roomId) : roomId);
+        document.getElementById('roomNameEl').textContent = displayName;
+        document.title = 'Babel Fish — ' + displayName;
+        if (isDM) {
+          codeEl.innerHTML = '<span class="dm-badge">👤 שיחה פרטית</span>';
+        } else {
+          codeEl.textContent = '📋 ' + roomId;
+          document.getElementById('roomSettingsBtn').style.display = '';
+        }
         // save to my rooms
         try {
           const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]').filter(r => r.id !== roomId);
-          rooms.unshift({ id: roomId, name: data.name, ts: Date.now() });
+          const type = isDM ? 'dm' : 'group';
+          rooms.unshift({ id: roomId, name: displayName, type, ts: Date.now() });
           localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
         } catch(e) {}
         if (data.allMembers) {
@@ -397,8 +448,32 @@
       try {
         const r = await fetch(`/api/dm?from=${encodeURIComponent(myName)}&to=${encodeURIComponent(otherName)}`);
         const { id } = await r.json();
+        // Save peer name so header can display it before first message
+        localStorage.setItem('bf_dm_peer_' + id, otherName);
+        // Save to rooms list as DM
+        const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]').filter(r => r.id !== id);
+        rooms.unshift({ id, name: 'שיחה עם ' + otherName, type: 'dm', ts: Date.now() });
+        localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
         location.href = `/room.html?room=${id}`;
       } catch(e) { console.error('openDM:', e); }
+    }
+
+    function openRoomSettings() {
+      const joinUrl = `${location.origin}/join.html?code=${roomId}`;
+      document.getElementById('joinUrl').textContent = joinUrl;
+      document.getElementById('qrImg').src =
+        `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
+      document.getElementById('roomSettingsSheet').style.display = '';
+    }
+    function closeRoomSettings() {
+      document.getElementById('roomSettingsSheet').style.display = 'none';
+    }
+    function copyJoinLink() {
+      const url = document.getElementById('joinUrl').textContent;
+      navigator.clipboard.writeText(url).catch(() => {});
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = '✓ הועתק!';
+      setTimeout(() => { btn.textContent = '📋 העתק קישור'; }, 2000);
     }
     function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
 
