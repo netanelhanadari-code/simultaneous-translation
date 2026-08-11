@@ -258,6 +258,35 @@ function makeRoomId() {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
+// Room names (translated) for a list of room IDs — used by home.html
+app.get('/api/rooms/names', async (req, res) => {
+  const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 20);
+  if (!ids.length || !SB_URL) return res.json({});
+  const result = {};
+  await Promise.all(ids.map(async id => {
+    if (id.startsWith('D')) return; // skip DMs
+    try {
+      const rows = await sbQuery('rooms', `id=eq.${id}&select=id,name,names&limit=1`);
+      const room = rows[0];
+      if (!room) return;
+      let names = room.names || {};
+      if (!names.he || !names.ar || !names.en) {
+        // backfill missing languages
+        await Promise.all(['he', 'ar', 'en'].map(async lang => {
+          if (!names[lang]) names[lang] = await translateRoomName(room.name, null, lang);
+        }));
+        fetch(`${SB_URL}/rest/v1/rooms?id=eq.${id}`, {
+          method: 'PATCH',
+          headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ names })
+        }).catch(() => {});
+      }
+      result[id] = names;
+    } catch(e) {}
+  }));
+  res.json(result);
+});
+
 // Latest message timestamp per room (for unread detection)
 app.get('/api/rooms/latest', async (req, res) => {
   const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 20);

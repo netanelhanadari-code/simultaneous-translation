@@ -88,7 +88,7 @@
       <span class="emoji-clear" onclick="clearEmoji()">ללא אימוג'י</span>
     </div>
     <div class="field">
-      <label>מספר טלפון (יוצג לחברים בקבוצה)</label>
+      <label>מספר טלפון <span style="color:#e07070;">*</span> (משמש לזיהוי ייחודי + מוצג לחברים)</label>
       <input id="phoneInput" type="tel" placeholder="05X-XXXXXXX" dir="ltr" style="text-align:left;">
     </div>
     <div class="field">
@@ -156,7 +156,14 @@
     function save() {
       const name = nameInput.value.trim();
       const lang = langSelect.value;
+      const phone = phoneInput.value.trim();
       if (!name) { nameInput.focus(); return; }
+      if (!phone) {
+        phoneInput.focus();
+        phoneInput.style.borderColor = '#e07070';
+        setTimeout(() => phoneInput.style.borderColor = '', 2000);
+        return;
+      }
       localStorage.setItem('bf_name',    name);
       localStorage.setItem('bf_lang',    lang);
       localStorage.setItem('bf_ui_lang', uiLangSelect.value);

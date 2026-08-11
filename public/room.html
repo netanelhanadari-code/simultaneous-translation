@@ -469,12 +469,16 @@
           codeEl.textContent = '📋 ' + roomId;
           document.getElementById('roomSettingsBtn').style.display = '';
         }
-        // save to my rooms
+        // save to my rooms — preserve existing name if server returned a fallback (roomId)
         try {
-          const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]').filter(r => r.id !== roomId);
+          const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
+          const existing = rooms.find(r => r.id === roomId);
+          const bestName = (displayName && displayName !== roomId) ? displayName : (existing?.name || displayName);
+          const bestNames = (!isDM && names && Object.keys(names).length) ? names : (existing?.names || {});
+          const filtered = rooms.filter(r => r.id !== roomId);
           const type = isDM ? 'dm' : 'group';
-          rooms.unshift({ id: roomId, name: displayName, names: isDM ? {} : names, type, ts: Date.now() });
-          localStorage.setItem('bf_rooms', JSON.stringify(rooms.slice(0, 10)));
+          filtered.unshift({ id: roomId, name: bestName, names: bestNames, type, ts: Date.now() });
+          localStorage.setItem('bf_rooms', JSON.stringify(filtered.slice(0, 10)));
         } catch(e) {}
         if (data.allMembers) {
           data.allMembers.forEach(m => allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '', phone: m.phone || '' }));

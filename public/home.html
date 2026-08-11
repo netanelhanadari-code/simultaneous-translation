@@ -170,11 +170,23 @@
       renderRooms({});
       const rooms = getMyRooms();
       if (!rooms.length) return;
+      const ids = rooms.map(r => r.id).join(',');
       try {
-        const ids = rooms.map(r => r.id).join(',');
-        const res = await fetch(`/api/rooms/latest?ids=${encodeURIComponent(ids)}`);
-        renderRooms(await res.json());
-      } catch(e) {}
+        // Fetch unread + translated names in parallel
+        const [latestRes, namesRes] = await Promise.all([
+          fetch(`/api/rooms/latest?ids=${encodeURIComponent(ids)}`),
+          fetch(`/api/rooms/names?ids=${encodeURIComponent(ids)}`)
+        ]);
+        const latestMap = await latestRes.json();
+        const namesMap  = await namesRes.json();
+        // Update bf_rooms with fresh translated names
+        const stored = getMyRooms();
+        stored.forEach(r => {
+          if (namesMap[r.id]) r.names = namesMap[r.id];
+        });
+        saveMyRooms(stored);
+        renderRooms(latestMap);
+      } catch(e) { renderRooms({}); }
     }
     init();
   </script>
