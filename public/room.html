@@ -274,6 +274,7 @@
   </div>
   <div id="members-panel"></div>
   <div id="messages"><div class="empty" id="emptyMsg">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
+  <div id="unreadBadge" onclick="dismissUnread()" style="display:none;position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;border-radius:20px;padding:.35rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4);z-index:20;white-space:nowrap;"></div>
 
   <div id="roomSettingsSheet" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeRoomSettings()">
     <div class="sheet" style="position:relative;">
@@ -603,14 +604,17 @@
           addMessage(msg);
           scrollBottom();
           if (msg.sender_name !== myName) {
-            if (document.hidden) {
+            const msgEl = document.getElementById('messages');
+            const atBottom = msgEl.scrollHeight - msgEl.scrollTop - msgEl.clientHeight < 60;
+            if (!atBottom) {
               unreadCount++;
               document.title = `(${unreadCount}) ${baseTitle}`;
               // Mark first unread message for separator
               if (unreadCount === 1) {
-                const lastBubble = document.getElementById('messages').lastElementChild;
+                const lastBubble = msgEl.lastElementChild;
                 if (lastBubble) lastBubble.dataset.firstUnread = '1';
               }
+              showUnreadBadge();
             }
             if (ttsOn) {
               const text = msg.translations?.[myLang] || msg.original_text;
@@ -629,23 +633,47 @@
     // ── Unread badge ───────────────────────────────────────────────────────
     let unreadCount = 0;
     let baseTitle = document.title;
+    const unreadBadge = document.getElementById('unreadBadge');
+    const UNREAD_LABELS = {
+      he: n => `↓ ${n} הודעות חדשות`,
+      ar: n => `↓ ${n} رسائل جديدة`,
+      en: n => `↓ ${n} new messages`,
+    };
+    function getUnreadLabel(n) { return (UNREAD_LABELS[myUiLang] || UNREAD_LABELS.he)(n); }
+
+    function showUnreadBadge() {
+      unreadBadge.textContent = getUnreadLabel(unreadCount);
+      unreadBadge.style.display = '';
+    }
+
+    function dismissUnread() {
+      scrollBottom();
+      unreadBadge.style.display = 'none';
+      document.querySelector('[data-first-unread="1"]')
+        && delete document.querySelector('[data-first-unread="1"]').dataset.firstUnread;
+      unreadCount = 0;
+      document.title = baseTitle;
+    }
+
+    // Hide badge when user manually scrolls to bottom
+    document.getElementById('messages').addEventListener('scroll', () => {
+      const el = document.getElementById('messages');
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) dismissUnread();
+    });
+
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && unreadCount > 0) {
-        // Insert unread separator before first unread message
+        // Insert separator before first unread message
         const firstUnread = document.querySelector('[data-first-unread="1"]');
         if (firstUnread) {
           delete firstUnread.dataset.firstUnread;
           const sep = document.createElement('div');
           sep.className = 'unread-sep';
-          const label = { he: `↑ ${unreadCount} הודעות חדשות`, ar: `↑ ${unreadCount} رسائل جديدة`, en: `↑ ${unreadCount} new messages` };
-          sep.textContent = label[myUiLang] || label.he;
+          sep.textContent = getUnreadLabel(unreadCount);
           firstUnread.before(sep);
-          firstUnread.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Auto-remove separator after 5s
           setTimeout(() => sep.remove(), 5000);
         }
-        unreadCount = 0;
-        document.title = baseTitle;
+        showUnreadBadge();
       }
     });
 
