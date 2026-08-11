@@ -39,9 +39,10 @@
       display: flex; flex-direction: column; gap: .65rem;
     }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; margin: auto; }
-    .bubble { max-width: 82%; display: flex; flex-direction: column; gap: .18rem; }
+    .bubble { max-width: 88%; display: flex; flex-direction: row; align-items: flex-end; gap: .5rem; }
     .bubble.mine  { align-self: flex-start; }
     .bubble.other { align-self: flex-end; }
+    .bubble-col { display: flex; flex-direction: column; gap: .18rem; min-width: 0; flex: 1; }
     .bubble-inner { padding: .55rem .85rem; border-radius: 12px; line-height: 1.5; }
     .bubble.mine  .bubble-inner { background: var(--accent2); border-radius: 12px 4px 12px 12px; border: 1px solid var(--accent); }
     .bubble.other .bubble-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
@@ -66,13 +67,10 @@
     .reply-quote strong { color: var(--text); display: block; font-size: .7rem; }
     .reply-bar {
       display: none; align-items: center; gap: .5rem;
-      background: var(--surface); border-top: 1px solid var(--accent);
-      padding: .4rem .8rem; font-size: .8rem; color: var(--muted);
-      position: absolute; bottom: 100%; right: 0; left: 0;
-      z-index: 10;
+      border-bottom: 1px solid var(--accent);
+      padding: .35rem .8rem; font-size: .8rem; color: var(--muted);
     }
     .reply-bar.open { display: flex; }
-    footer { position: relative; }
     .reply-bar-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .reply-bar strong { color: var(--text); }
     .reply-cancel { background: none; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; flex-shrink: 0; }
@@ -550,31 +548,32 @@
       const div = document.createElement('div');
       div.className = 'bubble ' + (isMine ? 'mine' : 'other');
       div.innerHTML =
-        (!isMine
-          ? `<div class="bubble-sender">${senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : ''}${esc(msg.sender_name)}</div>`
-          : '') +
-        `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
-          ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
-          <div class="bubble-text">${esc(translated)}</div>
-          ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
-        </div>` +
-        `<div class="bubble-footer">
-          <div style="display:flex;align-items:center;gap:.45rem;">
-            <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
+        `<button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>` +
+        `<div class="bubble-col">` +
+          (!isMine
+            ? `<div class="bubble-sender">${senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : ''}${esc(msg.sender_name)}</div>`
+            : '') +
+          `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
+            ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
+            <div class="bubble-text">${esc(translated)}</div>
+            ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
+          </div>` +
+          `<div class="bubble-footer">
             <div class="bubble-time">${time}</div>
-          </div>
-          <div style="display:flex;gap:.4rem;align-items:center;">
-            ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
-            ${msg.id ? `<button class="icon-btn reply-btn" data-mid="${msg.id}" data-sender="${encodeURIComponent(msg.sender_name)}" data-text="${encodeURIComponent(translated)}" title="השב">↩️</button>` : ''}
-            ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
-          </div>
-        </div>`;
+            <div style="display:flex;gap:.4rem;align-items:center;">
+              ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
+              ${msg.id ? `<button class="icon-btn reply-btn" data-mid="${msg.id}" data-sender="${encodeURIComponent(msg.sender_name)}" data-text="${encodeURIComponent(translated)}" title="השב">↩️</button>` : ''}
+              ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
+            </div>
+          </div>` +
+        `</div>`;
 
-      // Reactions + picker
+      // Reactions + picker (inside bubble-col)
+      const col = div.querySelector('.bubble-col');
       if (msg.id) {
         const reactionsEl = document.createElement('div');
         reactionsEl.className = 'reactions';
-        div.appendChild(reactionsEl);
+        col.appendChild(reactionsEl);
 
         const pickerEl = document.createElement('div');
         pickerEl.className = 'emoji-picker';
@@ -585,7 +584,7 @@
           btn.addEventListener('click', e => { e.stopPropagation(); sendReaction(msg.id, em); });
           pickerEl.appendChild(btn);
         });
-        div.appendChild(pickerEl);
+        col.appendChild(pickerEl);
 
         msgElements.set(String(msg.id), { reactionsEl, pickerEl });
         if (msg.reactions && Object.keys(msg.reactions).length) renderReactions(msg.id, msg.reactions);
