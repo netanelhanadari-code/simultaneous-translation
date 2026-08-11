@@ -64,6 +64,8 @@
     }
     .bubble-original.visible { display: block; }
     .bubble-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 .2rem; gap: .4rem; }
+    .unread-sep { display: flex; align-items: center; gap: .5rem; margin: .6rem 0; color: var(--accent); font-size: .78rem; font-weight: 600; }
+    .unread-sep::before, .unread-sep::after { content: ''; flex: 1; height: 1px; background: var(--accent); opacity: .4; }
     .reply-quote {
       font-size: .75rem; color: var(--muted);
       border-right: 3px solid var(--accent); padding: .25rem .55rem;
@@ -604,6 +606,11 @@
             if (document.hidden) {
               unreadCount++;
               document.title = `(${unreadCount}) ${baseTitle}`;
+              // Mark first unread message for separator
+              if (unreadCount === 1) {
+                const lastBubble = document.getElementById('messages').lastElementChild;
+                if (lastBubble) lastBubble.dataset.firstUnread = '1';
+              }
             }
             if (ttsOn) {
               const text = msg.translations?.[myLang] || msg.original_text;
@@ -624,6 +631,19 @@
     let baseTitle = document.title;
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && unreadCount > 0) {
+        // Insert unread separator before first unread message
+        const firstUnread = document.querySelector('[data-first-unread="1"]');
+        if (firstUnread) {
+          delete firstUnread.dataset.firstUnread;
+          const sep = document.createElement('div');
+          sep.className = 'unread-sep';
+          const label = { he: `↑ ${unreadCount} הודעות חדשות`, ar: `↑ ${unreadCount} رسائل جديدة`, en: `↑ ${unreadCount} new messages` };
+          sep.textContent = label[myUiLang] || label.he;
+          firstUnread.before(sep);
+          firstUnread.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Auto-remove separator after 5s
+          setTimeout(() => sep.remove(), 5000);
+        }
         unreadCount = 0;
         document.title = baseTitle;
       }
@@ -634,9 +654,10 @@
       if (msg.id && displayedIds.has(String(msg.id))) return;
       if (msg.id) displayedIds.add(String(msg.id));
       const isMine = msg.sender_name === myName;
-      const translated = msg.translations?.[myLang] || msg.original_text || '';
+      // Own messages: always show as written — no translation for sender
+      const translated = isMine ? (msg.original_text || '') : (msg.translations?.[myLang] || msg.original_text || '');
       const original  = msg.original_text || '';
-      const showOrig  = translated !== original && original;
+      const showOrig  = !isMine && translated !== original && original;
       if (msg.created_at && (!latestMsgTs || msg.created_at > latestMsgTs)) latestMsgTs = msg.created_at;
       const time = msg.created_at
         ? new Date(msg.created_at).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' })
@@ -823,17 +844,6 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
     });
 
-    function detectTextLang(text) {
-      const clean = text.replace(/\s/g, '') || ' ';
-      const ar = (text.match(/[؀-ۿ]/g) || []).length / clean.length;
-      const he = (text.match(/[֐-׿]/g) || []).length / clean.length;
-      const cy = (text.match(/[Ѐ-ӿ]/g) || []).length / clean.length;
-      if (ar > 0.3) return 'ar';
-      if (he > 0.3) return 'he';
-      if (cy > 0.3) return 'ru';
-      return myLang; // fallback to user's saved lang
-    }
-
     async function sendText() {
       const text = textInput.value.trim();
       if (!text) return;
@@ -842,12 +852,11 @@
       sendBtn.disabled = true;
       const reply_to = replyingTo;
       cancelReply();
-      const detectedLang = detectTextLang(text);
       try {
         await fetch('/api/rooms/' + roomId + '/text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: detectedLang, text, reply_to })
+          body: JSON.stringify({ sender_name: myName, sender_emoji: myEmoji, sender_lang: myLang, text, reply_to })
         });
       } catch(e) { console.error('sendText:', e); }
     }

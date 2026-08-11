@@ -454,7 +454,8 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
   const { sender_name, sender_emoji, sender_lang, text, reply_to } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'No text' });
   const original_text = text.trim();
-  const detected_lang = sender_lang || 'he';
+  // Use actual script in text for translation — overrides declared lang if user typed in different script
+  const detected_lang = detectScriptLang(original_text, sender_lang || 'he');
 
   const roomWs = rooms.get(id);
   const memberLangs = new Set(['he', 'ar', detected_lang]);
@@ -672,6 +673,18 @@ async function sendPushToRoom(roomId, roomWs, senderName, msgData) {
 }
 
 const rooms = new Map();
+
+// Detect actual script language from text (server-side, for translation accuracy)
+function detectScriptLang(text, fallback) {
+  const ar = (text.match(/[؀-ۿ]/g) || []).length;
+  const he = (text.match(/[֐-׿]/g) || []).length;
+  const cy = (text.match(/[Ѐ-ӿ]/g) || []).length;
+  const max = Math.max(ar, he, cy);
+  if (max === 0) return fallback;
+  if (ar >= he && ar >= cy) return 'ar';
+  if (he >= ar && he >= cy) return 'he';
+  return 'ru';
+}
 
 function getRoom(roomId) {
   if (!rooms.has(roomId)) {
