@@ -370,13 +370,13 @@ app.post('/api/rooms', express.json(), async (req, res) => {
   const WELCOME = [
     {
       sender_name: 'Worf', sender_emoji: '🖖', sender_lang: 'tlh',
-      original_text: 'nuqneH! *The Hitchhiker\'s Guide to the Galaxy* lut ghaj babel-ghotI\' — mach \'ej Hoch Hol Dayajmogh. naDev yIn — Babel Fish 🐟. Hoch mu\'tlhegh DaQoybogh, Hol laDlu\' qoj jatlhlu\'. Qapla\'!',
+      original_text: 'nuqneH! *The Hitchhiker\'s Guide to the Galaxy* lut ghaj babel-ghotI\' — mach \'ej Hoch Hol Dayajmogh. naDev yIn — Babel Fish (babel-ghotI\'). Hoch mu\'tlhegh DaQoybogh, Hol laDlu\' qoj jatlhlu\'. Qapla\'!',
       translations: {
-        he: 'בספר \'מדריך הטרמפיסט לגלקסיה\' מסופר על דג קטן ומדהים — שכאשר מכניסים אותו לאוזן, הוא מתרגם כל דבר ששומעים. ברוכים הבאים לבייבל פיש 🐟 — האפליקציה שמתרגמת כל הודעה בזמן אמת לשפה שלך.',
-        ar: 'في كتاب \'دليل المسافر عبر المجرة\' تُحكى قصة سمكة صغيرة رائعة — عندما تُدخلها في أذنك تترجم كل ما تسمعه. مرحباً بكم في Babel Fish 🐟 — التطبيق الذي يترجم كل رسالة في الوقت الفعلي إلى لغتك.',
-        en: 'In \'The Hitchhiker\'s Guide to the Galaxy\', there\'s a story about a small, amazing fish — put it in your ear and it translates everything you hear. Welcome to Babel Fish 🐟 — the app that translates every message in real time into your language.',
-        ru: 'В книге \'Автостопом по галактике\' рассказывается о маленькой удивительной рыбке — вложи её в ухо, и она переводит всё, что слышишь. Добро пожаловать в Babel Fish 🐟 — приложение, которое переводит каждое сообщение в реальном времени на твой язык.',
-        am: 'በ\'The Hitchhiker\'s Guide to the Galaxy\' ውስጥ ስለ ትንሽ አስደናቂ ዓሣ ይነገራል — ወደ ጆሮዎ ካስገቡት ሁሉንም የሚሰሙትን ይተረጉምልዎታል። ወደ Babel Fish 🐟 እንኳን ደህና መጡ — እያንዳንዷን ቋንቋ ወዳዎ በቅጽበት የሚተረጉም መተግበሪያ።',
+        he: 'בספר \'מדריך הטרמפיסט לגלקסיה\' מסופר על דג קטן ומדהים — שכאשר מכניסים אותו לאוזן, הוא מתרגם כל דבר ששומעים. ברוכים הבאים לבייבל פיש (דג בבל) — האפליקציה שמתרגמת כל הודעה בזמן אמת לשפה שלך.',
+        ar: 'في كتاب \'دليل المسافر عبر المجرة\' تُحكى قصة سمكة صغيرة رائعة — عندما تُدخلها في أذنك تترجم كل ما تسمعه. مرحباً بكم في Babel Fish (سمكة بابل) — التطبيق الذي يترجم كل رسالة في الوقت الفعلي إلى لغتك.',
+        en: 'In \'The Hitchhiker\'s Guide to the Galaxy\', there\'s a story about a small, amazing fish — put it in your ear and it translates everything you hear. Welcome to Babel Fish (the fish of Babel) — the app that translates every message in real time into your language.',
+        ru: 'В книге \'Автостопом по галактике\' рассказывается о маленькой удивительной рыбке — вложи её в ухо, и она переводит всё, что слышишь. Добро пожаловать в Babel Fish (Вавилонская рыбка) — приложение, которое переводит каждое сообщение в реальном времени на твой язык.',
+        am: 'በ\'The Hitchhiker\'s Guide to the Galaxy\' ውስጥ ስለ ትንሽ አስደናቂ ዓሣ ይነገራል — ወደ ጆሮዎ ካስገቡት ሁሉንም የሚሰሙትን ይተረጉምልዎታል። ወደ Babel Fish (የባቤል ዓሣ) እንኳን ደህና መጡ — እያንዳንዷን ቋንቋ ወዳዎ በቅጽበት የሚተረጉም መተግበሪያ።',
       },
       created_at: new Date(now).toISOString(),
     },

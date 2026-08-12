@@ -21,7 +21,7 @@
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: var(--bg); color: var(--text);
-      height: 100dvh; display: flex; flex-direction: column; overflow: hidden; touch-action: pan-y;
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
     }
     header {
       background: var(--surface); border-bottom: 1px solid var(--border);
@@ -43,8 +43,9 @@
       padding: .2rem .55rem; font-size: .72rem; color: var(--muted); flex-shrink: 0;
     }
     #messages {
-      flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-      overscroll-behavior: contain;
+      flex: 1; min-height: 0; overflow-y: scroll; overflow-x: hidden;
+      overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
     #messages-inner {
       display: flex; flex-direction: column; gap: .65rem;
