@@ -119,13 +119,15 @@
         <option value="am">አማርኛ</option>
         <option value="other">אחר / Other...</option>
       </select>
-      <div id="langOtherWrap" style="display:none;margin-top:.5rem;">
-        <input id="langSearch" type="text" autocomplete="off" placeholder="חפש שפה / Search language..."
-          style="margin-bottom:.35rem;" oninput="filterLangs(this.value)" onfocus="filterLangs(this.value)">
-        <div id="langDropdown" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;max-height:180px;overflow-y:auto;"></div>
-        <div id="langSelected" style="font-size:.8rem;color:var(--muted);margin-top:.3rem;"></div>
-      </div>
       <input type="hidden" id="langSelect">
+    </div>
+
+    <!-- Language search sheet -->
+    <div id="langSheetOverlay" onclick="closeLangSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;"></div>
+    <div id="langSheet" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border);padding:1rem;z-index:301;max-height:70vh;display:none;flex-direction:column;gap:.5rem;">
+      <div style="text-align:center;font-size:.8rem;color:var(--muted);margin-bottom:.2rem;">בחר שפה / اختر لغة / Choose language</div>
+      <input id="langSheetSearch" type="text" autocomplete="off" placeholder="חפש / Search..." oninput="filterLangSheet(this.value)" style="-webkit-user-select:text;user-select:text;">
+      <div id="langSheetList" style="overflow-y:auto;flex:1;"></div>
     </div>
 
     <!-- UI language -->
@@ -212,43 +214,57 @@
     const MAIN_LANGS = ['he','ar','en','ru','am'];
 
     function onMainLangChange(val) {
-      const wrap = document.getElementById('langOtherWrap');
       if (val === 'other') {
-        wrap.style.display = '';
-        document.getElementById('langSelect').value = '';
-        document.getElementById('langSelected').textContent = '';
-        document.getElementById('langSearch').focus();
+        openLangSheet();
       } else {
-        wrap.style.display = 'none';
         document.getElementById('langSelect').value = val;
       }
     }
 
-    function filterLangs(q) {
-      const dd = document.getElementById('langDropdown');
+    function openLangSheet() {
+      const overlay = document.getElementById('langSheetOverlay');
+      const sheet   = document.getElementById('langSheet');
+      overlay.style.display = '';
+      sheet.style.display = 'flex';
+      filterLangSheet('');
+      setTimeout(() => document.getElementById('langSheetSearch').focus(), 100);
+    }
+
+    function closeLangSheet() {
+      document.getElementById('langSheetOverlay').style.display = 'none';
+      document.getElementById('langSheet').style.display = 'none';
+      // if nothing was picked, revert select to previous valid value
+      const cur = document.getElementById('langSelect').value;
+      const sel = document.getElementById('langSelectMain');
+      if (!cur) sel.value = 'he';
+    }
+
+    function filterLangSheet(q) {
       const lower = q.toLowerCase();
       const filtered = q
-        ? ALL_LANGS.filter(l => l.name.toLowerCase().includes(lower) || l.en.toLowerCase().includes(lower) || l.code === lower)
+        ? ALL_LANGS.filter(l => l.name.toLowerCase().includes(lower) || l.en.toLowerCase().includes(lower))
         : ALL_LANGS;
-      if (!filtered.length) { dd.style.display = 'none'; return; }
-      dd.style.display = '';
-      dd.innerHTML = filtered.map(l => `
-        <div onclick="selectLang('${l.code}','${l.name}')"
-          style="padding:.5rem .8rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);font-size:.9rem;">
-          <span>${l.name}</span><span style="color:var(--muted);font-size:.75rem;">${l.en}</span>
+      document.getElementById('langSheetList').innerHTML = filtered.map(l => `
+        <div onclick="selectLang('${l.code}','${l.name} — ${l.en}')"
+          style="padding:.65rem .8rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);font-size:.9rem;">
+          <span>${l.name}</span><span style="color:var(--muted);font-size:.78rem;">${l.en}</span>
         </div>`).join('');
     }
 
-    function selectLang(code, name) {
+    function selectLang(code, label) {
+      const sel = document.getElementById('langSelectMain');
+      // add option if not exists
+      if (!sel.querySelector(`option[value="${code}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = code; opt.textContent = label;
+        sel.insertBefore(opt, sel.querySelector('option[value="other"]'));
+      } else {
+        sel.querySelector(`option[value="${code}"]`).textContent = label;
+      }
+      sel.value = code;
       document.getElementById('langSelect').value = code;
-      document.getElementById('langSearch').value = '';
-      document.getElementById('langDropdown').style.display = 'none';
-      document.getElementById('langSelected').textContent = '✓ ' + name;
+      closeLangSheet();
     }
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.field')) document.getElementById('langDropdown').style.display = 'none';
-    });
 
     // Load current values
     nameInput.value    = localStorage.getItem('bf_name') || '';
@@ -257,10 +273,8 @@
     if (MAIN_LANGS.includes(savedLang)) {
       document.getElementById('langSelectMain').value = savedLang;
     } else {
-      document.getElementById('langSelectMain').value = 'other';
-      document.getElementById('langOtherWrap').style.display = '';
       const savedLangObj = ALL_LANGS.find(l => l.code === savedLang);
-      if (savedLangObj) document.getElementById('langSelected').textContent = '✓ ' + savedLangObj.name;
+      if (savedLangObj) selectLang(savedLang, `${savedLangObj.name} — ${savedLangObj.en}`);
     }
     uiLangSelect.value = myUiLang;
     document.getElementById('phoneInput').value = localStorage.getItem('bf_phone') || '';
