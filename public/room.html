@@ -2,7 +2,7 @@
 <html dir="rtl" lang="he">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Babel Fish | עומדים ביחד | نقف معاً</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
     #messages {
       flex: 1; min-height: 0; overflow-y: scroll; overflow-x: hidden;
       overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
-      touch-action: pan-y;
+      touch-action: pan-y; will-change: scroll-position;
     }
     #messages-inner {
       display: flex; flex-direction: column; gap: .65rem;
@@ -155,8 +155,8 @@
     /* Footer / input area */
     footer {
       background: var(--surface); border-top: 1px solid var(--border);
-      padding: .5rem .8rem; display: flex; flex-direction: column;
-      gap: .3rem; flex-shrink: 0;
+      padding: .5rem .8rem calc(.5rem + env(safe-area-inset-bottom, 0px)) .8rem;
+      display: flex; flex-direction: column; gap: .3rem; flex-shrink: 0;
     }
     #textInput {
       flex: 1; background: var(--bg); color: var(--text);
