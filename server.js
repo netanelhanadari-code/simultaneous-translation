@@ -258,7 +258,7 @@ app.post('/api/tts', express.json(), async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.redirect('/broadcaster.html'));
+app.get('/', (req, res) => res.redirect('/home.html'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Persistent Rooms (IM mode) ────────────────────────────────────────────────
