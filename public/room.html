@@ -21,7 +21,7 @@
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: var(--bg); color: var(--text);
-      height: 100dvh; display: flex; flex-direction: column; overscroll-behavior: none;
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden; touch-action: pan-y;
     }
     header {
       background: var(--surface); border-bottom: 1px solid var(--border);
@@ -43,9 +43,12 @@
       padding: .2rem .55rem; font-size: .72rem; color: var(--muted); flex-shrink: 0;
     }
     #messages {
-      flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: .9rem 1rem;
+      flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+      overscroll-behavior: contain;
+    }
+    #messages-inner {
       display: flex; flex-direction: column; gap: .65rem;
-      touch-action: pan-y; overscroll-behavior: contain;
+      padding: .9rem 1rem; min-height: 100%;
     }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; margin: auto; }
     .bubble { max-width: 82%; display: flex; flex-direction: column; gap: .18rem; }
@@ -276,7 +279,7 @@
     <button id="members-toggle" onclick="toggleMembersBar()"><span id="members-count">0</span> ▾</button>
   </div>
   <div id="members-panel"></div>
-  <div id="messages"><div class="empty" id="emptyMsg">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div>
+  <div id="messages"><div id="messages-inner"><div class="empty" id="emptyMsg">📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק את הכפתור לשליחה קולית</small></div></div></div>
   <div id="unreadBadge" onclick="dismissUnread()" style="display:none;position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;border-radius:20px;padding:.35rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4);z-index:20;white-space:nowrap;"></div>
 
   <div id="roomSettingsSheet" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeRoomSettings()">
@@ -758,7 +761,7 @@
         if (msg.reactions && Object.keys(msg.reactions).length) renderReactions(msg.id, msg.reactions);
       }
 
-      document.getElementById('messages').appendChild(div);
+      document.getElementById('messages-inner').appendChild(div);
     }
 
     function toggleOrig(btn) {
