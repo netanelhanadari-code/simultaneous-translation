@@ -369,10 +369,11 @@ app.post('/api/rooms', express.json(), async (req, res) => {
   const now = Date.now();
   const WELCOME = [
     {
-      sender_name: 'Babel Fish', sender_emoji: '🐟', sender_lang: 'he',
-      original_text: 'בספר \'מדריך הטרמפיסט לגלקסיה\' מסופר על דג קטן ומדהים — שכאשר מכניסים אותו לאוזן, הוא מתרגם כל דבר ששומעים. ברוכים הבאים לבייבל פיש (דג בבל) 🐟 — האפליקציה שמתרגמת כל הודעה בזמן אמת לשפה שלך.',
+      sender_name: 'Worf', sender_emoji: '🖖', sender_lang: 'tlh',
+      original_text: 'nuqneH! *The Hitchhiker\'s Guide to the Galaxy* lut ghaj babel-ghotI\' — mach \'ej Hoch Hol Dayajmogh. naDev yIn — Babel Fish 🐟. Hoch mu\'tlhegh DaQoybogh, Hol laDlu\' qoj jatlhlu\'. Qapla\'!',
       translations: {
-        ar: 'في كتاب \'دليل المسافر عبر المجرة\' تُحكى قصة سمكة صغيرة رائعة — عندما تُدخلها في أذنك تترجم كل ما تسمعه. مرحباً بكم في Babel Fish (سمكة بابل) 🐟 — التطبيق الذي يترجم كل رسالة في الوقت الفعلي إلى لغتك.',
+        he: 'בספר \'מדריך הטרמפיסט לגלקסיה\' מסופר על דג קטן ומדהים — שכאשר מכניסים אותו לאוזן, הוא מתרגם כל דבר ששומעים. ברוכים הבאים לבייבל פיש 🐟 — האפליקציה שמתרגמת כל הודעה בזמן אמת לשפה שלך.',
+        ar: 'في كتاب \'دليل المسافر عبر المجرة\' تُحكى قصة سمكة صغيرة رائعة — عندما تُدخلها في أذنك تترجم كل ما تسمعه. مرحباً بكم في Babel Fish 🐟 — التطبيق الذي يترجم كل رسالة في الوقت الفعلي إلى لغتك.',
         en: 'In \'The Hitchhiker\'s Guide to the Galaxy\', there\'s a story about a small, amazing fish — put it in your ear and it translates everything you hear. Welcome to Babel Fish 🐟 — the app that translates every message in real time into your language.',
         ru: 'В книге \'Автостопом по галактике\' рассказывается о маленькой удивительной рыбке — вложи её в ухо, и она переводит всё, что слышишь. Добро пожаловать в Babel Fish 🐟 — приложение, которое переводит каждое сообщение в реальном времени на твой язык.',
         am: 'በ\'The Hitchhiker\'s Guide to the Galaxy\' ውስጥ ስለ ትንሽ አስደናቂ ዓሣ ይነገራል — ወደ ጆሮዎ ካስገቡት ሁሉንም የሚሰሙትን ይተረጉምልዎታል። ወደ Babel Fish 🐟 እንኳን ደህና መጡ — እያንዳንዷን ቋንቋ ወዳዎ በቅጽበት የሚተረጉም መተግበሪያ።',
@@ -380,7 +381,7 @@ app.post('/api/rooms', express.json(), async (req, res) => {
       created_at: new Date(now).toISOString(),
     },
     {
-      sender_name: 'יעל', sender_emoji: '🕊️', sender_lang: 'he',
+      sender_name: 'יעל', sender_emoji: '👩🏽', sender_lang: 'he',
       original_text: 'לחצו על כפתור המיקרופון 🎤 לשליחת הודעה קולית · הקלידו ⌨️ כדי לכתוב הודעה',
       translations: {
         ar: 'اضغطوا على زر الميكروفون 🎤 لإرسال رسالة صوتية · اكتبوا ⌨️ لإرسال رسالة نصية',
@@ -391,7 +392,7 @@ app.post('/api/rooms', express.json(), async (req, res) => {
       created_at: new Date(now + 1000).toISOString(),
     },
     {
-      sender_name: 'ليلى', sender_emoji: '🕊️', sender_lang: 'ar',
+      sender_name: 'ليلى', sender_emoji: '👩🏻‍🦱', sender_lang: 'ar',
       original_text: 'اضغطوا على 🔊 في أي رسالة لسماعها بلغتكم',
       translations: {
         he: 'לחצו על 🔊 בכל הודעה כדי לשמוע אותה בשפה שלכם',
@@ -402,7 +403,7 @@ app.post('/api/rooms', express.json(), async (req, res) => {
       created_at: new Date(now + 2000).toISOString(),
     },
     {
-      sender_name: 'Alex', sender_emoji: '🕊️', sender_lang: 'en',
+      sender_name: 'Alex', sender_emoji: '👨🏻', sender_lang: 'en',
       original_text: 'Tap 🌐 on any message to see the original language it was written in',
       translations: {
         he: 'לחצו על 🌐 בכל הודעה כדי לראות את השפה המקורית שבה היא נכתבה',
