@@ -1,3 +1,10 @@
+self.addEventListener('fetch', e => {
+  // network-first: always try network, fall back to cache
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+
 self.addEventListener('push', e => {
   if (!e.data) return;
   let data;
