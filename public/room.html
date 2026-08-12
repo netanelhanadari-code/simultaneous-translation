@@ -322,6 +322,12 @@
   <script>
     const params  = new URLSearchParams(location.search);
     const roomId  = params.get('room');
+
+    // ── Registration guard ────────────────────────────────────────────────────
+    if (!localStorage.getItem('bf_name') || !localStorage.getItem('bf_phone')) {
+      location.href = '/settings.html?from=' + encodeURIComponent(location.href);
+    }
+
     const myName   = localStorage.getItem('bf_name')    || 'אנונימי';
     const myLang   = localStorage.getItem('bf_lang')    || 'he';   // communication language
     const myUiLang = localStorage.getItem('bf_ui_lang') || myLang; // UI language
