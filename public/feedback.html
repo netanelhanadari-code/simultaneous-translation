@@ -3,380 +3,160 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Babel Fish — דיווח בודקים</title>
+<title>Babel Fish — דיווח | تقرير</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
-
-  :root{
-    --ink:#151d2b;
-    --ink-2:#1e2a3d;
-    --paper:#eef0e9;
-    --amber:#e6a13d;
-    --amber-dim:#8a6a35;
-    --teal:#4d9b95;
-    --line:#33445e;
-    --danger:#d9694f;
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;900&display=swap');
+  :root{--ink:#151d2b;--ink2:#1e2a3d;--paper:#eef0e9;--amber:#e6a13d;--teal:#4d9b95;--line:#33445e;--danger:#d9694f;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--ink);color:var(--paper);font-family:'Heebo',sans-serif;min-height:100vh;padding:28px 16px 56px;}
+  .wrap{max-width:500px;margin:0 auto;}
+  h1{font-size:20px;font-weight:900;margin-bottom:2px;}
+  .sub{color:#9fb0c3;font-size:13px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+  .field{margin-bottom:14px;}
+  label{display:block;font-size:13px;font-weight:600;color:#dfe6ee;margin-bottom:5px;}
+  label span{color:#9fb0c3;font-weight:400;}
+  input,textarea{
+    width:100%;background:var(--ink2);border:1px solid var(--line);
+    color:var(--paper);font-family:'Heebo',sans-serif;font-size:14px;
+    padding:10px 12px;border-radius:8px;transition:border-color .15s;direction:auto;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--ink);
-    color:var(--paper);
-    font-family:'Heebo',sans-serif;
-    min-height:100vh;
-    padding:32px 16px 64px;
-  }
-  .wrap{max-width:560px;margin:0 auto;}
-
-  header{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    margin-bottom:6px;
-  }
-  .glyph{
-    flex:0 0 auto;
-    width:42px;height:42px;
-    position:relative;
-  }
-  .glyph span{
-    position:absolute;
-    font-family:'JetBrains Mono',monospace;
-    font-size:15px;
-    font-weight:500;
-    width:26px;height:26px;
-    border-radius:7px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .glyph .b1{background:var(--teal);color:var(--ink);top:0;right:0;}
-  .glyph .b2{background:var(--amber);color:var(--ink);bottom:0;left:0;}
-  h1{
-    font-size:22px;
-    font-weight:900;
-    margin:0;
-    letter-spacing:-0.01em;
-  }
-  .sub{
-    color:#9fb0c3;
-    font-size:14px;
-    margin:2px 0 0;
-  }
-  .meta-strip{
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    color:var(--amber-dim);
-    letter-spacing:.04em;
-    margin:22px 0 24px;
-    padding-bottom:14px;
-    border-bottom:1px solid var(--line);
-  }
-
-  fieldset{border:0;padding:0;margin:0 0 22px;}
-  legend{
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    color:var(--teal);
-    letter-spacing:.08em;
-    margin-bottom:10px;
-    padding:0;
-  }
-  label{
-    display:block;
-    font-size:14px;
-    font-weight:500;
-    margin-bottom:6px;
-    color:#dfe6ee;
-  }
-  .req{color:var(--danger);margin-inline-start:3px;}
-  .field{margin-bottom:16px;}
-  input[type=text],select,textarea{
-    width:100%;
-    background:var(--ink-2);
-    border:1px solid var(--line);
-    color:var(--paper);
-    font-family:'Heebo',sans-serif;
-    font-size:15px;
-    padding:11px 12px;
-    border-radius:9px;
-    transition:border-color .15s;
-  }
-  input[type=text]:focus,select:focus,textarea:focus{
-    outline:none;
-    border-color:var(--amber);
-  }
-  textarea{resize:vertical;min-height:76px;line-height:1.5;}
-  .hint{font-size:12px;color:#7b8ba0;margin-top:5px;}
-
-  .sev-row{display:flex;gap:8px;}
+  input:focus,textarea:focus{outline:none;border-color:var(--amber);}
+  textarea{resize:vertical;min-height:70px;line-height:1.5;}
+  .sev-row{display:flex;gap:6px;}
   .sev-opt{flex:1;}
   .sev-opt input{position:absolute;opacity:0;}
   .sev-opt label{
-    display:block;
-    text-align:center;
-    padding:10px 6px;
-    border-radius:9px;
-    border:1px solid var(--line);
-    background:var(--ink-2);
-    font-size:13px;
-    cursor:pointer;
-    margin:0;
-    color:#9fb0c3;
-    transition:all .15s;
+    display:block;text-align:center;padding:9px 4px;border-radius:8px;
+    border:1px solid var(--line);background:var(--ink2);font-size:12px;
+    cursor:pointer;color:#9fb0c3;transition:all .15s;line-height:1.3;
   }
-  .sev-opt input:checked + label{
-    border-color:var(--amber);
-    background:rgba(230,161,61,.12);
-    color:var(--amber);
-    font-weight:700;
-  }
-
+  .sev-opt input:checked+label{border-color:var(--amber);background:rgba(230,161,61,.12);color:var(--amber);font-weight:700;}
   .submit-btn{
-    width:100%;
-    background:var(--amber);
-    color:var(--ink);
-    border:none;
-    font-family:'Heebo',sans-serif;
-    font-weight:700;
-    font-size:16px;
-    padding:14px;
-    border-radius:10px;
-    cursor:pointer;
-    transition:filter .15s, transform .1s;
+    width:100%;background:var(--amber);color:var(--ink);border:none;
+    font-family:'Heebo',sans-serif;font-weight:700;font-size:15px;
+    padding:13px;border-radius:9px;cursor:pointer;margin-top:6px;
   }
-  .submit-btn:hover{filter:brightness(1.08);}
-  .submit-btn:active{transform:scale(.99);}
   .submit-btn:disabled{opacity:.5;cursor:default;}
-
-  .status{
-    display:none;
-    text-align:center;
-    margin-top:14px;
-    font-size:14px;
-    padding:12px;
-    border-radius:9px;
-  }
+  .status{display:none;text-align:center;margin-top:12px;font-size:13px;padding:10px;border-radius:8px;}
   .status.ok{display:block;background:rgba(77,155,149,.15);color:var(--teal);}
   .status.err{display:block;background:rgba(217,105,79,.15);color:var(--danger);}
-
-  .footer-link{
-    text-align:center;
-    margin-top:34px;
-  }
-  .footer-link button{
-    background:none;border:none;
-    color:#5c7089;
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    letter-spacing:.05em;
-    cursor:pointer;
-    text-decoration:underline;
-  }
-
-  .admin-panel{
-    display:none;
-    margin-top:28px;
-    border-top:1px solid var(--line);
-    padding-top:20px;
-  }
+  .toggle-reports{background:none;border:none;color:#5c7089;font-size:11px;cursor:pointer;text-decoration:underline;display:block;margin:24px auto 0;}
+  .admin-panel{display:none;margin-top:20px;border-top:1px solid var(--line);padding-top:16px;}
   .admin-panel.show{display:block;}
-  .admin-note{
-    font-size:12px;
-    color:var(--amber-dim);
-    margin-bottom:14px;
-    font-family:'JetBrains Mono',monospace;
-  }
-  .report{
-    background:var(--ink-2);
-    border:1px solid var(--line);
-    border-radius:9px;
-    padding:14px;
-    margin-bottom:10px;
-    font-size:13px;
-  }
-  .report-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:8px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    color:#7b8ba0;
-  }
-  .report-sev{
-    font-weight:700;
-    padding:2px 8px;
-    border-radius:5px;
-  }
+  .report{background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:8px;font-size:12px;line-height:1.6;}
+  .report-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;color:#7b8ba0;font-size:11px;}
+  .sev-tag{font-weight:700;padding:1px 7px;border-radius:4px;}
   .sev-low{background:rgba(77,155,149,.2);color:var(--teal);}
   .sev-med{background:rgba(230,161,61,.2);color:var(--amber);}
   .sev-high{background:rgba(217,105,79,.2);color:var(--danger);}
-  .report p{margin:4px 0;line-height:1.5;}
-  .report .k{color:#7b8ba0;}
-  .empty{color:#7b8ba0;font-size:13px;text-align:center;padding:20px;}
+  .k{color:#7b8ba0;}
+  .empty{color:#7b8ba0;text-align:center;padding:16px;font-size:12px;}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <h1>🐟 Babel Fish</h1>
+  <p class="sub">דיווח באגים / בדיקה &nbsp;·&nbsp; تقرير أخطاء / اختبار</p>
 
-  <header>
-    <div class="glyph"><span class="b1">א</span><span class="b2">A</span></div>
-    <div>
-      <h1>Babel Fish — עומדים ביחד</h1>
-      <p class="sub">דיווח בדיקה · نموذج الاختبار</p>
+  <form id="form">
+    <div class="field">
+      <label>שם / الاسم <span>*</span></label>
+      <input type="text" id="name" required>
     </div>
-  </header>
-  <div class="meta-strip">BETA · דיווחי הבדיקה נשמרים ומשותפים לצוות הפיתוח</div>
-
-  <form id="feedbackForm">
-
-    <fieldset>
-      <legend>מי מדווח</legend>
-      <div class="field">
-        <label>שם <span class="req">*</span></label>
-        <input type="text" id="name" required>
+    <div class="field">
+      <label>קוד חדר / رمز الغرفة <span>— אם רלוונטי / إن وجد</span></label>
+      <input type="text" id="roomId">
+    </div>
+    <div class="field">
+      <label>מכשיר / الجهاز <span>— למשל: Android, Chrome / مثلاً: iPhone, Safari</span></label>
+      <input type="text" id="device">
+    </div>
+    <div class="field">
+      <label>חומרה / الخطورة</label>
+      <div class="sev-row">
+        <div class="sev-opt"><input type="radio" name="sev" id="s1" value="low" checked><label for="s1">קל<br>خفيف</label></div>
+        <div class="sev-opt"><input type="radio" name="sev" id="s2" value="med"><label for="s2">בינוני<br>متوسط</label></div>
+        <div class="sev-opt"><input type="radio" name="sev" id="s3" value="high"><label for="s3">חוסם<br>حرج</label></div>
       </div>
-      <div class="field">
-        <label>קוד חדר / מפגש</label>
-        <input type="text" id="roomId" placeholder="אם רלוונטי">
-      </div>
-      <div class="field">
-        <label>מכשיר ושפה</label>
-        <input type="text" id="device" placeholder="למשל: iPhone 14, Safari, עברית">
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>חומרה</legend>
-      <div class="sev-row" id="sevRow">
-        <div class="sev-opt">
-          <input type="radio" name="sev" id="sevLow" value="low" checked>
-          <label for="sevLow">קל</label>
-        </div>
-        <div class="sev-opt">
-          <input type="radio" name="sev" id="sevMed" value="med">
-          <label for="sevMed">בינוני</label>
-        </div>
-        <div class="sev-opt">
-          <input type="radio" name="sev" id="sevHigh" value="high">
-          <label for="sevHigh">חוסם</label>
-        </div>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>מה קרה</legend>
-      <div class="field">
-        <label>מה קרה בפועל <span class="req">*</span></label>
-        <textarea id="whatHappened" required></textarea>
-      </div>
-      <div class="field">
-        <label>מה ציפית שיקרה</label>
-        <textarea id="expected"></textarea>
-        <p class="hint">לא חובה — אבל עוזר להבין אם זה תרגום שגוי, קריסה, או משהו אחר</p>
-      </div>
-    </fieldset>
-
-    <button type="submit" class="submit-btn" id="submitBtn">שליחת דיווח</button>
+    </div>
+    <div class="field">
+      <label>מה קרה / ما الذي حدث <span>*</span></label>
+      <textarea id="what" required></textarea>
+    </div>
+    <div class="field">
+      <label>מה ציפית / ما توقعته <span>— לא חובה / اختياري</span></label>
+      <textarea id="expected" style="min-height:50px;"></textarea>
+    </div>
+    <button type="submit" class="submit-btn" id="submitBtn">שלח דיווח / إرسال التقرير</button>
     <div class="status" id="status"></div>
   </form>
 
-  <div class="footer-link">
-    <button type="button" id="toggleAdmin">צפייה בכל הדיווחים</button>
-  </div>
-
+  <button class="toggle-reports" id="toggleBtn" onclick="toggleReports()">צפייה בדיווחים / عرض التقارير</button>
   <div class="admin-panel" id="adminPanel">
-    <p class="admin-note">כל הדיווחים גלויים כאן לכל מי שפותח את הטופס</p>
     <div id="reportsList"></div>
   </div>
-
 </div>
 
 <script>
-const form = document.getElementById('feedbackForm');
-const submitBtn = document.getElementById('submitBtn');
-const statusEl = document.getElementById('status');
-const toggleAdmin = document.getElementById('toggleAdmin');
-const adminPanel = document.getElementById('adminPanel');
-const reportsList = document.getElementById('reportsList');
+const sevLabels = { low: 'קל / خفيف', med: 'בינוני / متوسط', high: 'חוסם / حرج' };
+const sevClass  = { low: 'sev-low', med: 'sev-med', high: 'sev-high' };
 
-const sevLabels = { low: 'קל', med: 'בינוני', high: 'חוסם' };
-const sevClass = { low: 'sev-low', med: 'sev-med', high: 'sev-high' };
-
-form.addEventListener('submit', async (e) => {
+document.getElementById('form').addEventListener('submit', async e => {
   e.preventDefault();
-  submitBtn.disabled = true;
-  statusEl.className = 'status';
-  statusEl.style.display = 'none';
-
-  const entry = {
-    name: document.getElementById('name').value.trim(),
-    room_id: document.getElementById('roomId').value.trim(),
-    device: document.getElementById('device').value.trim(),
-    severity: document.querySelector('input[name=sev]:checked').value,
-    what_happened: document.getElementById('whatHappened').value.trim(),
-    expected: document.getElementById('expected').value.trim()
-  };
-
+  const btn = document.getElementById('submitBtn');
+  const st  = document.getElementById('status');
+  btn.disabled = true;
+  st.className = 'status';
   try {
     const r = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry)
+      body: JSON.stringify({
+        name:         document.getElementById('name').value.trim(),
+        room_id:      document.getElementById('roomId').value.trim(),
+        device:       document.getElementById('device').value.trim(),
+        severity:     document.querySelector('input[name=sev]:checked').value,
+        what_happened:document.getElementById('what').value.trim(),
+        expected:     document.getElementById('expected').value.trim()
+      })
     });
-    if (!r.ok) throw new Error('server error');
-    statusEl.textContent = 'הדיווח נשלח, תודה!';
-    statusEl.className = 'status ok';
-    form.reset();
-  } catch (err) {
-    statusEl.textContent = 'שגיאה בשליחה — נסה שוב';
-    statusEl.className = 'status err';
-    console.error(err);
-  } finally {
-    submitBtn.disabled = false;
-  }
+    if (!r.ok) throw new Error();
+    st.textContent = '✓ הדיווח נשלח, תודה! / تم الإرسال، شكراً!';
+    st.className = 'status ok';
+    e.target.reset();
+  } catch {
+    st.textContent = 'שגיאה — נסה שוב / خطأ — حاول مجدداً';
+    st.className = 'status err';
+  } finally { btn.disabled = false; }
 });
 
-async function loadReports() {
-  reportsList.innerHTML = '<p class="empty">טוען…</p>';
+async function toggleReports() {
+  const panel = document.getElementById('adminPanel');
+  const btn   = document.getElementById('toggleBtn');
+  const show  = !panel.classList.contains('show');
+  panel.classList.toggle('show', show);
+  btn.textContent = show ? 'הסתרה / إخفاء' : 'צפייה בדיווחים / عرض التقارير';
+  if (!show) return;
+  const list = document.getElementById('reportsList');
+  list.innerHTML = '<p class="empty">טוען… / جارٍ التحميل…</p>';
   try {
-    const resp = await fetch('/api/feedback');
-    if (!resp.ok) throw new Error('server error');
-    const entries = await resp.json();
-    if (entries.length === 0) {
-      reportsList.innerHTML = '<p class="empty">אין דיווחים עדיין</p>';
-      return;
-    }
-
-    reportsList.innerHTML = entries.map(en => `
+    const entries = await fetch('/api/feedback').then(r => r.json());
+    if (!entries.length) { list.innerHTML = '<p class="empty">אין דיווחים עדיין / لا توجد تقارير</p>'; return; }
+    list.innerHTML = entries.map(en => `
       <div class="report">
         <div class="report-head">
-          <span>${en.name || 'אנונימי'} · ${new Date(en.created_at).toLocaleString('he-IL')}</span>
-          <span class="report-sev ${sevClass[en.severity] || 'sev-low'}">${sevLabels[en.severity] || en.severity}</span>
+          <span>${esc(en.name)} · ${new Date(en.created_at).toLocaleString('he-IL')}</span>
+          <span class="sev-tag ${sevClass[en.severity]||'sev-low'}">${sevLabels[en.severity]||en.severity}</span>
         </div>
-        ${en.room_id ? `<p><span class="k">חדר:</span> ${escapeHtml(en.room_id)}</p>` : ''}
-        ${en.device ? `<p><span class="k">מכשיר:</span> ${escapeHtml(en.device)}</p>` : ''}
-        <p><span class="k">מה קרה:</span> ${escapeHtml(en.what_happened)}</p>
-        ${en.expected ? `<p><span class="k">ציפייה:</span> ${escapeHtml(en.expected)}</p>` : ''}
-      </div>
-    `).join('');
-  } catch (err) {
-    reportsList.innerHTML = '<p class="empty">שגיאה בטעינת דיווחים</p>';
-    console.error(err);
-  }
+        ${en.room_id ? `<div><span class="k">חדר:</span> ${esc(en.room_id)}</div>` : ''}
+        ${en.device  ? `<div><span class="k">מכשיר:</span> ${esc(en.device)}</div>` : ''}
+        <div><span class="k">מה קרה:</span> ${esc(en.what_happened)}</div>
+        ${en.expected ? `<div><span class="k">ציפייה:</span> ${esc(en.expected)}</div>` : ''}
+      </div>`).join('');
+  } catch { list.innerHTML = '<p class="empty">שגיאה / خطأ</p>'; }
 }
 
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-toggleAdmin.addEventListener('click', () => {
-  const willShow = !adminPanel.classList.contains('show');
-  adminPanel.classList.toggle('show');
-  toggleAdmin.textContent = willShow ? 'הסתרת הדיווחים' : 'צפייה בכל הדיווחים';
-  if (willShow) loadReports();
-});
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 </script>
 </body>
 </html>
