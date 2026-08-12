@@ -308,7 +308,8 @@
       <button class="reply-cancel" onclick="cancelReply()" title="בטל">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;width:100%;">
-      <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()" title="השמעה אוטומטית">🔊</button>
+      <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()" title="קריאה אוטומטית">🔊</button>
+      <button class="tts-toggle" id="notifyBtn" onclick="toggleNotify()" title="צליל התרעה">🔔</button>
       <textarea id="textInput" rows="1" placeholder="הקלד הודעה..."></textarea>
       <button id="sendBtn" onclick="sendText()" disabled>➤</button>
       <button id="recordBtn">🎤</button>
@@ -331,7 +332,8 @@
     const LANG_NAMES = { he:'עברית', ar:'ערבית', en:'English', ru:'Русский', am:'አማርኛ' };
     const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET' };
 
-    let ttsOn = true;
+    let ttsOn = localStorage.getItem('bf_mute_tts') !== '0';
+    let notifyOn = localStorage.getItem('bf_mute_notify') !== '0';
     let latestMsgTs = null;
     const displayedIds = new Set();
     const msgElements  = new Map(); // msgId → { reactionsEl, pickerEl }
@@ -490,7 +492,12 @@
       const emptyEl = document.getElementById('emptyMsg');
       if (emptyEl) emptyEl.innerHTML = ui.empty;
     }
-    document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
+    const _ttsBtn = document.getElementById('ttsBtn');
+    _ttsBtn.classList.toggle('on', ttsOn);
+    _ttsBtn.textContent = ttsOn ? '🔊' : '🔇';
+    const _notifyBtn = document.getElementById('notifyBtn');
+    _notifyBtn.classList.toggle('on', notifyOn);
+    _notifyBtn.textContent = notifyOn ? '🔔' : '🔕';
 
     // ── Room code copy ─────────────────────────────────────────────────────
     const codeEl = document.getElementById('codeEl');
@@ -615,9 +622,12 @@
             }
             showUnreadBadge();
           }
-          if (msg.sender_name !== myName && ttsOn) {
-            const text = msg.translations?.[myLang] || msg.original_text;
-            speak(text, myLang);
+          if (msg.sender_name !== myName) {
+            playTardisSound();
+            if (ttsOn) {
+              const text = msg.translations?.[myLang] || msg.original_text;
+              speak(text, myLang);
+            }
           }
         }
       };
@@ -846,8 +856,29 @@
     function speakBtn(btn) { speak(decodeURIComponent(btn.dataset.text), btn.dataset.lang); }
     function toggleTTS() {
       ttsOn = !ttsOn;
-      document.getElementById('ttsBtn').classList.toggle('on', ttsOn);
+      localStorage.setItem('bf_mute_tts', ttsOn ? '1' : '0');
+      const btn = document.getElementById('ttsBtn');
+      btn.classList.toggle('on', ttsOn);
+      btn.textContent = ttsOn ? '🔊' : '🔇';
       if (!ttsOn) window.speechSynthesis?.cancel();
+    }
+    function toggleNotify() {
+      notifyOn = !notifyOn;
+      localStorage.setItem('bf_mute_notify', notifyOn ? '1' : '0');
+      const btn = document.getElementById('notifyBtn');
+      btn.classList.toggle('on', notifyOn);
+      btn.textContent = notifyOn ? '🔔' : '🔕';
+      if (notifyOn) playTardisSound(); // דמו קצר בלחיצה
+    }
+    const _notifyAudio = new Audio("/BBC_Records,_The_Hitch_Hiker's_Guide_To_The_Galaxy_(Sound_Effects_From_The_Radio_Dramatisation)_-_The_Book's_Activating_Code2.ogg");
+    _notifyAudio.volume = 0.5;
+    function playTardisSound() {
+      if (!notifyOn) return;
+      try {
+        _notifyAudio.currentTime = 0;
+        _notifyAudio.play().catch(() => {});
+        setTimeout(() => { _notifyAudio.pause(); }, 1500);
+      } catch(e) {}
     }
 
     // ── Text input ─────────────────────────────────────────────────────────
