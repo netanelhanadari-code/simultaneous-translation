@@ -996,8 +996,8 @@
     recordBtn.addEventListener('mousedown',  () => startRec());
     recordBtn.addEventListener('mouseup',    () => stopRec());
     recordBtn.addEventListener('mouseleave', () => stopRec());
-    recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRec(); }, { passive: false });
-    recordBtn.addEventListener('touchend',   e => { e.preventDefault(); stopRec(); },  { passive: false });
+    recordBtn.addEventListener('touchstart', e => { startRec(); }, { passive: true });
+    recordBtn.addEventListener('touchend',   e => { stopRec(); },  { passive: true });
 
     window.addEventListener('pagehide', () => {
       wsAlive = false; ws?.close();
