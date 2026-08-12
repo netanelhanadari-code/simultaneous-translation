@@ -1,18 +1,20 @@
-# Babel Fish — סיכום סשן (להמשך מחר)
+# Babel Fish — סיכום סשן (להמשך)
 
-## מה נעשה בסשן זה
+## כללי עבודה
+- **לפני כל שינוי קוד** — לסכם מה הובן ומה יצא, ולחכות לאישור מנתי.
+
+---
+
+## מה נעשה בסשן הקודם
 
 ### תמונת פרופיל (Avatar)
-- **settings.html**: העלאת תמונה (canvas 40×40 JPEG 0.75), מחליפה אימוג'י — כשיש תמונה קטע האימוג'י מוסתר
+- **settings.html**: העלאת תמונה (canvas 40×40 JPEG 0.75), מחליפה אימוג'י
 - **room.html**: תמונה מוצגת בצ'יפ (22px), בשורת פאנל (28px), וליד בועות הודעה (20px)
-- **server.js**: `set_avatar` מעדכן DB (`room_members.avatar`) → תמונה גלויה גם כשמשתמש לא מחובר
-- **SQL נדרש** (אם עוד לא הורץ):
-  ```sql
-  alter table room_members add column if not exists avatar text default '';
-  ```
+- **server.js**: `set_avatar` מעדכן DB (`room_members.avatar`)
+- **SQL נדרש**: `alter table room_members add column if not exists avatar text default '';`
 
 ### push_subscriptions
-- **SQL נדרש** (אם עוד לא הורץ):
+- **SQL נדרש**:
   ```sql
   create table if not exists push_subscriptions (
     room_id text not null, name text not null, lang text default 'he',
@@ -24,31 +26,51 @@
   ```
 
 ### הודעות שלא נקראו
-- **Badge צף סגול** `↓ 3 הודעות חדשות` מופיע כשמגיעות הודעות והמשתמש לא בתחתית
-- לחיצה על הbadge → קופץ לתחתית ומוחק ספירה
-- גלילה ידנית לתחתית → badge נעלם
-- **קו מפריד** `.unread-sep` בתוך הצ'אט כשחוזרים לטאב אחרי היעדרות
-- **כותרת טאב** `(3) Babel Fish — שם החדר` בעת היעדרות
-
-### תצוגת הודעות
-- **הודעות שלי**: תמיד מוצגות כפי שנכתבו (לא מתורגמות לשפת הממשק שלי)
-- כפתור 🌐 "הצג מקור" מוסתר בהודעות של עצמך
+- Badge צף סגול + קו מפריד + כותרת טאב
 
 ### זיהוי שפה לתרגום
-- **לקוח**: שולח תמיד `sender_lang: myLang` (פשוט, ללא auto-detect)
-- **שרת**: `detectScriptLang()` מזהה ערבית/עברית/רוסית מהטקסט בפועל, משתמש בזה לתרגום — פותר את הבעיה שמשתמש אנגלי כותב עברית ותרגום לא מגיע
+- `detectScriptLang()` בשרת מזהה ערבית/עברית/רוסית מהטקסט
 
-### ממשק
-- **Splash screen**: קוצר מ-2200ms ל-1200ms בכל הדפים (home, broadcaster, listener)
-- **כותרות**: כל הדפים עם `| עומדים ביחד | نقف معاً`
-- **manifest.json**: שם עודכן לכלול `نقف معاً`
-- **listener.html**: קוד המפגש (roomId) מוצג בבירור בראש הדף עם badge סגול
-- **listener.html**: בחירת שפה חובה לפני התחלת האזנה (אחרת פוקוס קופץ ל-select)
-- **listener.html**: ברירת מחדל עברית אם הגיעה הודעה ו-langSelect ריק
-- **TTS על צ'יפ**: זיהוי שפה לפי תווים (ערבית/עברית/לטינית) במקום שפת התקשורת
+---
 
-### iOS Push
-- לא מנסה auto-subscribe על iOS שאינו standalone (מונע שגיאות)
+## מה נעשה בסשן הנוכחי
+
+### כפתורי שתיקה
+- **🔊/🔇 TTS** — כפתור toggle, נשמר ב-`bf_mute_tts`, אייקון משתנה
+- **🔔/🔕 התרעות** — כפתור toggle, נשמר ב-`bf_mute_notify`
+- **צליל התרעה** — קובץ OGG (HHG2G), מנגן 1.5 שניות, נמצא ב-`public/`
+- לחיצה על 🔔 בהפעלה → מנגן דמו קצר
+- כשמגיעה הודעה מאחר: TARDIS → TTS (עצמאיים)
+
+### PWA / Android APK
+- `home.html` רשום כ-start_url ו-`/` מפנה אליו
+- SW רשום גם מ-`home.html`
+- `manifest.json`: נוסף `id`, `prefer_related_applications:false`, icons מתוקנים
+- `sw.js`: נוסף fetch handler (network-first)
+- נוצר APK דרך PWA Builder → "Other Android"
+
+### טופס פידבק
+- `/feedback.html` — טופס דו-לשוני עברית/ערבית, שני שפות זו לצד זו
+- **SQL נדרש**:
+  ```sql
+  create table if not exists feedback (
+    id uuid primary key default gen_random_uuid(),
+    name text not null, room_id text, device text,
+    severity text default 'low', what_happened text not null,
+    expected text, created_at timestamptz default now()
+  );
+  ```
+- `POST /api/feedback` + `GET /api/feedback` ב-server.js
+- קישור: `https://simultaneous-translation.onrender.com/feedback.html`
+
+### תיקון Android text selection
+- `user-select: none` על `body` ב-room.html
+- `user-select: text` רק על `.bubble-text` ו-`.bubble-original`
+
+### בחירת שפה — settings.html
+- Dropdown עם 5 שפות מרכזיות: עברית, ערבית, English, Русский, አማርኛ
+- אפשרות "אחר / Other..." → פותח חיפוש חופשי עם 35 שפות
+- `LANG_BCP47` ב-room.html הורחב ל-35 שפות
 
 ---
 
@@ -56,29 +78,32 @@
 
 | קובץ | שינויים עיקריים |
 |------|----------------|
-| `public/room.html` | avatar, unread badge, הודעות עצמי, detectScriptLang לקוח הוסר |
-| `public/settings.html` | avatar upload 40×40, emoji מוסתר כשיש avatar |
-| `public/listener.html` | roomId badge, שפה חובה, ברירת מחדל עברית |
-| `public/home.html` | splash 1200ms |
-| `public/broadcaster.html` | splash 1200ms |
-| `public/manifest.json` | שם עם نقف معاً |
-| `server.js` | detectScriptLang(), avatar ל-DB, push improvements |
+| `public/room.html` | TTS+notify toggles, user-select fix, LANG_BCP47 מורחב |
+| `public/settings.html` | language selector עם dropdown + חיפוש חופשי |
+| `public/home.html` | SW registration, splash 1200ms |
+| `public/feedback.html` | טופס דו-לשוני חדש |
+| `public/sw.js` | push handler + fetch handler |
+| `public/manifest.json` | id, prefer_related_applications, icons מתוקנים |
+| `server.js` | /api/feedback endpoints, redirect / → home.html |
 
 ---
 
 ## מה עוד לא נעשה / כדאי לבדוק
 
-1. **SQL migrations** — לוודא שהרצת שניהם ב-Supabase:
-   - `alter table room_members add column if not exists avatar text default '';`
-   - יצירת טבלת `push_subscriptions`
+1. **SQL migrations** — לוודא שהרצת ב-Supabase:
+   - `avatar` column ב-room_members
+   - טבלת `push_subscriptions`
+   - טבלת `feedback`
 
-2. **בדיקת DM** — הקוד נראה שלם אבל לא נבדק בפועל מקצה לקצה
+2. **דיווחי פידבק פתוחים** (מה שהגיע בטופס):
+   - ~~לחיצה על טקסט → Google search~~ ✓ תוקן
+   - ~~פורטוגזית/שפות נוספות~~ ✓ תוקן
+   - הודעות גרבאג' בחאן אל-אחמר — למחוק + לכתוב ברוכים הבאים בכמה שפות
+   - כניסה לחדר ללא הרשמה — לבדוק אם רוצה לחסום
 
-3. **תמונה נשמרת ב-DB** — רק אחרי שמשתמש נכנס לחדר ושולח `set_avatar`. משתמשים שהעלו תמונה לפני המיגרציה — יצטרכו להיכנס פעם אחת לחדר כדי לסנכרן
+3. **APK** — להפיץ לבודקים (הורד מ-PWA Builder)
 
-4. **iOS PWA** — Push עובד רק ב-Safari 16.4+ עם הוספה למסך הבית. הבאנר קיים ומציג הנחיות
-
-5. **broadcaster/listener** — לבדוק שהתרגום מאנגלית עובד (תוקן ב-listener: ברירת מחדל עברית)
+4. **assetlinks.json** — אם רוצים TWA מלא עם Push ב-APK
 
 ---
 
@@ -86,5 +111,5 @@
 - Backend: Node.js + Express + WebSocket על Render.com
 - AI: OpenAI Whisper (STT) + GPT-4o-mini (תרגום)
 - DB: Supabase (REST fetch ישיר)
-- Frontend: Vanilla JS, RTL עברית/ערבית, LTR אנגלית
-- Deploy: `git add -A && git commit -m "..." && git push`
+- Frontend: Vanilla JS, RTL עברית/ערבית
+- Deploy: `git add -A; git commit -m "..."; git push`

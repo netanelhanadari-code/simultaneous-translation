@@ -32,6 +32,7 @@
       font-family: 'Segoe UI', Arial, sans-serif;
       background: var(--bg); color: var(--text);
       min-height: 100dvh; display: flex; flex-direction: column;
+      -webkit-user-select: none; user-select: none;
     }
     header {
       background: var(--surface); border-bottom: 1px solid var(--border);
@@ -59,7 +60,7 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 12px; padding: .75rem 1rem;
       display: flex; align-items: center; gap: .6rem; cursor: pointer;
-      transition: border-color .15s;
+      transition: border-color .15s; touch-action: manipulation;
     }
     .room-chip:active { opacity: .85; }
     .room-chip.has-new { border-color: var(--accent); }
