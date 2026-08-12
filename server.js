@@ -611,6 +611,27 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   res.json({ ok: true, id: msgId, translations });
 });
 
+// ── Feedback ─────────────────────────────────────────────────────────────────
+app.post('/api/feedback', express.json(), async (req, res) => {
+  const { name, room_id, device, severity, what_happened, expected } = req.body;
+  if (!name || !what_happened) return res.status(400).json({ error: 'missing fields' });
+  if (!SB_URL) return res.json({ ok: true });
+  const r = await fetch(`${SB_URL}/rest/v1/feedback`, {
+    method: 'POST',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ name, room_id: room_id || null, device: device || null, severity: severity || 'low', what_happened, expected: expected || null })
+  });
+  if (!r.ok) return res.status(500).json({ error: 'db error' });
+  res.json({ ok: true });
+});
+
+app.get('/api/feedback', async (req, res) => {
+  if (!SB_URL) return res.json([]);
+  const r = await fetch(`${SB_URL}/rest/v1/feedback?order=created_at.desc&limit=100`, { headers: sbHeaders() });
+  if (!r.ok) return res.status(500).json({ error: 'db error' });
+  res.json(await r.json());
+});
+
 // ── Push notifications ───────────────────────────────────────────────────────
 app.get('/api/vapid-public-key', (req, res) => {
   res.json({ key: VAPID_PUBLIC });
