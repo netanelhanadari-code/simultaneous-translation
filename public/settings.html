@@ -111,17 +111,21 @@
     <!-- Communication language -->
     <div class="field">
       <label id="labelLang">שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת</label>
-      <select id="langSelect">
-        <option value="ar">عربي</option>
+      <select id="langSelectMain" onchange="onMainLangChange(this.value)">
         <option value="he">עברית</option>
+        <option value="ar">عربي</option>
         <option value="en">English</option>
         <option value="ru">Русский</option>
         <option value="am">አማርኛ</option>
-        <option value="fr">Français</option>
-        <option value="es">Español</option>
-        <option value="uk">Українська</option>
-        <option value="de">Deutsch</option>
+        <option value="other">אחר / Other...</option>
       </select>
+      <div id="langOtherWrap" style="display:none;margin-top:.5rem;">
+        <input id="langSearch" type="text" autocomplete="off" placeholder="חפש שפה / Search language..."
+          style="margin-bottom:.35rem;" oninput="filterLangs(this.value)" onfocus="filterLangs(this.value)">
+        <div id="langDropdown" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;max-height:180px;overflow-y:auto;"></div>
+        <div id="langSelected" style="font-size:.8rem;color:var(--muted);margin-top:.3rem;"></div>
+      </div>
+      <input type="hidden" id="langSelect">
     </div>
 
     <!-- UI language -->
@@ -166,9 +170,98 @@
     document.getElementById('saveBtn').textContent    = su.save;
     document.getElementById('avatarHint').textContent = su.avatarHint;
 
+    // ── Language search ───────────────────────────────────────────────────────
+    const ALL_LANGS = [
+      { code:'ar', name:'عربي', en:'Arabic' },
+      { code:'he', name:'עברית', en:'Hebrew' },
+      { code:'en', name:'English', en:'English' },
+      { code:'ru', name:'Русский', en:'Russian' },
+      { code:'am', name:'አማርኛ', en:'Amharic' },
+      { code:'fr', name:'Français', en:'French' },
+      { code:'es', name:'Español', en:'Spanish' },
+      { code:'uk', name:'Українська', en:'Ukrainian' },
+      { code:'de', name:'Deutsch', en:'German' },
+      { code:'pt', name:'Português', en:'Portuguese' },
+      { code:'it', name:'Italiano', en:'Italian' },
+      { code:'sv', name:'Svenska', en:'Swedish' },
+      { code:'nl', name:'Nederlands', en:'Dutch' },
+      { code:'pl', name:'Polski', en:'Polish' },
+      { code:'tr', name:'Türkçe', en:'Turkish' },
+      { code:'fa', name:'فارسی', en:'Persian' },
+      { code:'ur', name:'اردو', en:'Urdu' },
+      { code:'hi', name:'हिन्दी', en:'Hindi' },
+      { code:'zh', name:'中文', en:'Chinese' },
+      { code:'ja', name:'日本語', en:'Japanese' },
+      { code:'ko', name:'한국어', en:'Korean' },
+      { code:'ro', name:'Română', en:'Romanian' },
+      { code:'cs', name:'Čeština', en:'Czech' },
+      { code:'hu', name:'Magyar', en:'Hungarian' },
+      { code:'fi', name:'Suomi', en:'Finnish' },
+      { code:'da', name:'Dansk', en:'Danish' },
+      { code:'no', name:'Norsk', en:'Norwegian' },
+      { code:'el', name:'Ελληνικά', en:'Greek' },
+      { code:'vi', name:'Tiếng Việt', en:'Vietnamese' },
+      { code:'id', name:'Indonesia', en:'Indonesian' },
+      { code:'th', name:'ภาษาไทย', en:'Thai' },
+      { code:'bg', name:'Български', en:'Bulgarian' },
+      { code:'hr', name:'Hrvatski', en:'Croatian' },
+      { code:'sk', name:'Slovenčina', en:'Slovak' },
+      { code:'ms', name:'Melayu', en:'Malay' },
+    ];
+
+    const MAIN_LANGS = ['he','ar','en','ru','am'];
+
+    function onMainLangChange(val) {
+      const wrap = document.getElementById('langOtherWrap');
+      if (val === 'other') {
+        wrap.style.display = '';
+        document.getElementById('langSelect').value = '';
+        document.getElementById('langSelected').textContent = '';
+        document.getElementById('langSearch').focus();
+      } else {
+        wrap.style.display = 'none';
+        document.getElementById('langSelect').value = val;
+      }
+    }
+
+    function filterLangs(q) {
+      const dd = document.getElementById('langDropdown');
+      const lower = q.toLowerCase();
+      const filtered = q
+        ? ALL_LANGS.filter(l => l.name.toLowerCase().includes(lower) || l.en.toLowerCase().includes(lower) || l.code === lower)
+        : ALL_LANGS;
+      if (!filtered.length) { dd.style.display = 'none'; return; }
+      dd.style.display = '';
+      dd.innerHTML = filtered.map(l => `
+        <div onclick="selectLang('${l.code}','${l.name}')"
+          style="padding:.5rem .8rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);font-size:.9rem;">
+          <span>${l.name}</span><span style="color:var(--muted);font-size:.75rem;">${l.en}</span>
+        </div>`).join('');
+    }
+
+    function selectLang(code, name) {
+      document.getElementById('langSelect').value = code;
+      document.getElementById('langSearch').value = '';
+      document.getElementById('langDropdown').style.display = 'none';
+      document.getElementById('langSelected').textContent = '✓ ' + name;
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.field')) document.getElementById('langDropdown').style.display = 'none';
+    });
+
     // Load current values
     nameInput.value    = localStorage.getItem('bf_name') || '';
-    langSelect.value   = localStorage.getItem('bf_lang') || 'he';
+    const savedLang = localStorage.getItem('bf_lang') || 'he';
+    document.getElementById('langSelect').value = savedLang;
+    if (MAIN_LANGS.includes(savedLang)) {
+      document.getElementById('langSelectMain').value = savedLang;
+    } else {
+      document.getElementById('langSelectMain').value = 'other';
+      document.getElementById('langOtherWrap').style.display = '';
+      const savedLangObj = ALL_LANGS.find(l => l.code === savedLang);
+      if (savedLangObj) document.getElementById('langSelected').textContent = '✓ ' + savedLangObj.name;
+    }
     uiLangSelect.value = myUiLang;
     document.getElementById('phoneInput').value = localStorage.getItem('bf_phone') || '';
 
@@ -245,6 +338,7 @@
       const lang  = langSelect.value;
       const phone = document.getElementById('phoneInput').value.trim();
       if (!name) { nameInput.focus(); return; }
+      if (!lang) { document.getElementById('langSearch').focus(); return; }
       if (!phone) {
         const pi = document.getElementById('phoneInput');
         pi.focus();

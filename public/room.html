@@ -12,6 +12,8 @@
   <meta name="theme-color" content="#8B2FC9">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { -webkit-user-select: none; user-select: none; }
+    .bubble-text, .bubble-original { -webkit-user-select: text; user-select: text; }
     :root {
       --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
       --accent: #8B2FC9; --accent2: #7928b0; --text: #f0e8ff; --muted: #9b7fc4;
@@ -330,7 +332,7 @@
     const isDM = roomId.startsWith('D') && roomId.length <= 7;
 
     const LANG_NAMES = { he:'עברית', ar:'ערבית', en:'English', ru:'Русский', am:'አማርኛ' };
-    const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET' };
+    const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET', fr:'fr-FR', es:'es-ES', uk:'uk-UA', de:'de-DE', pt:'pt-BR', it:'it-IT', sv:'sv-SE', nl:'nl-NL', pl:'pl-PL', tr:'tr-TR', fa:'fa-IR', ur:'ur-PK', hi:'hi-IN', zh:'zh-CN', ja:'ja-JP', ko:'ko-KR', ro:'ro-RO', cs:'cs-CZ', hu:'hu-HU', fi:'fi-FI', da:'da-DK', no:'nb-NO', el:'el-GR', vi:'vi-VN', id:'id-ID', th:'th-TH', bg:'bg-BG', hr:'hr-HR', sk:'sk-SK', ms:'ms-MY' };
 
     let ttsOn = localStorage.getItem('bf_mute_tts') !== '0';
     let notifyOn = localStorage.getItem('bf_mute_notify') !== '0';
