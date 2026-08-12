@@ -773,7 +773,7 @@
     function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function linkify(html) {
       return html.replace(/https?:\/\/[^\s<>"'&]+/g, url =>
-        `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline;word-break:break-all;">${url}</a>`
+        `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;text-decoration:underline;word-break:break-all;">${url}</a>`
       );
     }
 
