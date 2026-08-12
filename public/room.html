@@ -708,9 +708,11 @@
         : '';
       const senderEmoji = msg.sender_emoji || '';
       const senderAvatar = allMembers.get(msg.sender_name)?.avatar || activeMembers.get(msg.sender_name)?.avatar || '';
-      const senderAvatarHtml = senderAvatar
-        ? `<img src="${senderAvatar}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${esc(msg.sender_name)}">`
-        : (senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : '');
+      const senderAvatarHtml = msg.sender_name === 'Babel Fish'
+        ? `<img src="/babel-fish.png" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="Babel Fish">`
+        : senderAvatar
+          ? `<img src="${senderAvatar}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${esc(msg.sender_name)}">`
+          : (senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : '');
       const div = document.createElement('div');
       div.className = 'bubble ' + (isMine ? 'mine' : 'other');
       div.innerHTML =
