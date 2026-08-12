@@ -234,5 +234,10 @@
       setTimeout(() => splash.remove(), 500);
     }, 1200);
   </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

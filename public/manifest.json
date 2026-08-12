@@ -1,5 +1,7 @@
 {
+  "id": "/home.html",
   "name": "Babel Fish — עומדים ביחד | نقف معاً",
+  "prefer_related_applications": false,
   "short_name": "Babel Fish",
   "description": "תרגום בזמן אמת",
   "start_url": "/home.html",
