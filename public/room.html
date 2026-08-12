@@ -727,10 +727,10 @@
         `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
           ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
           <div class="bubble-main-row">
-            <div class="bubble-text">${esc(translated)}</div>
+            <div class="bubble-text">${linkify(esc(translated))}</div>
             <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
           </div>
-          ${showOrig ? `<div class="bubble-original">${esc(original)}</div>` : ''}
+          ${showOrig ? `<div class="bubble-original">${linkify(esc(original))}</div>` : ''}
         </div>` +
         `<div class="bubble-footer">
           <div class="bubble-time">${time}</div>
@@ -771,6 +771,11 @@
     }
 
     function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function linkify(html) {
+      return html.replace(/https?:\/\/[^\s<>"'&]+/g, url =>
+        `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline;word-break:break-all;">${url}</a>`
+      );
+    }
 
     async function openDM(otherName) {
       try {
