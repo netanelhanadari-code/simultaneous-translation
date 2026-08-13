@@ -1003,8 +1003,8 @@
         mediaRecorder.onstop = sendAudio;
         mediaRecorder.start();
         recordBtn.classList.add('recording');
-        recordBtn.textContent = '⏹';
-        statusEl.textContent = 'מקליט...';
+        recordBtn.textContent = '▶';
+        statusEl.textContent = 'מקליט... לחץ לשליחה';
       } catch(e) {
         statusEl.textContent = 'אין גישה למיק';
         setTimeout(() => statusEl.textContent = '', 2000);
@@ -1013,7 +1013,7 @@
 
     function stopRec() {
       if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-      if (Date.now() - recordStart < 1000) shouldSend = false;
+      if (Date.now() - recordStart < 300) shouldSend = false;
       mediaRecorder.stop();
       stream?.getTracks().forEach(t => t.stop());
       recordBtn.classList.remove('recording');
@@ -1038,11 +1038,15 @@
       statusEl.textContent = '';
     }
 
-    recordBtn.addEventListener('mousedown',  () => startRec());
-    recordBtn.addEventListener('mouseup',    () => stopRec());
-    recordBtn.addEventListener('mouseleave', () => stopRec());
-    recordBtn.addEventListener('touchstart', e => { startRec(); }, { passive: true });
-    recordBtn.addEventListener('touchend',   e => { stopRec(); },  { passive: true });
+    // Tap to start, tap to stop-and-send (not hold) — single 'click' handles
+    // both mouse and touch, avoiding double-fire from separate touch/mouse events.
+    recordBtn.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        stopRec();
+      } else {
+        startRec();
+      }
+    });
 
     window.addEventListener('pagehide', () => {
       wsAlive = false; ws?.close();
