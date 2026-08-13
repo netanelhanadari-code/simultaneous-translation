@@ -1,5 +1,10 @@
 # Babel Fish — Project Context
 
+## כלל עבודה
+**לפני כל שינוי קוד** — לסכם מה הובן ומה צפוי לצאת, ולשאול "לבצע?" לפני כתיבת קוד.
+
+---
+
 ## What this is
 Real-time multilingual IM app. Users join rooms, send voice or text messages, and every message is translated to all connected members' languages and read aloud via TTS.
 
@@ -8,21 +13,46 @@ Real-time multilingual IM app. Users join rooms, send voice or text messages, an
 - **AI:** OpenAI Whisper (STT) + GPT-4o-mini (translation)
 - **DB:** Supabase (direct REST fetch calls — no JS client)
 - **Frontend:** Vanilla JS, Web Speech API for TTS
+- **Deploy:** `git add -A; git commit -m "..."; git push` → Render auto-deploys
 
 ## Key files
 - `server.js` — Express server, WebSocket hub, translation logic, Supabase REST calls
 - `public/home.html` — Landing page: enter name/lang, create/join rooms, saved rooms list
 - `public/room.html` — Main chat room: members bar, messages, text input, voice recording
-- `public/settings.html` — User settings: name, emoji, language preference
+- `public/settings.html` — User settings: name, emoji, language preference, avatar upload
+- `public/feedback.html` — Bilingual (he/ar) feedback form
 - `public/broadcaster.html` — Live event one-way broadcast mode
 - `public/listener.html` — Listener for live event broadcasts
 
 ## Database (Supabase)
-Three tables, RLS disabled on all:
+RLS disabled on all tables.
 ```sql
 rooms (id text PK, name text, created_at)
 messages (id uuid PK, room_id, sender_name, sender_emoji, sender_lang, original_text, translations jsonb, created_at)
-room_members (room_id, name, emoji, lang, last_seen, PRIMARY KEY (room_id, name))
+room_members (room_id, name, emoji, lang, last_seen, avatar text, PRIMARY KEY (room_id, name))
+push_subscriptions (room_id, name, lang, subscription jsonb, created_at, PRIMARY KEY (room_id, name))
+feedback (id uuid PK, name, room_id, device, severity, what_happened, expected, created_at)
+```
+
+### SQL migrations needed (run in Supabase if not done)
+```sql
+alter table room_members add column if not exists avatar text default '';
+alter table messages add column if not exists sender_emoji text default '';
+
+create table if not exists push_subscriptions (
+  room_id text not null, name text not null, lang text default 'he',
+  subscription jsonb not null, created_at timestamptz default now(),
+  primary key (room_id, name)
+);
+alter table push_subscriptions enable row level security;
+create policy "anon all" on push_subscriptions for all using (true) with check (true);
+
+create table if not exists feedback (
+  id uuid primary key default gen_random_uuid(),
+  name text not null, room_id text, device text,
+  severity text default 'low', what_happened text not null,
+  expected text, created_at timestamptz default now()
+);
 ```
 
 ## Environment variables (on Render)
@@ -30,56 +60,139 @@ room_members (room_id, name, emoji, lang, last_seen, PRIMARY KEY (room_id, name)
 - `SUPABASE_URL` — the raw project URL (strip trailing /rest/v1 in code)
 - `SUPABASE_ANON_KEY`
 
+---
+
 ## Critical patterns in server.js
+
 ```js
-// Always normalize SB_URL to strip accidental /rest/v1 suffix
+// Always normalize SB_URL
 const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '');
 
-// Translation: parallel — all room members' langs (from DB + WS) + detected lang
+// Language detection — detects script from text, falls back to declared lang
+function detectScriptLang(text, fallback) {
+  const ar    = (text.match(/[؀-ۿ]/g) || []).length;
+  const he    = (text.match(/[֐-׿]/g) || []).length;
+  const cy    = (text.match(/[Ѐ-ӿ]/g) || []).length;
+  const latin = (text.match(/[a-zA-Z]/g) || []).length;
+  const max = Math.max(ar, he, cy, latin);
+  if (max === 0) return fallback;
+  if (ar >= he && ar >= cy && ar >= latin) return 'ar';
+  if (he >= ar && he >= cy && he >= latin) return 'he';
+  if (cy >= ar && cy >= he && cy >= latin) return 'ru';
+  return 'en'; // Latin script dominates
+}
+
+// Translation: translate to all room members' languages (from DB + WS)
+// No hardcoded languages — purely based on who's actually in the room
 const memberLangs = new Set([detected_lang]);
 if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
 const dbMembers = await sbQuery('room_members', `room_id=eq.${id}&select=lang`).catch(() => []);
 dbMembers.forEach(m => { if (m.lang) memberLangs.add(m.lang); });
 await Promise.all([...memberLangs].filter(l => l !== detected_lang).map(async lang => {
-  // GPT-4o-mini with temperature:0, max_tokens:250, frequency_penalty:1.5, presence_penalty:0.5
+  // GPT-4o-mini: temperature:0, max_tokens:250, frequency_penalty:1.5, presence_penalty:0.5
   // Sanity check: reject if translation.length > original.length * 4 + 200
 }));
 
-// Always insert to DB first (sbInsert), then broadcast via WS
+// Audio endpoint: after Whisper transcription, re-detect language from actual script
+if (original_text) detected_lang = detectScriptLang(original_text, detected_lang);
+
+// On-demand translation save endpoint
+// PATCH /api/rooms/:id/messages/:msgId/translation { lang, text }
+// → fetches current translations, merges, PATCHes back to Supabase
+
+// Always: sbInsert first, then broadcast via WS
 ```
 
-## Critical pattern in room.html
+## Critical patterns in room.html
+
 ```js
 // Two maps: activeMembers (online, from WS) and allMembers (all known, from DB)
-// renderMembers merges both → me first (order:-1 CSS) → online → offline
-// .member-chip.me { order: -1 } — ensures own chip is always rightmost in RTL flexbox
+// renderMembers: me first (order:-1 CSS) → online → offline
+// .member-chip.me { order: -1 } — own chip always rightmost in RTL flexbox
+
+// On-demand translation: when a message has no translation in myLang,
+// fetch it via /api/translate, update DOM, then PATCH to save in DB
+async function fetchMissingTranslation(msg, div) { ... }
 
 // toggleOrig: must use btn.closest('.bubble') not .bubble-inner
 function toggleOrig(btn) {
   btn.closest('.bubble')?.querySelector('.bubble-original')?.classList.toggle('visible');
 }
+
+// linkify: escape HTML first, then replace URLs with <a> tags (color:#7dd3fc)
+function linkify(html) { ... }
 ```
+
+---
+
+## Features implemented
+
+### Welcome messages (4 messages on room creation)
+- **Worf** 🖖 (worf.png avatar) — speaks actual Klingon (`sender_lang:'tlh'`), intro to Babel Fish
+- **יעל** 👩🏽 (Hebrew) — mic button instructions
+- **ليلى** 👩🏻‍🦱 (Arabic) — speaker button instructions
+- **Alex** 👨🏻 (English) — globe button instructions
+- All 4 have translations in he/ar/en/ru/am
+
+### Translation pipeline
+- `detectScriptLang()` detects Arabic/Hebrew/Cyrillic/Latin script
+- Latin → `'en'`, no hardcoded target languages — uses room_members from DB
+- On-demand: missing translations fetched client-side, persisted to DB
+- New endpoint: `PATCH /api/rooms/:id/messages/:msgId/translation`
+
+### Avatar
+- settings.html: canvas 40×40 JPEG 0.75 upload
+- Displayed in chip (22px), member panel (28px), message bubble (20px)
+- Stored in `room_members.avatar` via `set_avatar` WS message
+
+### Push notifications
+- SW (`sw.js`) handles push + fetch (network-first)
+- TARDIS sound (OGG) on new message, 1.5s
+- 🔔/🔕 toggle (bf_mute_notify), 🔊/🔇 TTS toggle (bf_mute_tts)
+
+### PWA / APK
+- manifest.json with id, prefer_related_applications:false
+- APK via PWA Builder → "Other Android"
+
+### Feedback form
+- `/feedback.html` — bilingual he/ar
+- `POST /api/feedback`, `GET /api/feedback`
+
+### UX
+- RTL layout, own chip rightmost (order:-1)
+- Enter to send, Shift+Enter newline
+- Voice: hold to record
+- 🌐 toggle shows original, 🔊 speaks in user's lang
+- Clickable links (#7dd3fc blue)
+- user-select:none on body, text only on .bubble-text/.bubble-original
+- Language selector: 5 main languages + "Other..." → 35 languages search
+- viewport-fit=cover + env(safe-area-inset-bottom) for Android nav bar
+- localStorage: bf_name, bf_lang, bf_emoji, bf_rooms, bf_mute_tts, bf_mute_notify
+
+---
 
 ## Known fixes applied
-- SUPABASE_URL double `/rest/v1` path → normalize on startup
-- Translation catch block must NOT set `translations[lang] = original_text` (causes wrong-language display)
-- Chinese character hallucination → frequency_penalty:1.5 + presence_penalty:0.5 + sanity check
-- Hover tooltips don't work on mobile → use click-based tooltips instead
-- sender_emoji column: `alter table messages add column if not exists sender_emoji text default ''`
-- autoGainControl: false on getUserMedia to prevent first-word cutoff
+- SUPABASE_URL double `/rest/v1` → normalize on startup
+- Translation catch block must NOT set `translations[lang] = original_text`
+- Chinese hallucination → frequency_penalty:1.5 + presence_penalty:0.5 + sanity check
+- Hover tooltips → click-based on mobile
+- autoGainControl:false → prevent first-word cutoff
+- Latin text from Hebrew speaker → detectScriptLang returns 'en', translates correctly
+- Worf avatar: special-case `msg.sender_name === 'Worf'` → `<img src="/worf.png">`
 
-## User preferences / UX decisions
-- RTL layout (Hebrew/Arabic first-class)
-- Own chip always rightmost in members bar (order:-1 in RTL flex)
-- Text input: Enter to send, Shift+Enter for newline
-- Voice: hold button to record
-- Show original text toggle (🌐) on each message bubble
-- Emoji avatar: free text input (paste any emoji), stored in localStorage as `bf_emoji`
-- localStorage keys: `bf_name`, `bf_lang`, `bf_emoji`, `bf_rooms`
-- Saved rooms in home.html (max 10, stored in bf_rooms)
+---
 
-## Deployment
-Git push to main → Render auto-deploys.
-```
-git add -A && git commit -m "..." && git push
-```
+## משימות פתוחות
+
+### מהבטה-טסטינג (עדיפות גבוהה)
+- [ ] **כפתור הקלטה** — עכשיו: hold לקלטה. רוצה: tap להתחיל, tap לעצור
+- [ ] **שם כפול אחרי שינוי שם** — username ישן נשאר בחדר, נוצרים שני entries
+- [ ] **פידבק RTL באנדרואיד** — feedback.html מיושר שמאל באנדרואיד
+- [ ] **גלילה בטלפון** — גרירה איטית עדיין רועדת (flick עובד)
+- [ ] **הודעות גרבאג' בחאן אל-אחמר** — למחוק + לכתוב הודעות ברוכים הבאים מחדש
+- [ ] **כניסה לחדר ללא הרשמה** — לבדוק אם לחסום
+
+### תשתית
+- [ ] **SQL migrations** — לוודא שהורצו ב-Supabase (ראה למעלה)
+- [ ] **worf.png** — לוודא שהקובץ קיים ב-`public/worf.png` ונדחף ל-git
+- [ ] **assetlinks.json** — אם רוצים TWA מלא עם Push ב-APK

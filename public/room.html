@@ -704,6 +704,8 @@
       if (msg.id) displayedIds.add(String(msg.id));
       const isMine = msg.sender_name === myName;
       // Own messages: always show as written — no translation for sender
+      const hasTrans = !isMine && !!msg.translations?.[myLang];
+      const needsTrans = !isMine && !hasTrans && msg.sender_lang && msg.sender_lang !== myLang;
       const translated = isMine ? (msg.original_text || '') : (msg.translations?.[myLang] || msg.original_text || '');
       const original  = msg.original_text || '';
       const showOrig  = !isMine && translated !== original && original;
@@ -763,6 +765,33 @@
       }
 
       document.getElementById('messages-inner').appendChild(div);
+
+      // If this message has no translation in our language, fetch one in the background and save it
+      if (needsTrans && msg.id) fetchMissingTranslation(msg, div);
+    }
+
+    // Fetch translation for a message that arrived without our language, then persist to DB
+    async function fetchMissingTranslation(msg, div) {
+      try {
+        const r = await fetch(`/api/translate?text=${encodeURIComponent(msg.original_text)}&from=${encodeURIComponent(msg.sender_lang)}&to=${encodeURIComponent(myLang)}&room=${encodeURIComponent(roomId)}`);
+        const data = await r.json();
+        const t = data.text?.trim();
+        if (!t || t === msg.original_text) return; // no real translation
+        // Update DOM
+        const inner = div.querySelector(`#msg-${msg.id}`);
+        if (inner) {
+          const textEl = inner.querySelector('.bubble-text');
+          if (textEl) textEl.innerHTML = linkify(esc(t));
+          const speakBtn = inner.querySelector('.speak-main-btn');
+          if (speakBtn) { speakBtn.dataset.text = encodeURIComponent(t); }
+        }
+        // Persist to DB so next user doesn't need to fetch it
+        fetch(`/api/rooms/${roomId}/messages/${msg.id}/translation`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lang: myLang, text: t })
+        }).catch(() => {});
+      } catch(e) {}
     }
 
     function toggleOrig(btn) {
