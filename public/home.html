@@ -228,12 +228,22 @@
     }
     init();
 
-    // Splash fade-out
-    setTimeout(() => {
-      const splash = document.getElementById('splash');
-      splash.classList.add('hidden');
-      setTimeout(() => splash.remove(), 500);
-    }, 1200);
+    // Splash fade-out — only show the full splash on first load of the
+    // session or an explicit refresh (F5). Navigating back to home.html
+    // from a room (via the back button/location.href) shouldn't replay it
+    // every time.
+    const splash = document.getElementById('splash');
+    const navType = performance.getEntriesByType('navigation')[0]?.type;
+    const isFreshLoad = navType === 'reload' || !sessionStorage.getItem('bf_splash_shown');
+    if (!isFreshLoad) {
+      splash.remove();
+    } else {
+      sessionStorage.setItem('bf_splash_shown', '1');
+      setTimeout(() => {
+        splash.classList.add('hidden');
+        setTimeout(() => splash.remove(), 500);
+      }, 1200);
+    }
   </script>
   <script>
     if ('serviceWorker' in navigator) {
