@@ -771,30 +771,29 @@ app.get('/api/admin/usage-report', async (req, res) => {
   }
 });
 
-// ── Clear a room's messages, keeping only the welcome messages ────────────────
-// Protected by REPORT_SECRET (same as the usage report — arbitrary admin
-// password, ?secret= query param). Deletes every message in the room except
-// the 4 built-in welcome-message senders (Worf, יעל, ليلى, Alex).
-const WELCOME_SENDERS = ['Worf', 'יעל', 'ليلى', 'Alex'];
-app.post('/api/admin/rooms/:id/clear-messages', async (req, res) => {
-  const { id } = req.params;
+// ── Admin: delete any single message (moderation) ──────────────────────────────
+// For when a complaint comes in about a specific offensive message — unlike
+// DELETE /api/rooms/:id/messages/:msgId, this doesn't require being the
+// sender. Protected by REPORT_SECRET (?secret= query param). Reuses the same
+// 'message_deleted' WS broadcast, so the client-side removal logic already
+// built for sender-deletes handles this automatically — no client changes needed.
+app.delete('/api/admin/rooms/:id/messages/:msgId', async (req, res) => {
+  const { id, msgId } = req.params;
   if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
     return res.status(403).json({ error: 'Forbidden' });
   }
   if (!SB_URL) return res.status(503).json({ error: 'No DB' });
 
-  const notInList = WELCOME_SENDERS.map(n => `"${n}"`).join(',');
-  const url = `${SB_URL}/rest/v1/messages?room_id=eq.${id}&sender_name=not.in.(${notInList})`;
-  const r = await fetch(url, { method: 'DELETE', headers: { ...sbHeaders(), 'Prefer': 'return=representation' } });
+  const r = await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msgId}`, {
+    method: 'DELETE', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }
+  });
   if (!r.ok) return res.status(500).json({ error: 'db error', detail: await r.text() });
-  const deleted = await r.json().catch(() => []);
 
-  // Tell anyone currently in the room to reload so the cleared view shows immediately
-  const payload = JSON.stringify({ type: 'room_cleared' });
+  const payload = JSON.stringify({ type: 'message_deleted', msg_id: msgId });
   const roomWs = rooms.get(id);
   if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
 
-  res.json({ ok: true, deleted_count: deleted.length, kept_senders: WELCOME_SENDERS });
+  res.json({ ok: true });
 });
 
 // ── Rename a user across every room they're in ────────────────────────────────

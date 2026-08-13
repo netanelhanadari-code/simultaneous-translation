@@ -165,6 +165,7 @@ function linkify(html) { ... }
 - Enter to send, Shift+Enter newline
 - Voice: tap to start recording (▶ icon), tap again to stop+send
 - Long-press own message bubble → confirm → delete (DELETE /api/rooms/:id/messages/:msgId, sender-only, broadcasts message_deleted via WS)
+- Admin moderation delete: `DELETE /api/admin/rooms/:id/messages/:msgId?secret=REPORT_SECRET` — deletes any message regardless of sender (for handling complaints), reuses the same message_deleted WS broadcast
 - 🌐 toggle shows original, 🔊 speaks in user's lang
 - Clickable links (#7dd3fc blue)
 - user-select:none on body, text only on .bubble-text/.bubble-original
