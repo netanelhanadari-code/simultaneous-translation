@@ -588,7 +588,8 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
     if (!existing.length) await sbInsert('rooms', { id, name: id }).catch(() => {});
   }
   // Save to DB first so history is ready if client reconnects
-  const saved = await sbInsert('messages', { room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations, ...(reply_to ? { reply_to } : {}) })
+  const { flagged, reason: flagged_reason } = await moderateText(original_text);
+  const saved = await sbInsert('messages', { room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations, flagged, flagged_reason, ...(reply_to ? { reply_to } : {}) })
     .catch(e => { console.error('[db] save failed:', e.message); return null; });
   const msgId = saved?.id || Date.now().toString();
   const msgCreatedAt = saved?.created_at || new Date().toISOString();
@@ -700,9 +701,10 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
     const existing = await sbQuery('rooms', `id=eq.${id}&limit=1`).catch(() => []);
     if (!existing.length) await sbInsert('rooms', { id, name: id }).catch(() => {});
   }
+  const { flagged, reason: flagged_reason } = await moderateText(original_text);
   const saved = await sbInsert('messages', {
     room_id: id, sender_name, sender_emoji, sender_lang: detected_lang, original_text, translations,
-    ...(reply_to ? { reply_to } : {})
+    flagged, flagged_reason, ...(reply_to ? { reply_to } : {})
   }).catch(e => { console.error('[db] save failed:', e.message); return null; });
   const msgId = saved?.id || Date.now().toString();
   const msgCreatedAt = saved?.created_at || new Date().toISOString();
@@ -794,6 +796,18 @@ app.delete('/api/admin/rooms/:id/messages/:msgId', async (req, res) => {
   if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
 
   res.json({ ok: true });
+});
+
+// ── Admin: list flagged messages for review ────────────────────────────────────
+// Protected by REPORT_SECRET. Shows anything the Moderation API flagged, most
+// recent first, so an admin can review and delete via the endpoint above.
+app.get('/api/admin/flagged-messages', async (req, res) => {
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  if (!SB_URL) return res.json([]);
+  const rows = await sbQuery('messages', `flagged=eq.true&order=created_at.desc&limit=50&select=id,room_id,sender_name,original_text,flagged_reason,created_at`);
+  res.json(rows);
 });
 
 // ── Rename a user across every room they're in ────────────────────────────────
@@ -904,6 +918,28 @@ async function sendPushToRoom(roomId, roomWs, senderName, msgData) {
 }
 
 const rooms = new Map();
+
+// Check text against OpenAI's Moderation API — flags but never blocks, since
+// automatic censorship on a false positive would be worse than a human
+// reviewing a flagged message later via /api/admin/flagged-messages.
+async function moderateText(text) {
+  if (!text || !process.env.OPENAI_API_KEY) return { flagged: false, reason: null };
+  try {
+    const r = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'omni-moderation-latest', input: text })
+    });
+    const data = await r.json();
+    const result = data.results?.[0];
+    if (!result?.flagged) return { flagged: false, reason: null };
+    const reason = Object.entries(result.categories || {}).filter(([, v]) => v).map(([k]) => k).join(', ');
+    return { flagged: true, reason };
+  } catch (e) {
+    console.error('[moderation]', e.message);
+    return { flagged: false, reason: null }; // fail open — never block a message because moderation itself errored
+  }
+}
 
 // Detect actual script language from text (server-side, for translation accuracy)
 function detectScriptLang(text, fallback) {
