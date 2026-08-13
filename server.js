@@ -595,8 +595,9 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   form.append('file', blob, 'audio.webm');
   form.append('model', 'whisper-1');
   form.append('temperature', '0');
+  form.append('response_format', 'verbose_json'); // needed for no_speech_prob per segment
   if (sender_lang) form.append('language', sender_lang.split('-')[0]);
-  let original_text = '', detected_lang = sender_lang || 'ar';
+  let original_text = '', detected_lang = sender_lang || 'ar', noSpeechProb = 0;
   try {
     const wResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -606,6 +607,10 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
     const wData = await wResp.json();
     original_text = (wData.text || '').trim();
     detected_lang = sender_lang || 'ar';
+    const segments = wData.segments || [];
+    if (segments.length) {
+      noSpeechProb = segments.reduce((s, seg) => s + (seg.no_speech_prob || 0), 0) / segments.length;
+    }
   } catch(e) { console.error('Whisper error:', e.message); }
   // Re-detect from actual script — catches cases where user speaks a different language than declared
   if (original_text) detected_lang = detectScriptLang(original_text, detected_lang);
@@ -613,11 +618,14 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   const normalizeHallucination = t => t.trim().toLowerCase()
     .replace(/[ً-ٰٟ]/g, '') // Arabic diacritics
     .replace(/[.,!?؟،]/g, '').trim();
-  const WHISPER_HALLUCINATIONS = new Set([
-    'תודה','תודה רבה','שוקראן','شكرا','شكراً','شكرًا',
-    'thank you','thanks','you','','.',
-  ]);
-  if (!original_text || WHISPER_HALLUCINATIONS.has(normalizeHallucination(original_text)))
+  const WHISPER_HALLUCINATIONS = [
+    'תודה רבה','תודה','שוקראן','شكرا جزيلا','شكرا','شكراً','شكرًا',
+    'thank you for watching','thanks for watching','thank you','thanks','subscribe',
+    'اشتركوا في القناة','اشترك في القناة','شكراً للمشاهدة',
+  ];
+  const normalized = normalizeHallucination(original_text);
+  const looksLikeHallucination = !normalized || WHISPER_HALLUCINATIONS.some(h => normalized.includes(h));
+  if (!original_text || noSpeechProb > 0.6 || looksLikeHallucination)
     return res.json({ ok: true, text: '' });
 
   // 2. Translate to languages of all room members (from DB + currently connected)

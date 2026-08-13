@@ -985,8 +985,38 @@
 
     // ── Recording ──────────────────────────────────────────────────────────
     let mediaRecorder, audioChunks = [], stream, recordStart, shouldSend = false;
+    let audioCtx, analyser, volumeCheckInterval, maxVolume = 0;
     const recordBtn = document.getElementById('recordBtn');
     const statusEl  = document.getElementById('status');
+    const SILENCE_RMS_THRESHOLD = 0.01; // below this the whole recording is considered silent
+
+    function startVolumeMonitor(mediaStream) {
+      maxVolume = 0;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(mediaStream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        volumeCheckInterval = setInterval(() => {
+          analyser.getByteTimeDomainData(data);
+          let sumSquares = 0;
+          for (let i = 0; i < data.length; i++) {
+            const norm = (data[i] - 128) / 128;
+            sumSquares += norm * norm;
+          }
+          const rms = Math.sqrt(sumSquares / data.length);
+          if (rms > maxVolume) maxVolume = rms;
+        }, 150);
+      } catch(e) { console.error('volume monitor:', e); maxVolume = 1; /* fail open — don't block sending */ }
+    }
+
+    function stopVolumeMonitor() {
+      clearInterval(volumeCheckInterval);
+      audioCtx?.close().catch(() => {});
+      audioCtx = null; analyser = null;
+    }
 
     async function startRec() {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
@@ -999,6 +1029,7 @@
         audioChunks = [];
         shouldSend = true;
         recordStart = Date.now();
+        startVolumeMonitor(stream);
         mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
         mediaRecorder.onstop = sendAudio;
         mediaRecorder.start();
@@ -1014,6 +1045,8 @@
     function stopRec() {
       if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
       if (Date.now() - recordStart < 300) shouldSend = false;
+      stopVolumeMonitor();
+      if (maxVolume < SILENCE_RMS_THRESHOLD) shouldSend = false; // never heard any real sound — skip Whisper entirely
       mediaRecorder.stop();
       stream?.getTracks().forEach(t => t.stop());
       recordBtn.classList.remove('recording');
