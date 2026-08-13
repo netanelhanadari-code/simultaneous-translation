@@ -1093,8 +1093,7 @@
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
       function exitEdit() { wrap.remove(); mainRow.style.display = ''; }
-      wrap.querySelector('.bubble-edit-cancel').addEventListener('click', exitEdit);
-      wrap.querySelector('.bubble-edit-save').addEventListener('click', async () => {
+      async function saveEdit() {
         const newText = textarea.value.trim();
         if (!newText || newText === currentText) { exitEdit(); return; }
         const saveBtn = wrap.querySelector('.bubble-edit-save');
@@ -1109,6 +1108,12 @@
           // update the bubble's actual content; just close the edit UI here.
           exitEdit();
         } catch(e) { console.error('edit message:', e); saveBtn.disabled = false; }
+      }
+      wrap.querySelector('.bubble-edit-cancel').addEventListener('click', exitEdit);
+      wrap.querySelector('.bubble-edit-save').addEventListener('click', saveEdit);
+      textarea.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+        if (e.key === 'Escape') exitEdit();
       });
     }
 
