@@ -771,6 +771,52 @@ app.get('/api/admin/usage-report', async (req, res) => {
   }
 });
 
+// ── Rename a user across every room they're in ────────────────────────────────
+// Identity is anchored by phone (collected at registration), since `name` is
+// the room_members primary key and messages.sender_name is just plain text.
+// Renaming without this endpoint leaves a stale "ghost" member (old name) and
+// all past messages permanently attributed to the old name.
+app.post('/api/rename-member', express.json(), async (req, res) => {
+  const { phone, oldName, newName } = req.body;
+  if (!phone || !oldName || !newName) return res.status(400).json({ error: 'Missing params' });
+  if (oldName === newName) return res.json({ ok: true, rooms: [] });
+  if (!SB_URL) return res.json({ ok: true, rooms: [] });
+
+  // Only rename rooms where this phone actually owns the old name — proves ownership
+  const memberships = await sbQuery('room_members', `phone=eq.${encodeURIComponent(phone)}&name=eq.${encodeURIComponent(oldName)}&select=room_id`);
+  const roomIds = [...new Set(memberships.map(m => m.room_id))];
+  if (!roomIds.length) return res.status(404).json({ error: 'No matching membership found' });
+
+  for (const roomId of roomIds) {
+    // 1. Reattribute past messages to the new name
+    await fetch(`${SB_URL}/rest/v1/messages?room_id=eq.${roomId}&sender_name=eq.${encodeURIComponent(oldName)}`, {
+      method: 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ sender_name: newName })
+    }).catch(e => console.error('[rename] messages:', e.message));
+
+    // 2. Merge the room_members row — if a "new name" ghost already exists
+    // (created when they reconnected with the new name before this endpoint
+    // existed), drop it and keep the old row's history, just renamed.
+    await fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(newName)}`, {
+      method: 'DELETE',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }
+    }).catch(() => {});
+    await fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(oldName)}`, {
+      method: 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ name: newName })
+    }).catch(e => console.error('[rename] room_members:', e.message));
+
+    // 3. Notify anyone currently connected to that room
+    const payload = JSON.stringify({ type: 'member_renamed', old_name: oldName, new_name: newName });
+    const roomWs = rooms.get(roomId);
+    if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  }
+
+  res.json({ ok: true, rooms: roomIds });
+});
+
 // ── Push notifications ───────────────────────────────────────────────────────
 app.get('/api/vapid-public-key', (req, res) => {
   res.json({ key: VAPID_PUBLIC });

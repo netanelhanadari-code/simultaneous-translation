@@ -638,6 +638,21 @@
           renderReactions(msg.msg_id, msg.reactions);
         } else if (msg.type === 'message_deleted') {
           document.getElementById('msg-' + msg.msg_id)?.closest('.bubble')?.remove();
+        } else if (msg.type === 'member_renamed') {
+          // Someone else in this room changed their display name — update the
+          // member list and any already-rendered message bubbles live.
+          const info = activeMembers.get(msg.old_name) || allMembers.get(msg.old_name);
+          if (info) {
+            activeMembers.delete(msg.old_name); allMembers.delete(msg.old_name);
+            activeMembers.set(msg.new_name, info); allMembers.set(msg.new_name, info);
+            renderMembers();
+          }
+          document.querySelectorAll('.bubble-sender').forEach(el => {
+            if (el.textContent.trim() === msg.old_name) {
+              const textNode = [...el.childNodes].find(n => n.nodeType === 3);
+              if (textNode) textNode.textContent = msg.new_name;
+            }
+          });
         } else if (msg.type === 'room_message') {
           document.querySelector('.empty')?.remove();
           const msgEl = document.getElementById('messages');
