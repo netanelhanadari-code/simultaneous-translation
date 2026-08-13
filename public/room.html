@@ -683,8 +683,9 @@
       unreadBadge.style.display = '';
     }
 
-    function dismissUnread() {
-      scrollBottom();
+    // Hides the badge/counter only — does NOT move the scroll position.
+    // Used passively while the user scrolls, so it must never fight their gesture.
+    function clearUnreadState() {
       unreadBadge.style.display = 'none';
       document.querySelector('[data-first-unread="1"]')
         && delete document.querySelector('[data-first-unread="1"]').dataset.firstUnread;
@@ -692,10 +693,19 @@
       document.title = baseTitle;
     }
 
-    // Hide badge when user manually scrolls to bottom
+    // Full dismiss: jump to bottom AND clear the badge — only for explicit
+    // user action (tapping the badge), never from a passive scroll listener.
+    function dismissUnread() {
+      scrollBottom();
+      clearUnreadState();
+    }
+
+    // Hide badge when user manually scrolls to bottom — must not call
+    // scrollBottom() here, or a slow drag away from the last message gets
+    // snapped back on every scroll event (only a fast flick could escape it).
     document.getElementById('messages').addEventListener('scroll', () => {
       const el = document.getElementById('messages');
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) dismissUnread();
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) clearUnreadState();
     });
 
     document.addEventListener('visibilitychange', () => {
