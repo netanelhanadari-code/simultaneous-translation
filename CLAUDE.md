@@ -57,6 +57,8 @@ create table if not exists feedback (
 
 alter table messages add column if not exists flagged boolean default false;
 alter table messages add column if not exists flagged_reason text;
+alter table messages add column if not exists edited boolean default false;
+alter table messages add column if not exists edited_at timestamptz;
 ```
 
 ## Environment variables (on Render)
@@ -168,7 +170,9 @@ function linkify(html) { ... }
 - RTL layout, own chip rightmost (order:-1)
 - Enter to send, Shift+Enter newline
 - Voice: tap to start recording (▶ icon), tap again to stop+send
-- Long-press own message bubble → confirm → delete (DELETE /api/rooms/:id/messages/:msgId, sender-only, broadcasts message_deleted via WS)
+- Long-press own message bubble → action menu (✏️ ערוך / 🗑️ מחק), extensible for future actions
+  - Edit: PATCH /api/rooms/:id/messages/:msgId {name, text} — sender-only, re-detects language, re-runs moderation, re-translates to all room languages, sets edited/edited_at, broadcasts message_edited via WS
+  - Delete: DELETE /api/rooms/:id/messages/:msgId, sender-only, broadcasts message_deleted via WS
 - Admin moderation delete: `DELETE /api/admin/rooms/:id/messages/:msgId?secret=REPORT_SECRET` — deletes any message regardless of sender (for handling complaints), reuses the same message_deleted WS broadcast
 - Auto content moderation: every text/voice message is checked against OpenAI's Moderation API (`omni-moderation-latest`) on save. Never blocks sending — only sets `flagged`/`flagged_reason` on the row. Review via `GET /api/admin/flagged-messages?secret=REPORT_SECRET`, delete via the admin delete endpoint above
 - 🌐 toggle shows original, 🔊 speaks in user's lang

@@ -524,6 +524,42 @@ app.delete('/api/rooms/:id/messages/:msgId', express.json(), async (req, res) =>
   res.json({ ok: true });
 });
 
+// Edit a message — only the original sender may edit their own message.
+// Re-detects language, re-runs moderation, and re-translates to every
+// language currently in the room, since the text itself changed.
+app.patch('/api/rooms/:id/messages/:msgId', express.json(), async (req, res) => {
+  const { id, msgId } = req.params;
+  const { name, text } = req.body;
+  if (!name || !text?.trim()) return res.status(400).json({ error: 'Missing name or text' });
+  const original_text = text.trim();
+
+  const msgs = await sbQuery('messages', `id=eq.${msgId}&select=sender_name&limit=1`);
+  if (!msgs[0]) return res.status(404).json({ error: 'Not found' });
+  if (msgs[0].sender_name !== name) return res.status(403).json({ error: 'Not your message' });
+
+  const detected_lang = detectScriptLang(original_text, 'he');
+  const translations = await translateForRoom(id, detected_lang, original_text);
+  const { flagged, reason: flagged_reason } = await moderateText(original_text);
+  const edited_at = new Date().toISOString();
+
+  if (SB_URL) {
+    await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msgId}`, {
+      method: 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ original_text, sender_lang: detected_lang, translations, flagged, flagged_reason, edited: true, edited_at })
+    }).catch(e => console.error('[edit-message]', e.message));
+  }
+
+  const payload = JSON.stringify({
+    type: 'message_edited', id: msgId, sender_name: name,
+    original_text, sender_lang: detected_lang, translations, edited: true, edited_at
+  });
+  const roomWs = rooms.get(id);
+  if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+
+  res.json({ ok: true });
+});
+
 // Save a single translation that was fetched on-demand by a client
 app.patch('/api/rooms/:id/messages/:msgId/translation', express.json(), async (req, res) => {
   const { msgId } = req.params;
@@ -939,6 +975,41 @@ async function moderateText(text) {
     console.error('[moderation]', e.message);
     return { flagged: false, reason: null }; // fail open — never block a message because moderation itself errored
   }
+}
+
+// Translate text to every language currently in the room — extracted so the
+// edit endpoint can re-run the same logic used when a message is first sent.
+async function translateForRoom(roomId, detectedLang, originalText) {
+  const roomWs = rooms.get(roomId);
+  const memberLangs = new Set([detectedLang]);
+  if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
+  const dbMembers = await sbQuery('room_members', `room_id=eq.${roomId}&select=lang`).catch(() => []);
+  dbMembers.forEach(m => { if (m.lang) memberLangs.add(m.lang); });
+
+  const translations = { [detectedLang]: originalText };
+  const targetLangs = [...memberLangs].filter(l => l !== detectedLang);
+  await Promise.all(targetLangs.map(async lang => {
+    const fromName = LANG_NAMES[detectedLang] || detectedLang;
+    const toName   = LANG_NAMES[lang] || lang;
+    const systemPrompt = `תרגם מ${fromName} ל${toName} בלבד. הפלט חייב להיות ב${toName} בלבד.\n\n` + TRANSLATION_SYSTEM_PROMPT;
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: `[${fromName}→${toName}]\n<text>\n${originalText}\n</text>` }],
+          temperature: 0, max_tokens: 250, frequency_penalty: 1.5, presence_penalty: 0.5
+        })
+      });
+      const d = await r.json();
+      let t = d.choices?.[0]?.message?.content?.trim()?.replace(/<\/?text>/gi, '').trim();
+      if (t && lang === 'he') t = t.replace(/[؀-ۿ]/g, '');
+      if (t && lang === 'ar') t = t.replace(/[א-ת]/g, '');
+      if (t && t.length > 0 && t.length <= originalText.length * 4 + 200) translations[lang] = t;
+    } catch(e) {}
+  }));
+  return translations;
 }
 
 // Detect actual script language from text (server-side, for translation accuracy)
