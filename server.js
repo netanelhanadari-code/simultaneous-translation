@@ -729,9 +729,9 @@ app.get('/api/admin/usage-report', async (req, res) => {
     let total = 0;
     const byDay = [];
     (data.data || []).forEach(bucket => {
-      const dayTotal = (bucket.results || []).reduce((sum, x) => sum + (x.amount?.value || 0), 0);
+      const dayTotal = (bucket.results || []).reduce((sum, x) => sum + parseFloat(x.amount?.value || 0), 0);
       total += dayTotal;
-      byDay.push({ start: bucket.start_time, end: bucket.end_time, amount_usd: dayTotal });
+      byDay.push({ start: bucket.start_time, end: bucket.end_time, amount_usd: Math.round(dayTotal * 100) / 100 });
     });
     res.json({ days, total_usd: Math.round(total * 100) / 100, by_day: byDay });
   } catch (e) {
