@@ -35,9 +35,11 @@ room_members (room_id, name, emoji, lang, last_seen, PRIMARY KEY (room_id, name)
 // Always normalize SB_URL to strip accidental /rest/v1 suffix
 const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '');
 
-// Translation: parallel, always include he+ar+detected lang+connected members' langs
-const memberLangs = new Set(['he', 'ar', detected_lang]);
-roomWs?.members?.forEach(m => memberLangs.add(m.lang));
+// Translation: parallel — all room members' langs (from DB + WS) + detected lang
+const memberLangs = new Set([detected_lang]);
+if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
+const dbMembers = await sbQuery('room_members', `room_id=eq.${id}&select=lang`).catch(() => []);
+dbMembers.forEach(m => { if (m.lang) memberLangs.add(m.lang); });
 await Promise.all([...memberLangs].filter(l => l !== detected_lang).map(async lang => {
   // GPT-4o-mini with temperature:0, max_tokens:250, frequency_penalty:1.5, presence_penalty:0.5
   // Sanity check: reject if translation.length > original.length * 4 + 200

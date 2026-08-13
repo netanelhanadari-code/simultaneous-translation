@@ -500,6 +500,25 @@ app.post('/api/rooms/:id/messages/:msgId/react', express.json(), async (req, res
   res.json({ ok: true, reactions });
 });
 
+// Save a single translation that was fetched on-demand by a client
+app.patch('/api/rooms/:id/messages/:msgId/translation', express.json(), async (req, res) => {
+  const { msgId } = req.params;
+  const { lang, text } = req.body;
+  if (!lang || !text) return res.status(400).json({ error: 'Missing lang or text' });
+  if (!SB_URL) return res.json({ ok: true }); // no-op if no DB
+  // Merge into existing translations JSONB using Supabase's || operator via RPC isn't available in REST,
+  // so we fetch current translations, merge, and PATCH back.
+  const msgs = await sbQuery('messages', `id=eq.${msgId}&select=translations&limit=1`);
+  if (!msgs[0]) return res.status(404).json({ error: 'Not found' });
+  const translations = { ...(msgs[0].translations || {}), [lang]: text };
+  await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msgId}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ translations })
+  }).catch(e => console.error('[translation-save]', e.message));
+  res.json({ ok: true });
+});
+
 // Send text message
 app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
   const { id } = req.params;
@@ -510,8 +529,10 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
   const detected_lang = detectScriptLang(original_text, sender_lang || 'he');
 
   const roomWs = rooms.get(id);
-  const memberLangs = new Set(['he', 'ar', detected_lang]);
+  const memberLangs = new Set([detected_lang]);
   if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
+  const dbMembers = await sbQuery('room_members', `room_id=eq.${id}&select=lang`).catch(() => []);
+  dbMembers.forEach(m => { if (m.lang) memberLangs.add(m.lang); });
 
   const translations = { [detected_lang]: original_text };
   const targetLangs = [...memberLangs].filter(l => l !== detected_lang);
@@ -584,8 +605,10 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
     });
     const wData = await wResp.json();
     original_text = (wData.text || '').trim();
-    detected_lang = wData.language || sender_lang || 'ar';
+    detected_lang = sender_lang || 'ar';
   } catch(e) { console.error('Whisper error:', e.message); }
+  // Re-detect from actual script — catches cases where user speaks a different language than declared
+  if (original_text) detected_lang = detectScriptLang(original_text, detected_lang);
   // Strip punctuation + Arabic diacritics, then check against known hallucinations
   const normalizeHallucination = t => t.trim().toLowerCase()
     .replace(/[ً-ٰٟ]/g, '') // Arabic diacritics
@@ -597,10 +620,12 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   if (!original_text || WHISPER_HALLUCINATIONS.has(normalizeHallucination(original_text)))
     return res.json({ ok: true, text: '' });
 
-  // 2. Translate to languages of connected members (+ always he+ar for org core)
+  // 2. Translate to languages of all room members (from DB + currently connected)
   const roomWs = rooms.get(id);
-  const memberLangs = new Set(['he', 'ar', detected_lang]);
+  const memberLangs = new Set([detected_lang]);
   if (roomWs?.members) roomWs.members.forEach(m => memberLangs.add(m.lang));
+  const dbMembers = await sbQuery('room_members', `room_id=eq.${id}&select=lang`).catch(() => []);
+  dbMembers.forEach(m => { if (m.lang) memberLangs.add(m.lang); });
 
   // 3. Translate to each language — in parallel
   const translations = { [detected_lang]: original_text };
@@ -749,14 +774,16 @@ const rooms = new Map();
 
 // Detect actual script language from text (server-side, for translation accuracy)
 function detectScriptLang(text, fallback) {
-  const ar = (text.match(/[؀-ۿ]/g) || []).length;
-  const he = (text.match(/[֐-׿]/g) || []).length;
-  const cy = (text.match(/[Ѐ-ӿ]/g) || []).length;
-  const max = Math.max(ar, he, cy);
+  const ar    = (text.match(/[؀-ۿ]/g) || []).length;
+  const he    = (text.match(/[֐-׿]/g) || []).length;
+  const cy    = (text.match(/[Ѐ-ӿ]/g) || []).length;
+  const latin = (text.match(/[a-zA-Z]/g) || []).length;
+  const max = Math.max(ar, he, cy, latin);
   if (max === 0) return fallback;
-  if (ar >= he && ar >= cy) return 'ar';
-  if (he >= ar && he >= cy) return 'he';
-  return 'ru';
+  if (ar >= he && ar >= cy && ar >= latin) return 'ar';
+  if (he >= ar && he >= cy && he >= latin) return 'he';
+  if (cy >= ar && cy >= he && cy >= latin) return 'ru';
+  return 'en'; // Latin script dominates
 }
 
 function getRoom(roomId) {
