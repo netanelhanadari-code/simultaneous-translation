@@ -59,6 +59,8 @@ create table if not exists feedback (
 - `OPENAI_API_KEY` — never share in chat
 - `SUPABASE_URL` — the raw project URL (strip trailing /rest/v1 in code)
 - `SUPABASE_ANON_KEY`
+- `OPENAI_ADMIN_KEY` — restricted (usage-read-only) org admin key, only for `/api/admin/usage-report`. Never share in chat, never commit.
+- `REPORT_SECRET` — arbitrary password required as `?secret=` on `/api/admin/usage-report` so it isn't publicly scrapeable
 
 ---
 

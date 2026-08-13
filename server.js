@@ -709,6 +709,36 @@ app.get('/api/feedback', async (req, res) => {
   res.json(await r.json());
 });
 
+// ── OpenAI usage/cost report (admin, read-only key) ──────────────────────────
+// Protected by REPORT_SECRET env var (separate from the OpenAI key) so the
+// endpoint isn't publicly scrapeable. OPENAI_ADMIN_KEY must be a restricted
+// (usage-read-only) admin key — set both as env vars on Render, never in git.
+app.get('/api/admin/usage-report', async (req, res) => {
+  if (!process.env.OPENAI_ADMIN_KEY) return res.status(500).json({ error: 'No admin key configured' });
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const days = Math.min(parseInt(req.query.days) || 7, 90);
+  const startTime = Math.floor(Date.now() / 1000) - days * 86400;
+  try {
+    const r = await fetch(`https://api.openai.com/v1/organization/costs?start_time=${startTime}&limit=${days}`, {
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_ADMIN_KEY }
+    });
+    if (!r.ok) return res.status(r.status).json({ error: 'OpenAI API error', detail: await r.text() });
+    const data = await r.json();
+    let total = 0;
+    const byDay = [];
+    (data.data || []).forEach(bucket => {
+      const dayTotal = (bucket.results || []).reduce((sum, x) => sum + (x.amount?.value || 0), 0);
+      total += dayTotal;
+      byDay.push({ start: bucket.start_time, end: bucket.end_time, amount_usd: dayTotal });
+    });
+    res.json({ days, total_usd: Math.round(total * 100) / 100, by_day: byDay });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Push notifications ───────────────────────────────────────────────────────
 app.get('/api/vapid-public-key', (req, res) => {
   res.json({ key: VAPID_PUBLIC });
