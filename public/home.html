@@ -31,7 +31,8 @@
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: var(--bg); color: var(--text);
-      min-height: 100dvh; display: flex; flex-direction: column;
+      min-height: calc(var(--vh, 1vh) * 100);
+      display: flex; flex-direction: column;
       -webkit-user-select: none; user-select: none;
     }
     header {
@@ -81,7 +82,7 @@
     .room-chip-leave:hover { color: #e07070; background: rgba(224,112,112,.1); }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; padding: 2.5rem 1rem; line-height: 1.7; }
     footer {
-      margin-top: auto; padding: 1.2rem 1.2rem 1.8rem;
+      margin-top: auto; padding: 1rem 1.2rem 1.3rem;
       display: flex; flex-direction: column; gap: .5rem;
     }
     .notice {
@@ -118,6 +119,19 @@
   </footer>
 
   <script>
+    // Real viewport height (same fix as room.html) — 100dvh is unreliable
+    // right after a fresh page load in Android WebView/TWA before the
+    // browser chrome finishes settling, which is why this only showed up
+    // on refresh and not when navigating back within the app.
+    function setRealVh() {
+      const h = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty('--vh', (h * 0.01) + 'px');
+    }
+    setRealVh();
+    window.addEventListener('resize', setRealVh);
+    window.addEventListener('orientationchange', () => setTimeout(setRealVh, 100));
+    window.visualViewport?.addEventListener('resize', setRealVh);
+
     const myName   = localStorage.getItem('bf_name')    || '';
     const myEmoji  = localStorage.getItem('bf_emoji')   || '';
     const myUiLang = localStorage.getItem('bf_ui_lang') || localStorage.getItem('bf_lang') || 'he';
