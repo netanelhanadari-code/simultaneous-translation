@@ -163,7 +163,8 @@ function linkify(html) { ... }
 ### UX
 - RTL layout, own chip rightmost (order:-1)
 - Enter to send, Shift+Enter newline
-- Voice: hold to record
+- Voice: tap to start recording (▶ icon), tap again to stop+send
+- Long-press own message bubble → confirm → delete (DELETE /api/rooms/:id/messages/:msgId, sender-only, broadcasts message_deleted via WS)
 - 🌐 toggle shows original, 🔊 speaks in user's lang
 - Clickable links (#7dd3fc blue)
 - user-select:none on body, text only on .bubble-text/.bubble-original
@@ -187,12 +188,15 @@ function linkify(html) { ... }
 ## משימות פתוחות
 
 ### מהבטה-טסטינג (עדיפות גבוהה)
-- [ ] **כפתור הקלטה** — עכשיו: hold לקלטה. רוצה: tap להתחיל, tap לעצור
+- [x] **כפתור הקלטה** — tap להתחיל (▶ SEND icon), tap לעצור+לשלוח
+- [x] **מחיקת הודעה ע"י הכותב** — לחיצה ארוכה על הודעה משלך → אישור → מחיקה (DELETE /api/rooms/:id/messages/:msgId)
+- [x] **גלילה בטלפון** — תוקן: מאזין ה-scroll כבר לא מאלץ scrollBottom() ליד ההודעה האחרונה
+- [x] **כניסה לחדר ללא הרשמה** — חסום (room.html דורש bf_name + bf_phone)
+- [x] **הודעות גרבאג' בחאן אל-אחמר** — נמחקו
 - [ ] **שם כפול אחרי שינוי שם** — username ישן נשאר בחדר, נוצרים שני entries
 - [ ] **פידבק RTL באנדרואיד** — feedback.html מיושר שמאל באנדרואיד
-- [ ] **גלילה בטלפון** — גרירה איטית עדיין רועדת (flick עובד)
-- [ ] **הודעות גרבאג' בחאן אל-אחמר** — למחוק + לכתוב הודעות ברוכים הבאים מחדש
-- [ ] **כניסה לחדר ללא הרשמה** — לבדוק אם לחסום
+- [ ] **לחיצה על שם קבוצה** — פותחת חיפוש/תרגום גוגל בטעות (feedback חדש)
+- [ ] **הודעות ברוכים הבאים** בחאן אל-אחמר — לבדוק אם נכתבו מחדש אחרי מחיקת הגרבאג'
 
 ### תשתית
 - [ ] **SQL migrations** — לוודא שהורצו ב-Supabase (ראה למעלה)

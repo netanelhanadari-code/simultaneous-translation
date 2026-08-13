@@ -56,7 +56,8 @@
     .bubble { max-width: 82%; display: flex; flex-direction: column; gap: .18rem; }
     .bubble.mine  { align-self: flex-start; }
     .bubble.other { align-self: flex-end; }
-    .bubble-inner { padding: .55rem .85rem; border-radius: 12px; line-height: 1.5; }
+    .bubble-inner { padding: .55rem .85rem; border-radius: 12px; line-height: 1.5; transition: opacity .15s; }
+    .bubble-inner.long-press-active { opacity: .55; }
     .bubble.mine  .bubble-inner { background: var(--accent2); border-radius: 12px 4px 12px 12px; border: 1px solid var(--accent); }
     .bubble.other .bubble-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
     .bubble.mine .bubble-text { font-weight: 500; }
@@ -505,9 +506,9 @@
 
     // Apply UI language
     const UI = {
-      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה', settingsTitle: 'הגדרות קבוצה', copyLink: '📋 העתק קישור', linkCopied: '✓ הועתק!', notifOn: '🔔 התראות פעילות — לחץ לביטול', notifOff: '🔕 הפעל התראות לחדר זה', notifUnsupported: '🔕 לא נתמך בדפדפן זה', notifDenied: 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן', notifCancelled: 'התראות בוטלו', notifActive: '✓ תקבל התראות כשמגיעות הודעות', notifNoKey: 'שרת לא מוגדר לפוש', notifNoPerm: 'לא אושרה הרשאה', editName: '✏️ עריכת שם הקבוצה', saveName: 'שמור שם', nameSaved: '✓ נשמר', nameError: 'שגיאה', iosBanner: '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה' },
-      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل', settingsTitle: 'إعدادات المجموعة', copyLink: '📋 نسخ الرابط', linkCopied: '✓ تم النسخ!', notifOn: '🔔 التنبيهات مفعّلة — اضغط للإلغاء', notifOff: '🔕 تفعيل التنبيهات لهذه الغرفة', notifUnsupported: '🔕 غير مدعوم في هذا المتصفح', notifDenied: 'إذن التنبيهات محظور — غيّر في إعدادات المتصفح', notifCancelled: 'تم إلغاء التنبيهات', notifActive: '✓ ستصلك تنبيهات عند وصول رسائل', notifNoKey: 'الخادم غير مهيأ للإشعارات', notifNoPerm: 'لم يتم منح الإذن', editName: '✏️ تعديل اسم المجموعة', saveName: 'حفظ الاسم', nameSaved: '✓ تم الحفظ', nameError: 'خطأ', iosBanner: '📲 لإضافة Babel Fish إلى الشاشة الرئيسية: اضغط <strong style="color:var(--text)">مشاركة ↑</strong> ← "إضافة إلى الشاشة الرئيسية" — ثم ستصلك التنبيهات حتى عند إغلاق التطبيق' },
-      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record', settingsTitle: 'Group Settings', copyLink: '📋 Copy Link', linkCopied: '✓ Copied!', notifOn: '🔔 Notifications on — tap to disable', notifOff: '🔕 Enable notifications for this room', notifUnsupported: '🔕 Not supported in this browser', notifDenied: 'Notification permission blocked — change in browser settings', notifCancelled: 'Notifications disabled', notifActive: '✓ You will receive notifications when messages arrive', notifNoKey: 'Server not configured for push', notifNoPerm: 'Permission not granted', editName: '✏️ Edit Group Name', saveName: 'Save Name', nameSaved: '✓ Saved', nameError: 'Error', iosBanner: '📲 To add Babel Fish to your home screen: tap <strong style="color:var(--text)">Share ↑</strong> → "Add to Home Screen" — then you\'ll get notifications even when the app is closed' },
+      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה', settingsTitle: 'הגדרות קבוצה', copyLink: '📋 העתק קישור', linkCopied: '✓ הועתק!', notifOn: '🔔 התראות פעילות — לחץ לביטול', notifOff: '🔕 הפעל התראות לחדר זה', notifUnsupported: '🔕 לא נתמך בדפדפן זה', notifDenied: 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן', notifCancelled: 'התראות בוטלו', notifActive: '✓ תקבל התראות כשמגיעות הודעות', notifNoKey: 'שרת לא מוגדר לפוש', notifNoPerm: 'לא אושרה הרשאה', editName: '✏️ עריכת שם הקבוצה', saveName: 'שמור שם', nameSaved: '✓ נשמר', nameError: 'שגיאה', iosBanner: '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה', deleteConfirm: 'למחוק את ההודעה?' },
+      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل', settingsTitle: 'إعدادات المجموعة', copyLink: '📋 نسخ الرابط', linkCopied: '✓ تم النسخ!', notifOn: '🔔 التنبيهات مفعّلة — اضغط للإلغاء', notifOff: '🔕 تفعيل التنبيهات لهذه الغرفة', notifUnsupported: '🔕 غير مدعوم في هذا المتصفح', notifDenied: 'إذن التنبيهات محظور — غيّر في إعدادات المتصفح', notifCancelled: 'تم إلغاء التنبيهات', notifActive: '✓ ستصلك تنبيهات عند وصول رسائل', notifNoKey: 'الخادم غير مهيأ للإشعارات', notifNoPerm: 'لم يتم منح الإذن', editName: '✏️ تعديل اسم المجموعة', saveName: 'حفظ الاسم', nameSaved: '✓ تم الحفظ', nameError: 'خطأ', iosBanner: '📲 لإضافة Babel Fish إلى الشاشة الرئيسية: اضغط <strong style="color:var(--text)">مشاركة ↑</strong> ← "إضافة إلى الشاشة الرئيسية" — ثم ستصلك التنبيهات حتى عند إغلاق التطبيق', deleteConfirm: 'حذف الرسالة؟' },
+      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record', settingsTitle: 'Group Settings', copyLink: '📋 Copy Link', linkCopied: '✓ Copied!', notifOn: '🔔 Notifications on — tap to disable', notifOff: '🔕 Enable notifications for this room', notifUnsupported: '🔕 Not supported in this browser', notifDenied: 'Notification permission blocked — change in browser settings', notifCancelled: 'Notifications disabled', notifActive: '✓ You will receive notifications when messages arrive', notifNoKey: 'Server not configured for push', notifNoPerm: 'Permission not granted', editName: '✏️ Edit Group Name', saveName: 'Save Name', nameSaved: '✓ Saved', nameError: 'Error', iosBanner: '📲 To add Babel Fish to your home screen: tap <strong style="color:var(--text)">Share ↑</strong> → "Add to Home Screen" — then you\'ll get notifications even when the app is closed', deleteConfirm: 'Delete this message?' },
     };
     const ui = UI[myUiLang] || UI.he;
     document.getElementById('textInput').placeholder = ui.placeholder;
@@ -635,6 +636,8 @@
           }
         } else if (msg.type === 'reaction_update') {
           renderReactions(msg.msg_id, msg.reactions);
+        } else if (msg.type === 'message_deleted') {
+          document.getElementById('msg-' + msg.msg_id)?.closest('.bubble')?.remove();
         } else if (msg.type === 'room_message') {
           document.querySelector('.empty')?.remove();
           const msgEl = document.getElementById('messages');
@@ -966,6 +969,50 @@
       if (!btn) return;
       startReply(btn.dataset.mid, decodeURIComponent(btn.dataset.sender), decodeURIComponent(btn.dataset.text));
     });
+
+    // ── Long-press own message to delete ──────────────────────────────────
+    // Only messages the current user sent can be deleted; long-press (not a
+    // separate button) starts the confirm. Cancels itself if the finger
+    // moves (a scroll gesture) or lifts before the hold duration.
+    (function setupLongPressDelete() {
+      const LONG_PRESS_MS = 550;
+      const MOVE_CANCEL_PX = 10;
+      const messagesEl = document.getElementById('messages');
+      let timer = null, startX = 0, startY = 0, targetInner = null;
+
+      function cancel() {
+        clearTimeout(timer);
+        timer = null;
+        targetInner?.classList.remove('long-press-active');
+        targetInner = null;
+      }
+
+      messagesEl.addEventListener('pointerdown', e => {
+        const inner = e.target.closest('.bubble.mine .bubble-inner');
+        if (!inner || !inner.id) return;
+        targetInner = inner;
+        startX = e.clientX; startY = e.clientY;
+        inner.classList.add('long-press-active');
+        timer = setTimeout(async () => {
+          const msgId = inner.id.replace('msg-', '');
+          cancel();
+          if (confirm(ui.deleteConfirm || 'למחוק את ההודעה?')) {
+            try {
+              await fetch(`/api/rooms/${roomId}/messages/${msgId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: myName })
+              });
+            } catch(e) { console.error('delete message:', e); }
+          }
+        }, LONG_PRESS_MS);
+      });
+      messagesEl.addEventListener('pointermove', e => {
+        if (!timer) return;
+        if (Math.abs(e.clientX - startX) > MOVE_CANCEL_PX || Math.abs(e.clientY - startY) > MOVE_CANCEL_PX) cancel();
+      });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(evt => messagesEl.addEventListener(evt, cancel));
+    })();
 
     textInput.addEventListener('input', () => {
       sendBtn.disabled = !textInput.value.trim();

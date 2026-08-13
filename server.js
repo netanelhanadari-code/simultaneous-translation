@@ -500,6 +500,30 @@ app.post('/api/rooms/:id/messages/:msgId/react', express.json(), async (req, res
   res.json({ ok: true, reactions });
 });
 
+// Delete a message — only the original sender may delete their own message
+app.delete('/api/rooms/:id/messages/:msgId', express.json(), async (req, res) => {
+  const { id, msgId } = req.params;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Missing name' });
+
+  const msgs = await sbQuery('messages', `id=eq.${msgId}&select=sender_name&limit=1`);
+  if (!msgs[0]) return res.status(404).json({ error: 'Not found' });
+  if (msgs[0].sender_name !== name) return res.status(403).json({ error: 'Not your message' });
+
+  if (SB_URL) {
+    await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msgId}`, {
+      method: 'DELETE',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }
+    }).catch(e => console.error('[delete-message]', e.message));
+  }
+
+  const payload = JSON.stringify({ type: 'message_deleted', msg_id: msgId });
+  const roomWs = rooms.get(id);
+  if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+
+  res.json({ ok: true });
+});
+
 // Save a single translation that was fetched on-demand by a client
 app.patch('/api/rooms/:id/messages/:msgId/translation', express.json(), async (req, res) => {
   const { msgId } = req.params;
