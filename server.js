@@ -771,6 +771,32 @@ app.get('/api/admin/usage-report', async (req, res) => {
   }
 });
 
+// ── Clear a room's messages, keeping only the welcome messages ────────────────
+// Protected by REPORT_SECRET (same as the usage report — arbitrary admin
+// password, ?secret= query param). Deletes every message in the room except
+// the 4 built-in welcome-message senders (Worf, יעל, ليلى, Alex).
+const WELCOME_SENDERS = ['Worf', 'יעל', 'ليلى', 'Alex'];
+app.post('/api/admin/rooms/:id/clear-messages', async (req, res) => {
+  const { id } = req.params;
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  if (!SB_URL) return res.status(503).json({ error: 'No DB' });
+
+  const notInList = WELCOME_SENDERS.map(n => `"${n}"`).join(',');
+  const url = `${SB_URL}/rest/v1/messages?room_id=eq.${id}&sender_name=not.in.(${notInList})`;
+  const r = await fetch(url, { method: 'DELETE', headers: { ...sbHeaders(), 'Prefer': 'return=representation' } });
+  if (!r.ok) return res.status(500).json({ error: 'db error', detail: await r.text() });
+  const deleted = await r.json().catch(() => []);
+
+  // Tell anyone currently in the room to reload so the cleared view shows immediately
+  const payload = JSON.stringify({ type: 'room_cleared' });
+  const roomWs = rooms.get(id);
+  if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+
+  res.json({ ok: true, deleted_count: deleted.length, kept_senders: WELCOME_SENDERS });
+});
+
 // ── Rename a user across every room they're in ────────────────────────────────
 // Identity is anchored by phone (collected at registration), since `name` is
 // the room_members primary key and messages.sender_name is just plain text.
