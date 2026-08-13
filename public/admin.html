@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babel Fish | Admin</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
+    --accent: #8B2FC9; --accent2: #7928b0; --text: #f0e8ff; --muted: #9b7fc4;
+    --danger: #c0392b; --warn: #c0845a;
+  }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 1rem;
+  }
+  h1 { font-size: 1.1rem; margin-bottom: 1rem; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
+  }
+  input {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: .6rem .8rem; font-size: .95rem; margin-bottom: .6rem;
+  }
+  button {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: .55rem 1rem; font-size: .9rem;
+    cursor: pointer; font-weight: 600;
+  }
+  button.danger { background: var(--danger); }
+  button.secondary { background: var(--border); }
+  button:disabled { opacity: .5; cursor: default; }
+  #app { display: none; }
+  .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 8px; padding: .5rem .9rem; font-size: .85rem;
+  }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: .8rem; padding: .8rem 0; border-bottom: 1px solid var(--border);
+  }
+  .row:last-child { border-bottom: none; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-meta { font-size: .72rem; color: var(--muted); margin-bottom: .3rem; }
+  .row-text { font-size: .9rem; line-height: 1.4; word-break: break-word; }
+  .row-reason { font-size: .72rem; color: var(--warn); margin-top: .3rem; }
+  .empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 1rem; }
+  .loading { color: var(--muted); font-size: .85rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  th, td { text-align: right; padding: .4rem .3rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  .total-usd { font-size: 1.4rem; font-weight: 700; margin-bottom: .5rem; }
+  .days-select { display: flex; gap: .4rem; margin-bottom: .8rem; }
+  .days-btn { padding: .35rem .7rem; font-size: .8rem; }
+  .err { color: #e07070; font-size: .85rem; padding: .5rem 0; }
+</style>
+</head>
+<body>
+
+  <div id="login" class="card" style="max-width:360px;margin:2rem auto;">
+    <h1>Babel Fish — Admin</h1>
+    <input id="secretInput" type="password" placeholder="REPORT_SECRET">
+    <button onclick="login()" style="width:100%;">כניסה</button>
+    <p id="loginErr" class="err"></p>
+  </div>
+
+  <div id="app">
+    <h1>Babel Fish — Admin</h1>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="flagged" onclick="switchTab('flagged')">🚩 הודעות מסומנות</button>
+      <button class="tab-btn" data-tab="usage" onclick="switchTab('usage')">💰 הוצאות API</button>
+      <button class="tab-btn" data-tab="feedback" onclick="switchTab('feedback')">📝 פידבק</button>
+    </div>
+
+    <div id="tab-flagged" class="tab-panel active card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+        <span class="loading" id="flaggedStatus"></span>
+        <button class="secondary" onclick="loadFlagged()">🔄 רענן</button>
+      </div>
+      <div id="flaggedList"></div>
+    </div>
+
+    <div id="tab-usage" class="tab-panel card">
+      <div class="days-select">
+        <button class="days-btn secondary" onclick="loadUsage(7)">7 ימים</button>
+        <button class="days-btn secondary" onclick="loadUsage(30)">30 ימים</button>
+        <button class="days-btn secondary" onclick="loadUsage(90)">90 ימים</button>
+      </div>
+      <div id="usageContent"><span class="loading">בחר טווח ימים</span></div>
+    </div>
+
+    <div id="tab-feedback" class="tab-panel card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+        <span class="loading" id="feedbackStatus"></span>
+        <button class="secondary" onclick="loadFeedback()">🔄 רענן</button>
+      </div>
+      <div id="feedbackList"></div>
+    </div>
+  </div>
+
+<script>
+  let SECRET = '';
+
+  function login() {
+    const v = document.getElementById('secretInput').value.trim();
+    if (!v) return;
+    SECRET = v;
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadFlagged();
+  }
+  document.getElementById('secretInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('he-IL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  }
+
+  // ── Flagged messages ──────────────────────────────────────────────────────
+  async function loadFlagged() {
+    const statusEl = document.getElementById('flaggedStatus');
+    const listEl = document.getElementById('flaggedList');
+    statusEl.textContent = 'טוען...';
+    try {
+      const r = await fetch(`/api/admin/flagged-messages?secret=${encodeURIComponent(SECRET)}`);
+      if (r.status === 403) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const rows = await r.json();
+      statusEl.textContent = '';
+      if (!rows.length) { listEl.innerHTML = '<p class="empty">אין הודעות מסומנות 🎉</p>'; return; }
+      listEl.innerHTML = '';
+      rows.forEach(m => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <div class="row-main">
+            <div class="row-meta">${esc(m.room_id)} · ${esc(m.sender_name)} · ${fmtTime(m.created_at)}</div>
+            <div class="row-text">${esc(m.original_text || '')}</div>
+            <div class="row-reason">🚩 ${esc(m.flagged_reason || '')}</div>
+          </div>
+          <button class="danger" data-id="${m.id}" data-room="${esc(m.room_id)}">מחק</button>
+        `;
+        row.querySelector('button').addEventListener('click', async e => {
+          const btn = e.target;
+          btn.disabled = true; btn.textContent = 'מוחק...';
+          try {
+            await fetch(`/api/admin/rooms/${encodeURIComponent(btn.dataset.room)}/messages/${btn.dataset.id}?secret=${encodeURIComponent(SECRET)}`, { method: 'DELETE' });
+            row.remove();
+            if (!listEl.children.length) listEl.innerHTML = '<p class="empty">אין הודעות מסומנות 🎉</p>';
+          } catch(err) { btn.disabled = false; btn.textContent = 'שגיאה — נסה שוב'; }
+        });
+        listEl.appendChild(row);
+      });
+    } catch(e) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  // ── Usage report ──────────────────────────────────────────────────────────
+  async function loadUsage(days) {
+    const el = document.getElementById('usageContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const r = await fetch(`/api/admin/usage-report?secret=${encodeURIComponent(SECRET)}&days=${days}`);
+      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const data = await r.json();
+      if (data.error) { el.innerHTML = `<p class="err">${esc(data.error)}</p>`; return; }
+      let html = `<div class="total-usd">$${data.total_usd ?? '—'}</div>`;
+      html += `<table><thead><tr><th>תאריך</th><th>עלות ($)</th></tr></thead><tbody>`;
+      (data.by_day || []).forEach(d => {
+        const dateStr = new Date(d.start * 1000).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit' });
+        html += `<tr><td>${dateStr}</td><td>${d.amount_usd}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      el.innerHTML = html;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  // ── Feedback ─────────────────────────────────────────────────────────────
+  async function loadFeedback() {
+    const statusEl = document.getElementById('feedbackStatus');
+    const listEl = document.getElementById('feedbackList');
+    statusEl.textContent = 'טוען...';
+    try {
+      const r = await fetch('/api/feedback');
+      const rows = await r.json();
+      statusEl.textContent = '';
+      if (!rows.length) { listEl.innerHTML = '<p class="empty">אין פידבק</p>'; return; }
+      listEl.innerHTML = rows.map(f => `
+        <div class="row">
+          <div class="row-main">
+            <div class="row-meta">${esc(f.name)} · ${esc(f.room_id || '—')} · ${esc(f.device || '')} · ${fmtTime(f.created_at)}</div>
+            <div class="row-text"><strong>מה קרה:</strong> ${esc(f.what_happened)}</div>
+            ${f.expected ? `<div class="row-text"><strong>ציפייה:</strong> ${esc(f.expected)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    } catch(e) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>

@@ -21,6 +21,7 @@ Real-time multilingual IM app. Users join rooms, send voice or text messages, an
 - `public/room.html` — Main chat room: members bar, messages, text input, voice recording
 - `public/settings.html` — User settings: name, emoji, language preference, avatar upload
 - `public/feedback.html` — Bilingual (he/ar) feedback form
+- `public/admin.html` — Password-gated admin dashboard (enter REPORT_SECRET once): flagged messages + delete, API cost report, feedback list. Not linked from anywhere in the app nav — direct URL only
 - `public/broadcaster.html` — Live event one-way broadcast mode
 - `public/listener.html` — Listener for live event broadcasts
 
