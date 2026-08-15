@@ -21,51 +21,16 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* ── Splash ── */
+  /* Splash screen */
   #splash {
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0; z-index: 999;
     background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    z-index: 999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1.5rem;
     transition: opacity .5s ease;
   }
-  #splash.hide { opacity: 0; pointer-events: none; }
-  .splash-logos {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-  }
-  .splash-logos img { height: 56px; object-fit: contain; }
-  .splash-divider {
-    width: 1px;
-    height: 48px;
-    background: var(--border);
-  }
-  .splash-name {
-    font-size: 26px;
-    font-weight: 900;
-    letter-spacing: .5px;
-    color: var(--text);
-  }
-  .splash-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--amber);
-    animation: pulse 1s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity: .3; transform: scale(.8); }
-    50%      { opacity: 1;  transform: scale(1.2); }
-  }
-
-  /* ── Main content (hidden until splash done) ── */
-  #main { opacity: 0; transition: opacity .4s ease; }
-  #main.show { opacity: 1; }
+  #splash.hidden { opacity: 0; pointer-events: none; }
+  #splash img { width: min(220px, 62vw); object-fit: contain; }
 
   body {
     background: var(--bg);
@@ -290,13 +255,8 @@
 
 <!-- Splash -->
 <div id="splash">
-  <div class="splash-logos">
-    <img src="/babel-fish.png" alt="Babel Fish">
-    <div class="splash-divider"></div>
-    <img src="/logo.png" alt="Logo">
-  </div>
-  <div class="splash-name">Babel Fish</div>
-  <div class="splash-dot"></div>
+  <img src="logo.png" alt="עומדים ביחד">
+  <img src="babel-fish.png" alt="Babel Fish">
 </div>
 
 <!-- Main -->
@@ -372,16 +332,19 @@
 </div><!-- /main -->
 
 <script>
-  // Splash
-  window.addEventListener('load', () => {
+  // Splash — same logic as home.html
+  const splash = document.getElementById('splash');
+  const navType = performance.getEntriesByType('navigation')[0]?.type;
+  const isFreshLoad = navType === 'reload' || !sessionStorage.getItem('bf_splash_shown');
+  if (!isFreshLoad) {
+    splash.remove();
+  } else {
+    sessionStorage.setItem('bf_splash_shown', '1');
     setTimeout(() => {
-      const splash = document.getElementById('splash');
-      const main   = document.getElementById('main');
-      splash.classList.add('hide');
-      main.classList.add('show');
-      setTimeout(() => { splash.style.display = 'none'; }, 500);
-    }, 1500);
-  });
+      splash.classList.add('hidden');
+      setTimeout(() => splash.remove(), 500);
+    }, 1200);
+  }
 
   const SEV_LABEL = { low: 'קל / خفيف', med: 'בינוני / متوسط', high: 'חוסם / حرج' };
   const SEV_CLASS = { low: 'sev-low', med: 'sev-med', high: 'sev-high' };
