@@ -14,6 +14,7 @@ Real-time multilingual IM app. Users join rooms, send voice or text messages, an
 - **DB:** Supabase (direct REST fetch calls — no JS client)
 - **Frontend:** Vanilla JS, Web Speech API for TTS
 - **Deploy:** `git add -A; git commit -m "..."; git push` → Render auto-deploys
+- **⚠️ בתחילת session חדש:** לוודא ש-`git status` נקי — יכול להיות שיש שינויים מקומיים מ-session קודם שעדיין לא נדחפו (אין לכלי גישת git ישירה לתיקייה, ההנחיה תמיד היתה שהמשתמש ידחוף ידנית)
 
 ## Key files
 - `server.js` — Express server, WebSocket hub, translation logic, Supabase REST calls
@@ -24,6 +25,7 @@ Real-time multilingual IM app. Users join rooms, send voice or text messages, an
 - `public/admin.html` — Password-gated admin dashboard (enter REPORT_SECRET once): flagged messages + delete, API cost report, feedback list. Not linked from anywhere in the app nav — direct URL only
 - `public/broadcaster.html` — Live event one-way broadcast mode
 - `public/listener.html` — Listener for live event broadcasts
+- `תסריט וידאו - Babel Fish.md` — script for a 2:30-3:00 explainer video (Hebrew), aimed at עומדים ביחד members, for a landing page. Not yet produced.
 
 ## Database (Supabase)
 RLS disabled on all tables.
@@ -166,6 +168,38 @@ function linkify(html) { ... }
 - `/feedback.html` — bilingual he/ar
 - `POST /api/feedback`, `GET /api/feedback`
 
+### Admin dashboard (`public/admin.html`)
+- Password-gated (REPORT_SECRET entered once, kept in memory only — not stored)
+- Tabs: 🚩 flagged messages (list + delete button), 💰 API cost report (7/30/90 days, via `/api/admin/usage-report`), 📝 feedback list
+- Not linked anywhere in app nav — direct URL only
+
+### API cost report
+- `GET /api/admin/usage-report?secret=REPORT_SECRET&days=N` — calls OpenAI's org Costs API with `OPENAI_ADMIN_KEY` (must be a restricted, usage-read-only admin key), returns total + per-day breakdown
+- Sum uses `parseFloat()` on each `amount.value` before adding — without it JS string-concatenates instead of summing and `total_usd` comes back `null`
+
+### Rename a user across all their rooms
+- `POST /api/rename-member { phone, oldName, newName }` — identity anchored by phone (the only stable ID we have, since `name` is the room_members PK and messages.sender_name is plain text)
+- Reattributes all past messages (`sender_name`) + merges the room_members row into the new name, per room the phone+oldName combo is found in
+- Wired into settings.html's `save()`: if the name changed and both old name + phone existed, calls this before redirecting
+- Broadcasts `member_renamed` via WS so open room.html tabs update live (member list + already-rendered bubble sender names)
+
+### Whisper silence hallucination fix (voice messages)
+- Whisper hallucinates boilerplate ("thank you", "subscribe") on silent/near-silent audio
+- Server: `response_format: verbose_json` → average `no_speech_prob` across segments; if >0.6, message is dropped regardless of transcribed text. Hallucination blacklist changed from exact-match to substring `includes()`, list expanded
+- Client: Web Audio API measures RMS volume during recording (every 150ms); if the whole recording never exceeded a silence threshold, it's never even uploaded to Whisper (saves the API call too)
+
+### Android WebView/TWA viewport height instability
+- `100dvh` alone is unreliable right after a fresh page load (before browser chrome finishes settling) — caused the record button to hide behind the Android nav bar on refresh, and home.html's footer to render too short right after refresh (but fine on in-app navigation)
+- Fix in both room.html and home.html: JS computes `--vh` from `window.innerHeight`/`visualViewport.height`, updates on resize/orientationchange, used as `calc(var(--vh, 1vh) * 100)` instead of trusting `100dvh` alone
+- Also removed `will-change: scroll-position` from `#messages` (suspected compositing jank contributor)
+
+### Scroll-fights-user bug (fixed)
+- The `scroll` listener on `#messages` called `dismissUnread()` (which force-set `scrollTop = scrollHeight`) any time within 60px of the bottom — so a slow drag away from the last message got yanked back on every scroll event; only a fast flick had enough velocity to escape
+- Fixed by splitting into `clearUnreadState()` (badge-hiding only, used by the passive scroll listener) vs `dismissUnread()` (badge-hiding + scroll-to-bottom, only for the explicit "new messages" badge tap)
+
+### Home screen splash
+- Only replays on first load of the session or an explicit refresh (`performance.getEntriesByType('navigation')[0].type === 'reload'`) — not on back-navigation from a room, via a sessionStorage flag
+
 ### UX
 - RTL layout, own chip rightmost (order:-1)
 - Enter to send, Shift+Enter newline
@@ -203,12 +237,22 @@ function linkify(html) { ... }
 - [x] **גלילה בטלפון** — תוקן: מאזין ה-scroll כבר לא מאלץ scrollBottom() ליד ההודעה האחרונה
 - [x] **כניסה לחדר ללא הרשמה** — חסום (room.html דורש bf_name + bf_phone)
 - [x] **הודעות גרבאג' בחאן אל-אחמר** — נמחקו
-- [ ] **שם כפול אחרי שינוי שם** — username ישן נשאר בחדר, נוצרים שני entries
-- [ ] **פידבק RTL באנדרואיד** — feedback.html מיושר שמאל באנדרואיד
-- [ ] **לחיצה על שם קבוצה** — פותחת חיפוש/תרגום גוגל בטעות (feedback חדש)
+- [x] **שם כפול אחרי שינוי שם** — נבנה `/api/rename-member`, מחובר ל-settings.html; מעביר הודעות + ממזג את room_members לפי טלפון
+- [x] **לחיצה על שם קבוצה** — המשתמש אישר שזה כבר טופל (ללא שינוי קוד נדרש בפועל — הפיך אם יעלה שוב)
+- [x] **סינון הזיות Whisper בשקט** — no_speech_prob + בדיקת ווליום בלקוח + הרחבת רשימת ביטויים
+- [x] **גלילה רועדת בטלפון** — תוקן (ראו "Scroll-fights-user bug" למעלה)
+- [x] **כפתור הקלטה מתחבא מאחורי שורת ניווט אנדרואיד** — תוקן (ראו "Android WebView/TWA viewport height instability" למעלה)
+- [x] **עריכת הודעה** — נבנה, לחיצה ארוכה → תפריט (✏️ ערוך / 🗑️ מחק)
+- [x] **דיווח הוצאות API + בקרת תוכן פוגעני** — נבנה admin.html + moderation אוטומטי
+- [ ] **פידבק RTL באנדרואיד** — feedback.html מיושר שמאל באנדרואיד (עדיין לא טופל בפועל)
 - [ ] **הודעות ברוכים הבאים** בחאן אל-אחמר — לבדוק אם נכתבו מחדש אחרי מחיקת הגרבאג'
+- [ ] **וידאו הדגמה** — תסריט מוכן (`תסריט וידאו - Babel Fish.md`), עדיין לא צולם/הופק
 
 ### תשתית
-- [ ] **SQL migrations** — לוודא שהורצו ב-Supabase (ראה למעלה)
-- [ ] **worf.png** — לוודא שהקובץ קיים ב-`public/worf.png` ונדחף ל-git
+- [ ] **SQL migrations** — לוודא שהורצו ב-Supabase (ראה למעלה, כולל flagged/edited)
+- [x] **worf.png** — קיים ב-`public/worf.png`
 - [ ] **assetlinks.json** — אם רוצים TWA מלא עם Push ב-APK
+- [ ] **ניקוי חדר "האקווריום" (A2YO3)** — חדר בדיקה ששימש לצילומי מסך; המשתמש התחזה זמנית ל-Worf/יעל/ليلى/Alex דרך localStorage כדי לצלם מכל נקודת מבט, מה שיצר entries אמיתיים של אותם שמות ב-`room_members`. למחוק אותם כשנוח (לא דחוף — לא משפיע על חדרים אחרים):
+```sql
+delete from room_members where room_id = 'A2YO3' and name in ('Worf','יעל','ليلى','Alex');
+```

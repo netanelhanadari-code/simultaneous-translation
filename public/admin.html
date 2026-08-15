@@ -95,6 +95,13 @@
         <button class="days-btn secondary" onclick="loadUsage(90)">90 ימים</button>
       </div>
       <div id="usageContent"><span class="loading">בחר טווח ימים</span></div>
+      <div id="storageWidget" style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+          <span style="font-size:.8rem;color:var(--muted);">📦 Supabase Storage — תמונות</span>
+          <button class="secondary days-btn" onclick="loadStorage()">🔄</button>
+        </div>
+        <div id="storageContent"><span class="loading">...</span></div>
+      </div>
     </div>
 
     <div id="tab-feedback" class="tab-panel card">
@@ -123,6 +130,7 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'usage') loadStorage();
   }
 
   function fmtTime(iso) {
@@ -207,6 +215,34 @@
         </div>
       `).join('');
     } catch(e) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  // ── Storage usage ─────────────────────────────────────────────────────────
+  async function loadStorage() {
+    const el = document.getElementById('storageContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const r = await fetch(`/api/admin/storage-usage?secret=${encodeURIComponent(SECRET)}`);
+      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const data = await r.json();
+      const count = data.count ?? 0;
+      const mb    = data.size_estimate_mb ?? 0;
+      const pct   = Math.min(100, (mb / 1000) * 100); // 1 GB free tier
+      const color = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
+      el.innerHTML = `
+        <div style="font-size:.85rem;margin-bottom:.4rem;">
+          <strong style="color:${color};">${mb.toFixed(1)} MB</strong>
+          <span style="color:var(--muted);"> / 1,000 MB פנוי &nbsp;·&nbsp; ${count} תמונות פעילות</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${pct.toFixed(1)}%;background:${color};border-radius:3px;transition:width .4s;"></div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">תמונות נמחקות אוטומטית אחרי 30 יום</div>
+        ${pct > 80 ? '<div style="color:#e07070;font-size:.8rem;font-weight:600;margin-top:.4rem;">⚠ מעל 80% מהקיבולת — שקול מחיקה ידנית</div>' : ''}
+      `;
+    } catch(e) {
+      el.innerHTML = '<p class="err">שגיאת רשת</p>';
+    }
   }
 
   function esc(s) {

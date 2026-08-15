@@ -73,6 +73,18 @@
     }
     .bubble-original.visible { display: block; }
     .bubble-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 .2rem; gap: .4rem; }
+    /* Image bubbles */
+    .bubble-image { display: block; max-width: 100%; border-radius: 8px; cursor: pointer; }
+    .bubble-image-wrap { padding: .35rem .35rem .1rem; }
+    /* Image upload button */
+    #attachBtn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      color: var(--muted); font-size: 1.1rem; width: 38px; height: 38px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: border-color .15s, color .15s;
+    }
+    #attachBtn:hover { border-color: var(--accent); color: var(--accent); }
+    #attachBtn.uploading { opacity: .5; pointer-events: none; }
     .unread-sep { display: flex; align-items: center; gap: .5rem; margin: .6rem 0; color: var(--accent); font-size: .78rem; font-weight: 600; }
     .unread-sep::before, .unread-sep::after { content: ''; flex: 1; height: 1px; background: var(--accent); opacity: .4; }
     .reply-quote {
@@ -361,8 +373,11 @@
       <button class="tts-toggle" id="notifyBtn" onclick="toggleNotify()" title="צליל התרעה">🔔</button>
       <textarea id="textInput" rows="1" placeholder="הקלד הודעה..."></textarea>
       <button id="sendBtn" onclick="sendText()" disabled>➤</button>
+      <button id="attachBtn" onclick="document.getElementById('imageInput').click()" title="שלח תמונה">📎</button>
+      <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
       <button id="recordBtn">🎤</button>
     </div>
+    <canvas id="imgCanvas" style="display:none;"></canvas>
     <div id="status" style="font-size:.8rem;color:var(--muted);text-align:center;min-height:1em;"></div>
   </footer>
 
@@ -713,7 +728,7 @@
           }
           if (msg.sender_name !== myName) {
             playTardisSound();
-            if (ttsOn) {
+            if (ttsOn && !msg.image_url) {
               const text = msg.translations?.[myLang] || msg.original_text;
               speak(text, myLang);
             }
@@ -809,26 +824,47 @@
           : (senderEmoji ? `<span class="avatar">${senderEmoji}</span>` : '');
       const div = document.createElement('div');
       div.className = 'bubble ' + (isMine ? 'mine' : 'other');
-      div.innerHTML =
-        (!isMine
-          ? `<div class="bubble-sender">${senderAvatarHtml}${esc(msg.sender_name)}</div>`
-          : '') +
-        `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
-          ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
-          <div class="bubble-main-row">
-            <div class="bubble-text">${linkify(esc(translated))}</div>
-            <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
-          </div>
-          ${showOrig ? `<div class="bubble-original">${linkify(esc(original))}</div>` : ''}
-        </div>` +
-        `<div class="bubble-footer">
-          <div class="bubble-time" data-edited="${msg.edited ? '1' : '0'}">${time}${editedTag}</div>
-          <div style="display:flex;gap:.4rem;align-items:center;">
-            ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
-            ${msg.id ? `<button class="icon-btn reply-btn" data-mid="${msg.id}" data-sender="${encodeURIComponent(msg.sender_name)}" data-text="${encodeURIComponent(translated)}" title="השב">↩️</button>` : ''}
-            ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
-          </div>
-        </div>`;
+
+      // Image message — render a tappable image, no text/TTS controls
+      if (msg.image_url) {
+        div.innerHTML =
+          (!isMine
+            ? `<div class="bubble-sender">${senderAvatarHtml}${esc(msg.sender_name)}</div>`
+            : '') +
+          `<div class="bubble-inner bubble-image-wrap" ${msg.id ? `id="msg-${msg.id}"` : ''}>
+            <img class="bubble-image" src="${esc(msg.image_url)}" alt="📷"
+              onclick="window.open('${esc(msg.image_url)}','_blank')"
+              onerror="this.alt='🖼️ (תמונה לא זמינה)';this.style.display='none';this.nextSibling?.remove();this.parentNode.insertAdjacentText('afterbegin','🖼️');"
+              loading="lazy">
+          </div>` +
+          `<div class="bubble-footer">
+            <div class="bubble-time">${time}</div>
+            <div style="display:flex;gap:.4rem;align-items:center;">
+              ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
+            </div>
+          </div>`;
+      } else {
+        div.innerHTML =
+          (!isMine
+            ? `<div class="bubble-sender">${senderAvatarHtml}${esc(msg.sender_name)}</div>`
+            : '') +
+          `<div class="bubble-inner" ${msg.id ? `id="msg-${msg.id}"` : ''}>
+            ${msg.reply_to ? `<div class="reply-quote" onclick="document.getElementById('msg-${msg.reply_to.id}')?.scrollIntoView({behavior:'smooth',block:'center'})"><strong>${esc(msg.reply_to.sender_name)}</strong> ${esc((msg.reply_to.text||'').slice(0,80))}${(msg.reply_to.text||'').length>80?'…':''}</div>` : ''}
+            <div class="bubble-main-row">
+              <div class="bubble-text">${linkify(esc(translated))}</div>
+              <button class="speak-main-btn" data-text="${encodeURIComponent(translated)}" data-lang="${myLang}" onclick="speakBtn(this)" title="השמע">🔊</button>
+            </div>
+            ${showOrig ? `<div class="bubble-original">${linkify(esc(original))}</div>` : ''}
+          </div>` +
+          `<div class="bubble-footer">
+            <div class="bubble-time" data-edited="${msg.edited ? '1' : '0'}">${time}${editedTag}</div>
+            <div style="display:flex;gap:.4rem;align-items:center;">
+              ${showOrig ? `<button class="icon-btn" onclick="toggleOrig(this)" title="הצג מקור">🌐</button>` : ''}
+              ${msg.id ? `<button class="icon-btn reply-btn" data-mid="${msg.id}" data-sender="${encodeURIComponent(msg.sender_name)}" data-text="${encodeURIComponent(translated)}" title="השב">↩️</button>` : ''}
+              ${msg.id ? `<button class="icon-btn" onclick="togglePicker('${msg.id}')" title="הגב">😊</button>` : ''}
+            </div>
+          </div>`;
+      }
 
       // Reactions + picker
       if (msg.id) {
@@ -1207,6 +1243,69 @@
         });
       } catch(e) { console.error('sendText:', e); }
     }
+
+    // ── Image upload ───────────────────────────────────────────────────────
+    const attachBtn  = document.getElementById('attachBtn');
+    const imageInput = document.getElementById('imageInput');
+    const imgCanvas  = document.getElementById('imgCanvas');
+
+    const IMG_MAX_PX   = 800;   // longest edge after resize
+    const IMG_QUALITY  = 0.7;   // JPEG quality
+    const IMG_MAX_RAW  = 15;    // MB — reject before compressing
+
+    imageInput.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      e.target.value = '';   // reset so same file can be re-picked
+      if (!file) return;
+
+      const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!ALLOWED.includes(file.type)) {
+        document.getElementById('status').textContent = '⚠ פורמט לא נתמך (JPEG/PNG/WebP בלבד)';
+        setTimeout(() => { document.getElementById('status').textContent = ''; }, 3000);
+        return;
+      }
+      if (file.size > IMG_MAX_RAW * 1024 * 1024) {
+        document.getElementById('status').textContent = `⚠ תמונה גדולה מדי (מקסימום ${IMG_MAX_RAW} MB)`;
+        setTimeout(() => { document.getElementById('status').textContent = ''; }, 3000);
+        return;
+      }
+
+      attachBtn.classList.add('uploading');
+      document.getElementById('status').textContent = 'דוחסת תמונה…';
+
+      try {
+        // Load image
+        const bitmap = await createImageBitmap(file);
+        const ow = bitmap.width, oh = bitmap.height;
+        const longer = Math.max(ow, oh);
+        const scale  = longer > IMG_MAX_PX ? IMG_MAX_PX / longer : 1;
+        const outW = Math.round(ow * scale), outH = Math.round(oh * scale);
+
+        imgCanvas.width  = outW;
+        imgCanvas.height = outH;
+        const ctx = imgCanvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0, outW, outH);
+        bitmap.close?.();
+
+        const blob = await new Promise(res => imgCanvas.toBlob(res, 'image/jpeg', IMG_QUALITY));
+
+        document.getElementById('status').textContent = 'מעלה תמונה…';
+        const fd = new FormData();
+        fd.append('image', blob, 'image.jpg');
+        fd.append('sender_name', myName);
+        fd.append('sender_emoji', myEmoji || '');
+
+        const r = await fetch(`/api/rooms/${roomId}/image`, { method: 'POST', body: fd });
+        if (!r.ok) throw new Error(await r.text());
+        document.getElementById('status').textContent = '';
+      } catch(err) {
+        console.error('sendImage:', err);
+        document.getElementById('status').textContent = '⚠ שגיאה בהעלאת תמונה';
+        setTimeout(() => { document.getElementById('status').textContent = ''; }, 4000);
+      } finally {
+        attachBtn.classList.remove('uploading');
+      }
+    });
 
     // ── Recording ──────────────────────────────────────────────────────────
     let mediaRecorder, audioChunks = [], stream, recordStart, shouldSend = false;

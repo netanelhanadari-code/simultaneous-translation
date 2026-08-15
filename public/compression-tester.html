@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babel Fish — Image Compression Tester</title>
+<style>
+  :root {
+    --ink: #151d2b; --ink2: #1e2a3d; --paper: #eef0e9;
+    --amber: #e6a13d; --teal: #4d9b95; --line: #33445e;
+    --danger: #d9694f; --green: #4caf7d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink); color: var(--paper);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh; padding: 32px 16px;
+    direction: ltr; text-align: left;
+  }
+  h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--amber); }
+  .sub { font-size: 12px; color: #7b8ba0; margin-bottom: 28px; }
+
+  /* Controls */
+  .controls {
+    background: var(--ink2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  }
+  .controls label { display: block; font-size: 12px; color: #9fb0c3; margin-bottom: 6px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+  .field { flex: 1; min-width: 120px; }
+  input[type=range] { width: 100%; accent-color: var(--amber); cursor: pointer; }
+  .val { font-size: 13px; font-weight: 700; color: var(--amber); margin-top: 4px; }
+  .field-num input {
+    width: 100%; background: var(--ink); border: 1px solid var(--line);
+    color: var(--paper); border-radius: 8px; padding: 8px 10px; font-size: 14px;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed var(--line); border-radius: 12px;
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s; position: relative;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--amber); background: rgba(230,161,61,.05); }
+  .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .dropzone .icon { font-size: 36px; margin-bottom: 8px; }
+  .dropzone p { font-size: 13px; color: #7b8ba0; }
+  .dropzone .hint { font-size: 11px; color: #4a5a72; margin-top: 6px; }
+
+  /* Error */
+  .error {
+    display: none; background: rgba(217,105,79,.12);
+    border: 1px solid var(--danger); border-radius: 8px;
+    padding: 12px 16px; font-size: 13px; color: var(--danger); margin-top: 16px;
+  }
+  .error.show { display: block; }
+
+  /* Results */
+  .results { display: none; margin-top: 20px; }
+  .results.show { display: block; }
+
+  .stat-row {
+    display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .stat {
+    flex: 1; min-width: 120px;
+    background: var(--ink2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .stat .label { font-size: 11px; color: #7b8ba0; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .num { font-size: 22px; font-weight: 700; }
+  .stat.good .num { color: var(--green); }
+  .stat.warn .num { color: var(--amber); }
+  .stat.info .num { color: var(--teal); }
+
+  /* Reduction bar */
+  .bar-wrap { margin-bottom: 20px; }
+  .bar-label { font-size: 12px; color: #7b8ba0; margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .bar-track { height: 10px; background: var(--ink2); border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--teal)); border-radius: 5px; transition: width .5s ease; }
+
+  /* Previews */
+  .previews { display: flex; gap: 16px; flex-wrap: wrap; }
+  .preview-box {
+    flex: 1; min-width: 200px;
+    background: var(--ink2); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+  }
+  .preview-box .ph { font-size: 11px; color: #9fb0c3; padding: 10px 14px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center; }
+  .preview-box img { width: 100%; display: block; max-height: 280px; object-fit: contain; background: #0a1018; }
+
+  /* Dimensions */
+  .dims { font-size: 11px; color: #4a5a72; padding: 6px 14px; }
+
+  /* Try another */
+  .again-btn {
+    display: block; width: 100%; margin-top: 20px;
+    background: var(--ink2); border: 1px solid var(--line); color: #9fb0c3;
+    border-radius: 8px; padding: 11px; font-size: 13px; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .again-btn:hover { border-color: var(--amber); color: var(--paper); }
+
+  canvas { display: none; }
+</style>
+</head>
+<body>
+
+<h1>🐟 Babel Fish — Image Compression Tester</h1>
+<p class="sub">See exactly what client-side compression does before we build the feature.</p>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="row">
+    <div class="field">
+      <label>Max dimension (px) — longer edge scaled down to this</label>
+      <input type="range" id="maxPx" min="200" max="1600" step="100" value="800"
+             oninput="document.getElementById('maxPxVal').textContent=this.value+'px'">
+      <div class="val" id="maxPxVal">800px</div>
+    </div>
+    <div class="field">
+      <label>JPEG quality (0.0 – 1.0)</label>
+      <input type="range" id="quality" min="0.1" max="1.0" step="0.05" value="0.7"
+             oninput="document.getElementById('qualityVal').textContent=parseFloat(this.value).toFixed(2)">
+      <div class="val" id="qualityVal">0.70</div>
+    </div>
+    <div class="field field-num">
+      <label>Max raw input size (MB) — reject before compressing</label>
+      <input type="number" id="maxRawMb" value="15" min="1" max="100" step="1">
+    </div>
+  </div>
+</div>
+
+<!-- Drop zone -->
+<div class="dropzone" id="dropzone">
+  <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+  <div class="icon">📎</div>
+  <p>Drop an image here, or click to pick</p>
+  <p class="hint">Accepted: JPEG · PNG · WebP</p>
+</div>
+
+<div class="error" id="error"></div>
+
+<!-- Results -->
+<div class="results" id="results">
+  <div class="stat-row">
+    <div class="stat info">
+      <div class="label">Original size</div>
+      <div class="num" id="statOrig">—</div>
+    </div>
+    <div class="stat info">
+      <div class="label">Original dimensions</div>
+      <div class="num" id="statOrigDim">—</div>
+    </div>
+    <div class="stat good">
+      <div class="label">Compressed size</div>
+      <div class="num" id="statComp">—</div>
+    </div>
+    <div class="stat good">
+      <div class="label">Output dimensions</div>
+      <div class="num" id="statCompDim">—</div>
+    </div>
+    <div class="stat warn">
+      <div class="label">Size reduction</div>
+      <div class="num" id="statReduction">—</div>
+    </div>
+  </div>
+
+  <div class="bar-wrap">
+    <div class="bar-label">
+      <span>Compressed vs original</span>
+      <span id="barLabel">—</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" id="barFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="previews">
+    <div class="preview-box">
+      <div class="ph"><span>Original</span><span id="phOrigSize"></span></div>
+      <img id="previewOrig" src="" alt="original">
+      <div class="dims" id="dimsOrig"></div>
+    </div>
+    <div class="preview-box">
+      <div class="ph"><span>Compressed</span><span id="phCompSize"></span></div>
+      <img id="previewComp" src="" alt="compressed">
+      <div class="dims" id="dimsComp"></div>
+    </div>
+  </div>
+
+  <button class="again-btn" onclick="reset()">↩ Try another image</button>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+function fmt(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('show');
+  document.getElementById('results').classList.remove('show');
+}
+
+function hideError() {
+  document.getElementById('error').classList.remove('show');
+}
+
+function reset() {
+  document.getElementById('results').classList.remove('show');
+  hideError();
+  document.getElementById('fileInput').value = '';
+}
+
+async function processFile(file) {
+  hideError();
+
+  // Format check
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    showError(`Format not allowed: ${file.type || 'unknown'}. Use JPEG, PNG, or WebP.`);
+    return;
+  }
+
+  // Raw size check
+  const maxRawBytes = parseFloat(document.getElementById('maxRawMb').value) * 1024 * 1024;
+  if (file.size > maxRawBytes) {
+    showError(`File too large: ${fmt(file.size)} — max allowed is ${fmt(maxRawBytes)}. Would freeze the browser on mobile.`);
+    return;
+  }
+
+  const maxPx   = parseInt(document.getElementById('maxPx').value);
+  const quality = parseFloat(document.getElementById('quality').value);
+
+  // Load image
+  const origUrl = URL.createObjectURL(file);
+  const img = new Image();
+  await new Promise((res, rej) => {
+    img.onload = res; img.onerror = rej; img.src = origUrl;
+  });
+
+  const origW = img.naturalWidth;
+  const origH = img.naturalHeight;
+
+  // Compute output dimensions
+  let outW = origW, outH = origH;
+  const longer = Math.max(origW, origH);
+  if (longer > maxPx) {
+    const scale = maxPx / longer;
+    outW = Math.round(origW * scale);
+    outH = Math.round(origH * scale);
+  }
+
+  // Draw to canvas
+  const canvas = document.getElementById('canvas');
+  canvas.width  = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, outW, outH);
+
+  // Export
+  const compDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+  // Compute compressed size (base64 → bytes approximation)
+  const base64Data = compDataUrl.split(',')[1];
+  const compBytes  = Math.round(base64Data.length * 0.75);
+
+  const reduction = ((1 - compBytes / file.size) * 100);
+  const reductionStr = reduction > 0
+    ? `−${reduction.toFixed(1)}%`
+    : `+${Math.abs(reduction).toFixed(1)}% ⚠`;
+
+  // Render stats
+  document.getElementById('statOrig').textContent     = fmt(file.size);
+  document.getElementById('statOrigDim').textContent  = `${origW}×${origH}`;
+  document.getElementById('statComp').textContent     = fmt(compBytes);
+  document.getElementById('statCompDim').textContent  = `${outW}×${outH}`;
+  document.getElementById('statReduction').textContent = reductionStr;
+
+  const pct = Math.min(100, Math.max(0, (compBytes / file.size) * 100));
+  document.getElementById('barFill').style.width = (100 - pct) + '%';
+  document.getElementById('barLabel').textContent = `${pct.toFixed(1)}% of original`;
+
+  document.getElementById('phOrigSize').textContent = fmt(file.size);
+  document.getElementById('phCompSize').textContent = fmt(compBytes);
+  document.getElementById('dimsOrig').textContent   = `${origW} × ${origH} px`;
+  document.getElementById('dimsComp').textContent   = `${outW} × ${outH} px`;
+
+  document.getElementById('previewOrig').src = origUrl;
+  document.getElementById('previewComp').src = compDataUrl;
+
+  document.getElementById('results').classList.add('show');
+}
+
+// File input
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+// Drag and drop
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+</script>
+</body>
+</html>

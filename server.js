@@ -642,6 +642,75 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
   res.json({ ok: true, id: msgId });
 });
 
+// ── Image upload endpoint ─────────────────────────────────────────────────────
+// Client compresses on canvas (max 800px, JPEG q=0.7) before sending,
+// so files arriving here are typically 80–150 KB.
+app.post('/api/rooms/:id/image', upload.single('image'), async (req, res) => {
+  const { id } = req.params;
+  const { sender_name, sender_emoji } = req.body;
+  if (!req.file) return res.status(400).json({ error: 'No image' });
+
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!ALLOWED_MIME.includes(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Invalid image type' });
+  }
+  if (!SB_URL || !SB_KEY) return res.status(503).json({ error: 'No storage configured' });
+
+  const timestamp = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8);
+  const filename = `${id}/${timestamp}-${rand}.jpg`;
+
+  // Upload to Supabase Storage bucket "images"
+  const uploadUrl = `${SB_URL}/storage/v1/object/images/${filename}`;
+  const uploadResp = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': req.file.mimetype,
+      'x-upsert': 'false',
+    },
+    body: req.file.buffer
+  }).catch(e => null);
+
+  if (!uploadResp || !uploadResp.ok) {
+    const err = uploadResp ? await uploadResp.text() : 'fetch failed';
+    console.error('[image-upload] Storage error:', err);
+    return res.status(500).json({ error: 'Storage upload failed' });
+  }
+
+  const image_url = `${SB_URL}/storage/v1/object/public/images/${filename}`;
+
+  // Save as a message row (text = placeholder; image_url carries the media)
+  const saved = await sbInsert('messages', {
+    room_id: id,
+    sender_name,
+    sender_emoji: sender_emoji || '',
+    sender_lang: 'he',
+    original_text: '📷',
+    translations: { he: '📷', ar: '📷', en: '📷' },
+    image_url,
+    flagged: false,
+    flagged_reason: null
+  }).catch(e => { console.error('[db] image save failed:', e.message); return null; });
+
+  const msgId = saved?.id || Date.now().toString();
+  const msgCreatedAt = saved?.created_at || new Date().toISOString();
+
+  const payload = JSON.stringify({
+    type: 'room_message', id: msgId, sender_name, sender_emoji: sender_emoji || '',
+    sender_lang: 'he', original_text: '📷',
+    translations: { he: '📷', ar: '📷', en: '📷' },
+    image_url, created_at: msgCreatedAt
+  });
+
+  const roomWs = rooms.get(id);
+  if (roomWs?.members) {
+    roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  }
+  res.json({ ok: true, id: msgId, image_url });
+});
+
 // Send voice message
 app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   const { id } = req.params;
@@ -844,6 +913,28 @@ app.get('/api/admin/flagged-messages', async (req, res) => {
   if (!SB_URL) return res.json([]);
   const rows = await sbQuery('messages', `flagged=eq.true&order=created_at.desc&limit=50&select=id,room_id,sender_name,original_text,flagged_reason,created_at`);
   res.json(rows);
+});
+
+// ── Admin: storage usage ──────────────────────────────────────────────────────
+// Returns count of active (non-expired) image messages and estimated MB used.
+app.get('/api/admin/storage-usage', async (req, res) => {
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  if (!SB_URL) return res.json({ count: 0, size_estimate_mb: 0 });
+  try {
+    const r = await fetch(
+      `${SB_URL}/rest/v1/messages?image_url=not.is.null&select=id`,
+      { headers: { ...sbHeaders(), 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } }
+    );
+    const contentRange = r.headers.get('content-range') || '';
+    const total = parseInt((contentRange.split('/')[1] || '0'), 10) || 0;
+    const size_estimate_mb = Math.round(total * 0.12 * 10) / 10; // ~120 KB avg after compression
+    res.json({ count: total, size_estimate_mb });
+  } catch(e) {
+    console.error('[storage-usage]', e.message);
+    res.json({ count: 0, size_estimate_mb: 0, error: e.message });
+  }
 });
 
 // ── Rename a user across every room they're in ────────────────────────────────
@@ -1200,6 +1291,43 @@ wss.on('connection', (ws, req) => {
     ws.on('error', err => console.error('Listener error room=' + roomId + ':', err.message));
   }
 });
+
+// ── Daily image cleanup (30-day TTL) ─────────────────────────────────────────
+// Deletes images from Supabase Storage and nulls out image_url in DB for
+// messages older than 30 days, keeping storage usage near zero over time.
+async function cleanupOldImages() {
+  if (!SB_URL || !SB_KEY) return;
+  console.log('[cleanup] image TTL pass...');
+  try {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const old = await sbQuery(
+      'messages',
+      `image_url=not.is.null&created_at=lt.${cutoff}&select=id,image_url&limit=200`
+    );
+    if (!old.length) { console.log('[cleanup] no old images'); return; }
+    for (const msg of old) {
+      const match = (msg.image_url || '').match(/\/storage\/v1\/object\/public\/images\/(.+)$/);
+      if (match) {
+        const filePath = match[1];
+        await fetch(`${SB_URL}/storage/v1/object/images/${filePath}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+        }).catch(e => console.warn('[cleanup] delete storage fail:', e.message));
+      }
+      await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msg.id}`, {
+        method: 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ image_url: null })
+      }).catch(e => console.warn('[cleanup] null image_url fail:', e.message));
+    }
+    console.log(`[cleanup] purged ${old.length} old images`);
+  } catch(e) {
+    console.error('[cleanup] error:', e.message);
+  }
+}
+// First pass: 2 minutes after startup (so server is stable). Then every 24 h.
+setTimeout(cleanupOldImages, 2 * 60 * 1000);
+setInterval(cleanupOldImages, 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
