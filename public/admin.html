@@ -9,7 +9,7 @@
   :root {
     --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
     --accent: #8B2FC9; --accent2: #7928b0; --text: #f0e8ff; --muted: #9b7fc4;
-    --danger: #c0392b; --warn: #c0845a;
+    --danger: #c0392b; --warn: #c0845a; --green: #4caf7d;
   }
   body {
     font-family: 'Segoe UI', Arial, sans-serif;
@@ -61,6 +61,42 @@
   .days-select { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .days-btn { padding: .35rem .7rem; font-size: .8rem; }
   .err { color: #e07070; font-size: .85rem; padding: .5rem 0; }
+
+  /* ── Dashboard ── */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+    margin-bottom: .75rem;
+  }
+  .dash-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: .85rem 1rem;
+    display: flex; flex-direction: column; gap: .3rem;
+    cursor: default;
+  }
+  .dash-card.clickable { cursor: pointer; transition: border-color .15s; }
+  .dash-card.clickable:hover { border-color: var(--accent); }
+  .dash-icon { font-size: 1.3rem; line-height: 1; }
+  .dash-label { font-size: .72rem; color: var(--muted); }
+  .dash-value {
+    font-size: 1.6rem; font-weight: 700; line-height: 1.1;
+    color: var(--text);
+  }
+  .dash-value.ok   { color: var(--green); }
+  .dash-value.warn { color: var(--warn); }
+  .dash-value.bad  { color: var(--danger); }
+  .dash-sub { font-size: .72rem; color: var(--muted); }
+  .dash-bar-track {
+    height: 4px; background: var(--border);
+    border-radius: 2px; overflow: hidden; margin-top: .2rem;
+  }
+  .dash-bar-fill {
+    height: 100%; border-radius: 2px; transition: width .4s;
+  }
+  .dash-refresh {
+    display: flex; justify-content: flex-end; margin-bottom: .5rem;
+  }
 </style>
 </head>
 <body>
@@ -75,12 +111,28 @@
   <div id="app">
     <h1>Babel Fish — Admin</h1>
     <div class="tabs">
-      <button class="tab-btn active" data-tab="flagged" onclick="switchTab('flagged')">🚩 הודעות מסומנות</button>
-      <button class="tab-btn" data-tab="usage" onclick="switchTab('usage')">💰 הוצאות API</button>
-      <button class="tab-btn" data-tab="feedback" onclick="switchTab('feedback')">📝 פידבק</button>
+      <button class="tab-btn active" data-tab="dash"     onclick="switchTab('dash')">📊 דשבורד</button>
+      <button class="tab-btn"        data-tab="flagged"  onclick="switchTab('flagged')">🚩 מסומנות</button>
+      <button class="tab-btn"        data-tab="usage"    onclick="switchTab('usage')">💰 API</button>
+      <button class="tab-btn"        data-tab="feedback" onclick="switchTab('feedback')">📝 פידבק</button>
     </div>
 
-    <div id="tab-flagged" class="tab-panel active card">
+    <!-- Dashboard -->
+    <div id="tab-dash" class="tab-panel active card">
+      <div class="dash-refresh">
+        <button class="secondary days-btn" onclick="loadDashboard()">🔄 רענן</button>
+      </div>
+      <div class="dash-grid" id="dashGrid">
+        <div class="dash-card"><div class="dash-icon">⏳</div><div class="dash-label">טוען…</div></div>
+        <div class="dash-card"><div class="dash-icon">⏳</div><div class="dash-label">טוען…</div></div>
+        <div class="dash-card"><div class="dash-icon">⏳</div><div class="dash-label">טוען…</div></div>
+        <div class="dash-card"><div class="dash-icon">⏳</div><div class="dash-label">טוען…</div></div>
+      </div>
+      <div id="dashErr"></div>
+    </div>
+
+    <!-- Flagged -->
+    <div id="tab-flagged" class="tab-panel card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
         <span class="loading" id="flaggedStatus"></span>
         <button class="secondary" onclick="loadFlagged()">🔄 רענן</button>
@@ -88,6 +140,7 @@
       <div id="flaggedList"></div>
     </div>
 
+    <!-- Usage -->
     <div id="tab-usage" class="tab-panel card">
       <div class="days-select">
         <button class="days-btn secondary" onclick="loadUsage(7)">7 ימים</button>
@@ -104,6 +157,7 @@
       </div>
     </div>
 
+    <!-- Feedback -->
     <div id="tab-feedback" class="tab-panel card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
         <span class="loading" id="feedbackStatus"></span>
@@ -122,7 +176,7 @@
     SECRET = v;
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    loadFlagged();
+    loadDashboard();
   }
   document.getElementById('secretInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
@@ -130,12 +184,103 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'usage') loadStorage();
+    if (name === 'usage')    loadStorage();
+    if (name === 'dash')     loadDashboard();
+    if (name === 'flagged')  loadFlagged();
+    if (name === 'feedback') loadFeedback();
   }
 
   function fmtTime(iso) {
     if (!iso) return '';
     return new Date(iso).toLocaleString('he-IL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  async function loadDashboard() {
+    const grid = document.getElementById('dashGrid');
+    const errEl = document.getElementById('dashErr');
+    errEl.textContent = '';
+    // Show skeleton
+    grid.innerHTML = `
+      ${dashSkeleton('🚩','הודעות מסומנות')}
+      ${dashSkeleton('💰','עלות API — 7 ימים')}
+      ${dashSkeleton('📦','סטורג\' תמונות')}
+      ${dashSkeleton('📝','פידבקים')}
+    `;
+
+    // Fetch everything in parallel
+    const [flaggedRes, usageRes, storageRes, feedbackRes] = await Promise.allSettled([
+      fetch(`/api/admin/flagged-messages?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
+      fetch(`/api/admin/usage-report?secret=${encodeURIComponent(SECRET)}&days=7`).then(r => r.json()),
+      fetch(`/api/admin/storage-usage?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
+      fetch('/api/feedback').then(r => r.json()),
+    ]);
+
+    const flagged  = flaggedRes.status  === 'fulfilled' ? flaggedRes.value  : null;
+    const usage    = usageRes.status    === 'fulfilled' ? usageRes.value    : null;
+    const storage  = storageRes.status  === 'fulfilled' ? storageRes.value  : null;
+    const feedback = feedbackRes.status === 'fulfilled' ? feedbackRes.value : null;
+
+    // 🚩 Flagged
+    const flagCount = Array.isArray(flagged) ? flagged.length : '—';
+    const flagClass = flagCount > 0 ? 'bad' : 'ok';
+    const flagSub   = flagCount > 0 ? 'לחץ לטיפול' : 'הכל נקי 🎉';
+
+    // 💰 API cost
+    const usd    = usage?.total_usd ?? '—';
+    const usdNum = parseFloat(usd) || 0;
+    const usdClass = usdNum > 5 ? 'warn' : 'ok';
+
+    // 📦 Storage
+    const mb     = storage?.size_estimate_mb ?? 0;
+    const imgCnt = storage?.count ?? 0;
+    const pct    = Math.min(100, (mb / 1000) * 100);
+    const stColor = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
+    const stClass = pct > 80 ? 'bad' : pct > 50 ? 'warn' : 'ok';
+
+    // 📝 Feedback
+    const fbCount = Array.isArray(feedback) ? feedback.length : '—';
+
+    grid.innerHTML = `
+      <div class="dash-card clickable" onclick="switchTab('flagged')" title="עבור להודעות מסומנות">
+        <div class="dash-icon">🚩</div>
+        <div class="dash-label">הודעות מסומנות</div>
+        <div class="dash-value ${flagClass}">${flagCount}</div>
+        <div class="dash-sub">${flagSub}</div>
+      </div>
+
+      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור להוצאות API">
+        <div class="dash-icon">💰</div>
+        <div class="dash-label">עלות API — 7 ימים</div>
+        <div class="dash-value ${usdClass}">$${usd}</div>
+        <div class="dash-sub">gpt-4o-mini + Whisper</div>
+      </div>
+
+      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור לניהול סטורג'">
+        <div class="dash-icon">📦</div>
+        <div class="dash-label">סטורג' תמונות</div>
+        <div class="dash-value ${stClass}">${mb.toFixed(1)} MB</div>
+        <div class="dash-sub">${imgCnt} תמונות · ${pct.toFixed(1)}% מ-1 GB</div>
+        <div class="dash-bar-track">
+          <div class="dash-bar-fill" style="width:${pct.toFixed(1)}%;background:${stColor};"></div>
+        </div>
+      </div>
+
+      <div class="dash-card clickable" onclick="switchTab('feedback')" title="עבור לפידבק">
+        <div class="dash-icon">📝</div>
+        <div class="dash-label">פידבקים</div>
+        <div class="dash-value">${fbCount}</div>
+        <div class="dash-sub">סה"כ שהתקבלו</div>
+      </div>
+    `;
+  }
+
+  function dashSkeleton(icon, label) {
+    return `<div class="dash-card">
+      <div class="dash-icon">${icon}</div>
+      <div class="dash-label">${label}</div>
+      <div class="dash-value" style="color:var(--border);">—</div>
+    </div>`;
   }
 
   // ── Flagged messages ──────────────────────────────────────────────────────
@@ -227,7 +372,7 @@
       const data = await r.json();
       const count = data.count ?? 0;
       const mb    = data.size_estimate_mb ?? 0;
-      const pct   = Math.min(100, (mb / 1000) * 100); // 1 GB free tier
+      const pct   = Math.min(100, (mb / 1000) * 100);
       const color = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
       el.innerHTML = `
         <div style="font-size:.85rem;margin-bottom:.4rem;">
@@ -240,9 +385,7 @@
         <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">תמונות נמחקות אוטומטית אחרי 30 יום</div>
         ${pct > 80 ? '<div style="color:#e07070;font-size:.8rem;font-weight:600;margin-top:.4rem;">⚠ מעל 80% מהקיבולת — שקול מחיקה ידנית</div>' : ''}
       `;
-    } catch(e) {
-      el.innerHTML = '<p class="err">שגיאת רשת</p>';
-    }
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
   function esc(s) {
