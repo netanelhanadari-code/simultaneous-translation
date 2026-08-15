@@ -7,7 +7,8 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { -webkit-user-select: none; user-select: none; }
-  .row-text, .row-meta, .row-reason, .total-usd, td, th { -webkit-user-select: text; user-select: text; }
+  .row-text, .row-meta, .row-reason, .total-usd, td, th,
+  input[type="checkbox"] { -webkit-user-select: text; user-select: text; }
   :root {
     --bg: #12082a; --surface: #1e0f3a; --border: #3d1f6b;
     --accent: #8B2FC9; --accent2: #7928b0; --text: #f0e8ff; --muted: #9b7fc4;
@@ -261,7 +262,7 @@
     // 📝 Feedback — show unhandled count
     const fbTotal    = Array.isArray(feedback) ? feedback.length : 0;
     const handled    = getFbHandled();
-    const fbHandled  = Array.isArray(feedback) ? feedback.filter(f => handled.has(f.created_at)).length : 0;
+    const fbHandled  = Array.isArray(feedback) ? feedback.filter(f => handled.has(f.created_at || f.id || '')).length : 0;
     const fbPending  = fbTotal - fbHandled;
     const fbClass    = fbPending > 0 ? 'warn' : 'ok';
     const fbSub      = fbTotal > 0 ? `${fbHandled} טופלו · ${fbTotal} סה"כ` : 'אין פידבק עדיין';
