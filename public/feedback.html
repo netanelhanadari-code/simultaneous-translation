@@ -21,6 +21,52 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* ── Splash ── */
+  #splash {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 999;
+    transition: opacity .5s ease;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .splash-logos {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .splash-logos img { height: 56px; object-fit: contain; }
+  .splash-divider {
+    width: 1px;
+    height: 48px;
+    background: var(--border);
+  }
+  .splash-name {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    color: var(--text);
+  }
+  .splash-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--amber);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: .3; transform: scale(.8); }
+    50%      { opacity: 1;  transform: scale(1.2); }
+  }
+
+  /* ── Main content (hidden until splash done) ── */
+  #main { opacity: 0; transition: opacity .4s ease; }
+  #main.show { opacity: 1; }
+
   body {
     background: var(--bg);
     color: var(--text);
@@ -242,6 +288,19 @@
 </head>
 <body>
 
+<!-- Splash -->
+<div id="splash">
+  <div class="splash-logos">
+    <img src="/babel-fish.png" alt="Babel Fish">
+    <div class="splash-divider"></div>
+    <img src="/logo.png" alt="Logo">
+  </div>
+  <div class="splash-name">Babel Fish</div>
+  <div class="splash-dot"></div>
+</div>
+
+<!-- Main -->
+<div id="main">
 <div class="header">
   <img src="/babel-fish.png" alt="Babel Fish">
   <div class="header-divider"></div>
@@ -310,7 +369,20 @@
   <div id="reportsList"></div>
 </div>
 
+</div><!-- /main -->
+
 <script>
+  // Splash
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const splash = document.getElementById('splash');
+      const main   = document.getElementById('main');
+      splash.classList.add('hide');
+      main.classList.add('show');
+      setTimeout(() => { splash.style.display = 'none'; }, 500);
+    }, 1500);
+  });
+
   const SEV_LABEL = { low: 'קל / خفيف', med: 'בינוני / متوسط', high: 'חוסם / حرج' };
   const SEV_CLASS = { low: 'sev-low', med: 'sev-med', high: 'sev-high' };
 
