@@ -61,6 +61,24 @@
   .days-select { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .days-btn { padding: .35rem .7rem; font-size: .8rem; }
   .err { color: #e07070; font-size: .85rem; padding: .5rem 0; }
+  /* Feedback handled state */
+  .fb-row { display: flex; align-items: flex-start; gap: .6rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+  .fb-row:last-child { border-bottom: none; }
+  .fb-row.handled { opacity: .38; }
+  .fb-row.handled .row-text { text-decoration: line-through; }
+  .fb-check {
+    appearance: none; -webkit-appearance: none;
+    width: 18px; height: 18px; flex-shrink: 0; margin-top: .15rem;
+    border: 1.5px solid var(--border); border-radius: 4px;
+    background: var(--bg); cursor: pointer; position: relative;
+    transition: background .15s, border-color .15s;
+  }
+  .fb-check:checked { background: var(--accent); border-color: var(--accent); }
+  .fb-check:checked::after {
+    content: '✓'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff; font-weight: 700;
+  }
 
   /* ── Dashboard ── */
   .dash-grid {
@@ -238,8 +256,13 @@
     const stColor = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
     const stClass = pct > 80 ? 'bad' : pct > 50 ? 'warn' : 'ok';
 
-    // 📝 Feedback
-    const fbCount = Array.isArray(feedback) ? feedback.length : '—';
+    // 📝 Feedback — show unhandled count
+    const fbTotal    = Array.isArray(feedback) ? feedback.length : 0;
+    const handled    = getFbHandled();
+    const fbHandled  = Array.isArray(feedback) ? feedback.filter(f => handled.has(f.created_at)).length : 0;
+    const fbPending  = fbTotal - fbHandled;
+    const fbClass    = fbPending > 0 ? 'warn' : 'ok';
+    const fbSub      = fbTotal > 0 ? `${fbHandled} טופלו · ${fbTotal} סה"כ` : 'אין פידבק עדיין';
 
     grid.innerHTML = `
       <div class="dash-card clickable" onclick="switchTab('flagged')" title="עבור להודעות מסומנות">
@@ -268,9 +291,9 @@
 
       <div class="dash-card clickable" onclick="switchTab('feedback')" title="עבור לפידבק">
         <div class="dash-icon">📝</div>
-        <div class="dash-label">פידבקים</div>
-        <div class="dash-value">${fbCount}</div>
-        <div class="dash-sub">סה"כ שהתקבלו</div>
+        <div class="dash-label">פידבקים לא טופלו</div>
+        <div class="dash-value ${fbClass}">${fbTotal > 0 ? fbPending : '—'}</div>
+        <div class="dash-sub">${fbSub}</div>
       </div>
     `;
   }
@@ -340,25 +363,60 @@
     } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
+  // ── Feedback handled state (localStorage) ────────────────────────────────
+  function getFbHandled() {
+    try { return new Set(JSON.parse(localStorage.getItem('bf_admin_fb_handled') || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveFbHandled(set) {
+    localStorage.setItem('bf_admin_fb_handled', JSON.stringify([...set]));
+  }
+
   // ── Feedback ─────────────────────────────────────────────────────────────
   async function loadFeedback() {
     const statusEl = document.getElementById('feedbackStatus');
-    const listEl = document.getElementById('feedbackList');
+    const listEl   = document.getElementById('feedbackList');
     statusEl.textContent = 'טוען...';
     try {
       const r = await fetch('/api/feedback');
       const rows = await r.json();
       statusEl.textContent = '';
       if (!rows.length) { listEl.innerHTML = '<p class="empty">אין פידבק</p>'; return; }
-      listEl.innerHTML = rows.map(f => `
-        <div class="row">
-          <div class="row-main">
-            <div class="row-meta">${esc(f.name)} · ${esc(f.room_id || '—')} · ${esc(f.device || '')} · ${fmtTime(f.created_at)}</div>
-            <div class="row-text"><strong>מה קרה:</strong> ${esc(f.what_happened)}</div>
-            ${f.expected ? `<div class="row-text"><strong>ציפייה:</strong> ${esc(f.expected)}</div>` : ''}
-          </div>
-        </div>
-      `).join('');
+
+      const handled = getFbHandled();
+      listEl.innerHTML = '';
+
+      rows.forEach(f => {
+        const key       = f.created_at || f.id || '';
+        const isHandled = handled.has(key);
+
+        const div = document.createElement('div');
+        div.className = 'fb-row' + (isHandled ? ' handled' : '');
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'fb-check';
+        cb.checked = isHandled;
+        cb.title = isHandled ? 'מסומן כטופל — לחץ לביטול' : 'סמן כטופל';
+        cb.addEventListener('change', () => {
+          const h = getFbHandled();
+          if (cb.checked) h.add(key); else h.delete(key);
+          saveFbHandled(h);
+          div.classList.toggle('handled', cb.checked);
+        });
+
+        const main = document.createElement('div');
+        main.className = 'row-main';
+        main.innerHTML = `
+          <div class="row-meta">${esc(f.name)} · ${esc(f.room_id || '—')} · ${esc(f.device || '')} · ${fmtTime(f.created_at)}</div>
+          <div class="row-text"><strong>מה קרה:</strong> ${esc(f.what_happened)}</div>
+          ${f.expected ? `<div class="row-text"><strong>ציפייה:</strong> ${esc(f.expected)}</div>` : ''}
+        `;
+
+        div.appendChild(cb);
+        div.appendChild(main);
+        listEl.appendChild(div);
+      });
     } catch(e) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
