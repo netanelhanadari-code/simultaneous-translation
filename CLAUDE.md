@@ -1,7 +1,11 @@
 # Babel Fish — Project Context
 
-## כלל עבודה
-**לפני כל שינוי קוד** — לסכם מה הובן ומה צפוי לצאת, ולשאול "לבצע?" לפני כתיבת קוד.
+## כללי עבודה (חובה)
+1. **לפני כל שינוי קוד** — לסכם מה הובן ומה מתוכנן לשנות, ולשאול "לכתוב?" לפני כתיבת קוד. לא לבצע שינויים ביוזמה עצמית.
+2. **שפה:** כאשר יש פקודות מעורבות — לכתוב הכל באנגלית. שיחה עקרונית בלבד — אפשר בעברית.
+3. **PowerShell בלבד:** פקודות git ו-shell חייבות להיות תואמות PowerShell. אין `&&` — שימוש ב-`;` או שורות נפרדות. `Move-Item` במקום `mv`, `Remove-Item` במקום `rm`.
+4. **אין Preview ואין הצגת קבצים:** לא לשלוח SendUserFile לשום קובץ (HTML, txt, או אחר) — לא להציג תוצר, לא "transfer only". לשמור ישירות ל-device ולתת פקודת push בלבד. אם רוצים UUID לצורך device_commit_files — להשתמש בשם קובץ שלא יגרום ל-render, אך גם אז לא לשלוח ל-user.
+5. **פתיחת יום:** בתחילת כל סשן — לתת סקירה קצרה: מה פתוח (משימות), מה התווסף לפידבק מאז הסשן הקודם.
 
 ---
 
@@ -244,7 +248,23 @@ function linkify(html) { ... }
 - [x] **כפתור הקלטה מתחבא מאחורי שורת ניווט אנדרואיד** — תוקן (ראו "Android WebView/TWA viewport height instability" למעלה)
 - [x] **עריכת הודעה** — נבנה, לחיצה ארוכה → תפריט (✏️ ערוך / 🗑️ מחק)
 - [x] **דיווח הוצאות API + בקרת תוכן פוגעני** — נבנה admin.html + moderation אוטומטי
-- [ ] **פידבק RTL באנדרואיד** — feedback.html מיושר שמאל באנדרואיד (עדיין לא טופל בפועל)
+- [x] **פידבק RTL באנדרואיד** — תוקן: הוסרה `direction:rtl` מה-`body`, הועברה ל-`.wrap` בלבד
+- [x] **user-select:none** — נוסף לכל הדפים (room.html, admin.html, feedback.html) למניעת popup גוגל בלחיצה ארוכה
+- [x] **Admin dashboard** — נוסף טאב דשבורד ראשי עם 4 כרטיסים: מסומנות / עלות API / סטורג' / פידבק
+- [x] **Feedback checkboxes** — נוספו checkboxes לטאב הפידבק בadmin, מתמידים ב-localStorage
+- [ ] **Image upload** — קוד מוכן ב-server.js ו-room.html, **אך צריך:**
+  - צור bucket בשם `images` ב-Supabase (Public, allow anon upload)
+  - הרץ migration: `alter table messages add column if not exists image_url text;`
+- [ ] **Bug: feedback checkboxes מתאפסים** — ייתכן שני גורמים:
+  - `user-select:none` על body עלול למנוע `change` event ב-checkbox בחלק מהדפדפנים → צריך להוסיף `input[type="checkbox"]` לרשימת ה-re-enable
+  - Key mismatch: loadDashboard משתמש ב-`f.created_at` ישירות, loadFeedback משתמש ב-`f.created_at || f.id` — לאחד ל-`f.id`
+- [ ] **feedback.html כפול ב-root** — נוצר בטעות קובץ `feedback.html` בתיקיית ה-root של הפרויקט (לא ב-public/). למחוק ידנית מ-Explorer.
+- [ ] **git push** — feedback.html ו-admin.html עודכנו מקומית אך לא נדחפו עדיין. לאחר תיקון bug הcheckboxes:
+  ```
+  git add public/admin.html public/feedback.html
+  git commit -m "fix: feedback checkboxes persistence + user-select re-enable"
+  git push
+  ```
 - [ ] **הודעות ברוכים הבאים** בחאן אל-אחמר — לבדוק אם נכתבו מחדש אחרי מחיקת הגרבאג'
 - [ ] **וידאו הדגמה** — תסריט מוכן (`תסריט וידאו - Babel Fish.md`), עדיין לא צולם/הופק
 
