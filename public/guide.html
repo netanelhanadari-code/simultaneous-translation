@@ -56,11 +56,12 @@
     padding: 8px 12px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 8px;
-    direction: rtl;
   }
   .back-btn {
+    position: absolute;
+    left: 12px;
     background: none;
     border: none;
     color: var(--muted);
@@ -69,7 +70,6 @@
     padding: 2px 6px;
     border-radius: 6px;
     line-height: 1;
-    margin-right: auto;
   }
   .back-btn:active { opacity: .7; }
   #lang-select {
@@ -390,6 +390,7 @@
 
 <!-- Lang bar -->
 <div id="lang-bar">
+  <button class="back-btn" onclick="history.back()">‹</button>
   <span style="color:var(--muted);font-size:1.1rem;">🌐</span>
   <select id="lang-select">
     <option value="he" selected>עברית</option>
@@ -403,7 +404,6 @@
     <input type="text" id="lang-other" placeholder="שם השפה באנגלית, למשל: French">
     <button id="lang-go">תרגם</button>
   </div>
-  <button class="back-btn" onclick="history.back()">‹</button>
 </div>
 
 <!-- Page content -->
@@ -496,7 +496,7 @@
       </figure>
       <figure class="ss-fig">
         <img src="/screenshots/room-lila.png" alt="ليلى — ערבית">
-        <figcaption>ليلى 🌸 — ערבית</figcaption>
+        <figcaption>ليلى 🌸 — العربية</figcaption>
       </figure>
     </div>
   </div>
