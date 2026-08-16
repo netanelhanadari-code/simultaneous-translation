@@ -53,18 +53,25 @@
     background: rgba(18,8,42,.92);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
     direction: rtl;
   }
-  #lang-bar label {
-    font-size: 13px;
+  .back-btn {
+    background: none;
+    border: none;
     color: var(--muted);
-    white-space: nowrap;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    line-height: 1;
+    margin-left: auto;
   }
+  .back-btn:active { opacity: .7; }
   #lang-select {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -383,7 +390,8 @@
 
 <!-- Lang bar -->
 <div id="lang-bar">
-  <label for="lang-select">🌐 שפת המדריך:</label>
+  <button class="back-btn" onclick="history.back()">‹</button>
+  <span style="color:var(--muted);font-size:1.1rem;">🌐</span>
   <select id="lang-select">
     <option value="he" selected>עברית</option>
     <option value="ar">العربية</option>
@@ -479,12 +487,12 @@
         <figcaption>יעל 🐙 — עברית</figcaption>
       </figure>
       <figure class="ss-fig">
-        <img src="/screenshots/room-worf.png" alt="Worf — English">
-        <figcaption>Worf 🖖 — English</figcaption>
+        <img src="/screenshots/room-worf.png" alt="Worf — Klingon">
+        <figcaption>Worf 🖖 — Klingon</figcaption>
       </figure>
       <figure class="ss-fig">
-        <img src="/screenshots/room-alex.png" alt="Alex — Español">
-        <figcaption>Alex 🤖 — Español</figcaption>
+        <img src="/screenshots/room-alex.png" alt="Alex — English">
+        <figcaption>Alex 🤖 — English</figcaption>
       </figure>
       <figure class="ss-fig">
         <img src="/screenshots/room-lila.png" alt="לילי — ערבית">

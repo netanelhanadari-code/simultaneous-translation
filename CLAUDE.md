@@ -29,6 +29,9 @@ Real-time multilingual IM app. Users join rooms, send voice or text messages, an
 - `public/admin.html` — Password-gated admin dashboard (enter REPORT_SECRET once): flagged messages + delete, API cost report, feedback list. Not linked from anywhere in the app nav — direct URL only
 - `public/broadcaster.html` — Live event one-way broadcast mode
 - `public/listener.html` — Listener for live event broadcasts
+- `public/guide.html` — User guide / onboarding page. Multilingual (he/ar/en + API for others). Linked via ℹ️ button in home.html header. Contains screenshots gallery. BUILT_IN vetted translations for ar/en stored instantly via `pretranslated:true` flag, other langs use GPT from English source.
+- `public/lang-select.html` — First-run language picker. Rotating tagline with `dir="auto"`. Logos: logo.png + babel-fish.png with divider.
+- `public/screenshots/` — PNG files. Use **ASCII filenames only** (Hebrew filenames break URL routing). Mapping: `home.png`=קבוצות, `room.png`=1_יעל, `room-worf.png`=2_וורף, `room-alex.png`=3_alex, `room-lila.png`=4_לילה, `recording.png`=הקלטה, `wave.png`=הקלטת הודעה, `settings.png`=הגדרות משתמש
 - `תסריט וידאו - Babel Fish.md` — script for a 2:30-3:00 explainer video (Hebrew), aimed at עומדים ביחד members, for a landing page. Not yet produced.
 
 ## Database (Supabase)
@@ -75,6 +78,23 @@ alter table messages add column if not exists edited_at timestamptz;
 - `REPORT_SECRET` — arbitrary password required as `?secret=` on `/api/admin/usage-report` so it isn't publicly scrapeable
 
 ---
+
+## Critical patterns in guide.html / page-content API
+
+```js
+// BUILT_IN pattern — vetted translations, no GPT:
+const BUILT_IN = { en: { hero_title: 'Welcome to <span>Babel Fish</span>', ... }, ar: { ... } };
+
+// applyLang flow:
+// 'he' → reload() | BUILT_IN lang → apply + seed DB with pretranslated:true | other → check cache → GPT from BUILT_IN.en
+
+// pretranslated flag in server.js POST /api/page-content/translate:
+const { lang, texts, pretranslated } = req.body;
+if (pretranslated) { /* store entries directly, skip GPT */ return res.json(translated); }
+
+// applyTranslations: innerHTML (keeps <span>), display:none if val===''
+// RTL direction applied to: .page, .quote-block, .step-body p/strong, .feat-desc, .section p, .tip, .share-box p, .footer p
+```
 
 ## Critical patterns in server.js
 
@@ -200,6 +220,22 @@ function linkify(html) { ... }
 ### Scroll-fights-user bug (fixed)
 - The `scroll` listener on `#messages` called `dismissUnread()` (which force-set `scrollTop = scrollHeight`) any time within 60px of the bottom — so a slow drag away from the last message got yanked back on every scroll event; only a fast flick had enough velocity to escape
 - Fixed by splitting into `clearUnreadState()` (badge-hiding only, used by the passive scroll listener) vs `dismissUnread()` (badge-hiding + scroll-to-bottom, only for the explicit "new messages" badge tap)
+
+### Voice recording wave animation (room.html)
+- Canvas element `#waveCanvas` (40px tall, display:none) sits above the input row
+- `startWave()` / `stopWave()` called on recording start/stop
+- `analyser.getByteTimeDomainData(data)`, amplified `AMP=4`, `shadowBlur=10`, `shadowColor:#8B2FC9`, `strokeStyle:#c084fc`
+
+### Guide page (guide.html)
+- Linked via ℹ️ button in home.html header
+- Sticky lang bar: back button `‹` (`history.back()`) on left, 🌐 icon + `<select>` on right — no text label
+- BUILT_IN object: vetted ar/en translations, applied instantly without API
+- Other languages: translate FROM `BUILT_IN.en` (better GPT quality than from Hebrew)
+- `pretranslated:true` flag in POST body → server skips GPT, stores directly in Supabase
+- `applyTranslations(map, lang)`: `innerHTML` (preserves `<span>` in hero_title), `display:none` if val is `''`
+- `resetToHebrew()` = `location.reload()` (simplest way to restore all Hebrew HTML)
+- Screenshots gallery: perspectives row shows same room from 4 users' POV
+  - Worf 🖖 — Klingon | יעל 🐙 — עברית | Alex 🤖 — English | לילי 🌸 — ערבית
 
 ### Home screen splash
 - Only replays on first load of the session or an explicit refresh (`performance.getEntriesByType('navigation')[0].type === 'reload'`) — not on back-navigation from a room, via a sessionStorage flag
