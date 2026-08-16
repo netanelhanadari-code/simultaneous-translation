@@ -844,10 +844,24 @@ app.get('/api/page-content', async (req, res) => {
 });
 
 app.post('/api/page-content/translate', express.json(), async (req, res) => {
-  const { lang, texts } = req.body;
+  const { lang, texts, pretranslated } = req.body;
   if (!lang || !texts || typeof texts !== 'object') return res.status(400).json({ error: 'missing' });
   const entries = Object.entries(texts);
   if (!entries.length) return res.json({});
+
+  // Pre-translated (vetted) content — just store, skip GPT
+  if (pretranslated) {
+    const translated = Object.fromEntries(entries);
+    if (SB_URL) {
+      const rows = entries.filter(([, text]) => text !== '').map(([key, text]) => ({ key, lang, text }));
+      if (rows.length) await fetch(`${SB_URL}/rest/v1/page_content`, {
+        method: 'POST',
+        headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(rows)
+      }).catch(() => {});
+    }
+    return res.json(translated);
+  }
   const translated = {};
   await Promise.all(entries.map(async ([key, src]) => {
     try {

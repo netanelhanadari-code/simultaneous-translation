@@ -618,52 +618,150 @@
     if (v) applyLang(v);
   });
 
+  // ── Vetted translations (he source is in the HTML; ar/en are here) ──────────
+  const BUILT_IN = {
+    en: {
+      hero_title: 'Welcome to <span>Babel Fish</span>',
+      quote_he: '',   // English original already shown below — hide the translation
+      what_title: 'What is Babel Fish?',
+      what_p1: 'Babel Fish is a real-time communication app that lets people speaking different languages talk to each other — before you\'ve had a chance to learn each other\'s language.',
+      what_p2: 'Every message — voice or text — is automatically translated into each participant\'s language and read aloud. Arabic, Hebrew, English, Russian, Amharic — everything flows.',
+      start_title: 'Getting Started',
+      step1_title: 'Choose a name and emoji',
+      step1_desc: 'On the home screen — enter a name (you can change it anytime in settings) and choose an emoji that represents you.',
+      step2_title: 'Choose your language',
+      step2_desc: 'Choose the language you want to read messages in — this is the language everything will be translated into for you.',
+      step3_title: 'Join or create a room',
+      step3_desc: 'Enter a room code you received, or press "New Room" and send the code to your friends.',
+      step4_title: 'Start talking',
+      step4_desc: 'Send a voice or text message — and it reaches everyone in their language.',
+      voice_title: 'Voice Messages',
+      voice_p1: 'Press the microphone button — and start speaking. Press again — the recording is sent. The app automatically detects the language you spoke and translates it for everyone.',
+      voice_p2: 'Incoming messages are read aloud in your language. Want silence? — press the speaker button to mute the reading.',
+      voice_tip: 'For best results — speak clearly and avoid very noisy environments.',
+      text_title: 'Text Messages',
+      text_p1: 'Type in the text field at the bottom of the screen and press send (or Enter on the keyboard). Text is automatically detected by script — Hebrew, Arabic, Latin — and translated accordingly.',
+      text_p2: 'Long-press your own message to open a menu — you can edit or delete it.',
+      text_p3: 'Press the 🌐 globe button on a message — to see the original in the language it was sent in.',
+      langs_title: 'Languages & Translation',
+      feat1_title: 'Real-time translation',
+      feat1_desc: 'Every message is translated within seconds to all languages of the room participants.',
+      feat2_title: 'Automatic language detection',
+      feat2_desc: 'No need to specify what you\'re sending — the app detects it automatically.',
+      feat3_title: '35+ languages',
+      feat3_desc: 'Including Hebrew, Arabic, English, Russian, Amharic, Spanish, French and more.',
+      feat4_title: 'On-demand translation',
+      feat4_desc: 'Joined a room after messages were sent? The app will translate them retroactively.',
+      settings_title: 'Personal Settings',
+      settings_p1: 'Press your name at the top of the screen to access settings. There you can change your name, emoji, language — and even upload a profile picture.',
+      settings_tip: 'Changing your language in settings will affect all your rooms — all messages will be translated to the new language.',
+      share_title: 'Share a Room',
+      share_p1: 'Every room has a unique 5-character code. Send it to friends — and they can join directly from the home screen.',
+      share_cta: 'Want to try? Open the app and create a new room.',
+      share_btn: '→ Open Babel Fish',
+      perspectives_label: 'Same room — four languages, four perspectives:',
+      footer: 'Babel Fish · Standing Together · All rights reserved'
+    },
+    ar: {
+      hero_title: 'أهلاً بكم في <span>بابل فيش</span>',
+      quote_he: 'النتيجة العملية لكل هذا أنك إذا أدخلت سمكة بابل في أذنك، يمكنك على الفور فهم أي شيء يُقال لك بأي لغة. إنها مصادفة غريبة بعيدة الاحتمال أن شيئاً بالغ الفائدة إلى هذا الحد قد تطوّر بمحض الصدفة.',
+      what_title: 'ما هو بابل فيش؟',
+      what_p1: 'بابل فيش تطبيق للتواصل الفوري يتيح للأشخاص الذين يتحدثون لغات مختلفة التحدث مع بعضهم — قبل أن تتعلموا لغة بعضكم.',
+      what_p2: 'كل رسالة — صوتية أو نصية — تُترجم تلقائياً إلى لغة كل مشارك وتُقرأ بصوت عالٍ. العربية، العبرية، الإنجليزية، الروسية، الأمهرية — كل شيء يتدفق.',
+      start_title: 'كيف نبدأ؟',
+      step1_title: 'اختر اسماً ورمزاً تعبيرياً',
+      step1_desc: 'في الشاشة الرئيسية — اكتب اسماً (يمكنك تغييره في أي وقت من الإعدادات) واختر رمزاً تعبيرياً يمثلك.',
+      step2_title: 'اختر لغتك',
+      step2_desc: 'اختر اللغة التي تريد قراءة الرسائل بها — هذه هي اللغة التي سيُترجم إليها كل شيء من أجلك.',
+      step3_title: 'انضم إلى غرفة أو افتح غرفة جديدة',
+      step3_desc: 'اكتب رمز الغرفة الذي استلمته، أو اضغط "غرفة جديدة" وأرسل الرمز لأصدقائك.',
+      step4_title: 'ابدأ الحديث',
+      step4_desc: 'أرسل رسالة صوتية أو نصية — وستصل للجميع بلغتهم.',
+      voice_title: 'الرسائل الصوتية',
+      voice_p1: 'اضغط زر الميكروفون — وابدأ الكلام. اضغط مرة أخرى — تُرسل التسجيلة. يكتشف التطبيق تلقائياً اللغة التي تحدثت بها ويترجمها للجميع.',
+      voice_p2: 'الرسائل الواردة تُقرأ بصوت عالٍ بلغتك. تريد الصمت؟ — اضغط زر السماعة لإيقاف القراءة.',
+      voice_tip: 'للحصول على أفضل النتائج — تكلم بوضوح وابتعد عن البيئات الصاخبة.',
+      text_title: 'الرسائل النصية',
+      text_p1: 'اكتب في حقل النص في أسفل الشاشة واضغط إرسال (أو Enter من لوحة المفاتيح). يُكتشف النص تلقائياً حسب الخط — عبري، عربي، لاتيني — ويُترجم وفقاً لذلك.',
+      text_p2: 'اضغط مطولاً على رسالتك لفتح القائمة — يمكنك تعديلها أو حذفها.',
+      text_p3: 'اضغط 🌐 على أي رسالة — لرؤية النص الأصلي باللغة التي كُتبت بها.',
+      langs_title: 'اللغات والترجمة',
+      feat1_title: 'ترجمة فورية',
+      feat1_desc: 'كل رسالة تُترجم في ثوانٍ إلى جميع لغات المشاركين في الغرفة.',
+      feat2_title: 'كشف اللغة تلقائياً',
+      feat2_desc: 'لا حاجة لتحديد ما ترسله — التطبيق يكتشف ذلك تلقائياً.',
+      feat3_title: 'أكثر من 35 لغة',
+      feat3_desc: 'بما في ذلك العربية، العبرية، الإنجليزية، الروسية، الأمهرية، الإسبانية، الفرنسية وأكثر.',
+      feat4_title: 'ترجمة عند الطلب',
+      feat4_desc: 'انضممت إلى الغرفة بعد إرسال رسائل؟ سيترجمها التطبيق بأثر رجعي.',
+      settings_title: 'الإعدادات الشخصية',
+      settings_p1: 'اضغط على اسمك في أعلى الشاشة للدخول إلى الإعدادات. هناك يمكنك تغيير اسمك، الرمز التعبيري، اللغة — بل وتحميل صورة ملف شخصي.',
+      settings_tip: 'تغيير لغتك في الإعدادات سيؤثر على جميع غرفك — ستُترجم جميع الرسائل إلى اللغة الجديدة.',
+      share_title: 'مشاركة الغرفة',
+      share_p1: 'لكل غرفة رمز فريد من 5 أحرف. أرسله لأصدقائك — ويمكنهم الانضمام مباشرة من الشاشة الرئيسية.',
+      share_cta: 'تريد تجربته؟ افتح التطبيق وأنشئ غرفة جديدة.',
+      share_btn: '← افتح بابل فيش',
+      perspectives_label: 'نفس الغرفة — أربع لغات، أربع وجهات نظر:',
+      footer: 'بابل فيش · نقف معاً · جميع الحقوق محفوظة'
+    }
+  };
+
   async function applyLang(lang) {
     if (lang === 'he') { resetToHebrew(); return; }
-    showOverlay(`מתרגם ל-${lang}…`);
+
+    // ar / en — use vetted built-in translations (no API call needed)
+    if (BUILT_IN[lang]) {
+      applyTranslations(BUILT_IN[lang], lang);
+      // Silently seed DB so other pages benefit too
+      fetch('/api/page-content/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lang, texts: BUILT_IN[lang], pretranslated: true })
+      }).catch(() => {});
+      return;
+    }
+
+    // All other languages — translate from English (better quality than from Hebrew)
+    showOverlay(`Translating to ${lang}…`);
     try {
-      // 1. Try to load from DB cache
+      // 1. Try DB cache first
       const cached = await fetch(`/api/page-content?lang=${encodeURIComponent(lang)}`).then(r => r.json());
       if (cached && Object.keys(cached).length > 0) {
-        applyTranslations(cached);
+        applyTranslations(cached, lang);
         hideOverlay();
         return;
       }
-      // 2. Collect all keys + Hebrew source texts
-      const keys = {};
-      document.querySelectorAll('[data-key]').forEach(el => {
-        keys[el.dataset.key] = el.innerText.trim();
-      });
-      // 3. Send to server to translate + cache
+      // 2. Translate from English
       const result = await fetch('/api/page-content/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lang, texts: keys })
+        body: JSON.stringify({ lang, texts: BUILT_IN.en })
       }).then(r => r.json());
-      applyTranslations(result);
-    } catch (e) {
-      console.error(e);
-    }
+      applyTranslations(result, lang);
+    } catch (e) { console.error(e); }
     hideOverlay();
   }
 
-  function applyTranslations(map) {
+  function applyTranslations(map, lang) {
     document.querySelectorAll('[data-key]').forEach(el => {
       const key = el.dataset.key;
-      if (map[key]) el.innerText = map[key];
+      if (!(key in map)) return;
+      const val = map[key];
+      if (val === '' || val == null) {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+        el.innerHTML = val;   // innerHTML preserves <span> in hero_title
+      }
     });
-    // Adjust page direction
-    // (for Arabic/Hebrew keep RTL, for others switch to LTR)
-    const rtlLangs = ['he','ar'];
-    const isRTL = rtlLangs.includes(langSelect.value) || false;
-    document.querySelectorAll('.page, .quote-block, .step-body p, .step-body strong, .feat-desc, .section p').forEach(el => {
+    const isRTL = ['he', 'ar'].includes(lang);
+    document.querySelectorAll('.page, .quote-block, .step-body p, .step-body strong, .feat-desc, .section p, .tip, .share-box p, .footer p').forEach(el => {
       el.style.direction = isRTL ? 'rtl' : 'ltr';
-      el.style.textAlign = isRTL ? 'right' : 'left';
+      el.style.textAlign  = isRTL ? 'right' : 'left';
     });
   }
 
   function resetToHebrew() {
-    // Just reload — source is Hebrew
     location.reload();
   }
 
