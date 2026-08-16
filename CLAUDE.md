@@ -255,24 +255,12 @@ function linkify(html) { ... }
 - [ ] **Image upload** — קוד מוכן ב-server.js ו-room.html, **אך צריך:**
   - צור bucket בשם `images` ב-Supabase (Public, allow anon upload)
   - הרץ migration: `alter table messages add column if not exists image_url text;`
-- [ ] **Bug: feedback checkboxes מתאפסים** — ייתכן שני גורמים:
-  - `user-select:none` על body עלול למנוע `change` event ב-checkbox בחלק מהדפדפנים → צריך להוסיף `input[type="checkbox"]` לרשימת ה-re-enable
-  - Key mismatch: loadDashboard משתמש ב-`f.created_at` ישירות, loadFeedback משתמש ב-`f.created_at || f.id` — לאחד ל-`f.id`
-- [ ] **feedback.html כפול ב-root** — נוצר בטעות קובץ `feedback.html` בתיקיית ה-root של הפרויקט (לא ב-public/). למחוק ידנית מ-Explorer.
-- [ ] **git push** — feedback.html ו-admin.html עודכנו מקומית אך לא נדחפו עדיין. לאחר תיקון bug הcheckboxes:
-  ```
-  git add public/admin.html public/feedback.html
-  git commit -m "fix: feedback checkboxes persistence + user-select re-enable"
-  git push
-  ```
+- [x] **Bug: feedback checkboxes מתאפסים** — תוקן: הוסף `input[type="checkbox"]` לרשימת user-select:text; key אוחד ל-`f.created_at || f.id || ''`
+- [x] **feedback.html** — נכתב מחדש לגמרי (FROM SCRATCH): עיצוב חדש, RTL נקי ללא `dir="rtl"` על html, splash screen זהה ל-home.html (שני לוגואים: logo.png + babel-fish.png), שדות מדויקים לפי DB
 - [ ] **הודעות ברוכים הבאים** בחאן אל-אחמר — לבדוק אם נכתבו מחדש אחרי מחיקת הגרבאג'
 - [ ] **וידאו הדגמה** — תסריט מוכן (`תסריט וידאו - Babel Fish.md`), עדיין לא צולם/הופק
 
 ### תשתית
-- [ ] **SQL migrations** — לוודא שהורצו ב-Supabase (ראה למעלה, כולל flagged/edited)
+- [x] **SQL migrations** — הורצו ב-Supabase (flagged/edited/avatar/push_subscriptions/feedback)
 - [x] **worf.png** — קיים ב-`public/worf.png`
 - [ ] **assetlinks.json** — אם רוצים TWA מלא עם Push ב-APK
-- [ ] **ניקוי חדר "האקווריום" (A2YO3)** — חדר בדיקה ששימש לצילומי מסך; המשתמש התחזה זמנית ל-Worf/יעל/ليلى/Alex דרך localStorage כדי לצלם מכל נקודת מבט, מה שיצר entries אמיתיים של אותם שמות ב-`room_members`. למחוק אותם כשנוח (לא דחוף — לא משפיע על חדרים אחרים):
-```sql
-delete from room_members where room_id = 'A2YO3' and name in ('Worf','יעל','ليلى','Alex');
-```

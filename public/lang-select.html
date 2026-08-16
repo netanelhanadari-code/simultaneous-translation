@@ -42,6 +42,23 @@
   #splash.hidden { opacity: 0; pointer-events: none; }
   #splash img { width: min(220px, 62vw); object-fit: contain; }
 
+  /* ── Page logos ── */
+  .page-logos {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .page-logos img {
+    height: 36px;
+    object-fit: contain;
+  }
+  .logo-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+  }
+
   /* ── Globe ── */
   .globe-wrap {
     position: relative;
@@ -220,6 +237,13 @@
   <p id="loading-msg">מכין את האפליקציה…</p>
 </div>
 
+<!-- Page logos -->
+<div class="page-logos">
+  <img src="logo.png" alt="עומדים ביחד">
+  <div class="logo-divider"></div>
+  <img src="babel-fish.png" alt="Babel Fish">
+</div>
+
 <!-- Globe -->
 <div class="globe-wrap">
   <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
@@ -263,11 +287,8 @@
   </svg>
 </div>
 
-<!-- Tagline (multilingual) -->
-<p class="tagline">
-  באיזו שפה נדבר?<br>
-  <span style="font-size:.9em;opacity:.7">بأي لغة نتحدث؟ · In which language? · На каком языке?</span>
-</p>
+<!-- Tagline (rotating) -->
+<p class="tagline" id="tagline" dir="auto"></p>
 
 <!-- Language buttons -->
 <div class="lang-section">
@@ -319,8 +340,30 @@
     setTimeout(() => {
       splash.classList.add('hidden');
       setTimeout(() => splash.remove(), 500);
-    }, 1200);
+    }, 2000);
   }
+
+  // ── Rotating tagline ─────────────────────────────────────────────────────
+  const TAGLINES = [
+    'באיזו שפה נדבר?',
+    'بأي لغة نتحدث؟',
+    'In which language?',
+    'На каком языке?',
+    'በምን ቋንቋ እናወራ?',
+    '¿En qué idioma hablamos?',
+  ];
+  let tIdx = 0;
+  const tEl = document.getElementById('tagline');
+  tEl.style.transition = 'opacity 0.4s ease';
+  tEl.textContent = TAGLINES[0];
+  setInterval(() => {
+    tEl.style.opacity = '0';
+    setTimeout(() => {
+      tIdx = (tIdx + 1) % TAGLINES.length;
+      tEl.textContent = TAGLINES[tIdx];
+      tEl.style.opacity = '1';
+    }, 400);
+  }, 2500);
 
   // ── Known UI langs (already in settings.html SETT_UI) ───────────────────
   const KNOWN_LANGS = new Set(['he', 'ar', 'en', 'ru']);
