@@ -320,6 +320,14 @@
     border: 1px solid var(--border);
     flex-shrink: 0;
   }
+  .ss-fig {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    flex-shrink: 0;
+  }
+  .ss-fig img { height: 320px; width: auto; border-radius: 12px; }
+  .ss-fig figcaption {
+    font-size: .75rem; color: var(--muted); text-align: center;
+  }
   .screenshots-row .ph {
     height: 300px;
     min-width: 140px;
@@ -462,7 +470,26 @@
 
     <div class="screenshots-row">
       <img src="/screenshots/home.png" alt="מסך הבית">
-      <img src="/screenshots/room.png" alt="חדר פעיל">
+    </div>
+
+    <p style="font-size:.85rem;color:var(--muted);margin:12px 0 4px;text-align:center;" data-key="perspectives_label">אותו חדר — ארבע שפות, ארבע נקודות מבט:</p>
+    <div class="screenshots-row">
+      <figure class="ss-fig">
+        <img src="/screenshots/room.png" alt="יעל — עברית">
+        <figcaption>יעל 🐙 — עברית</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/screenshots/room-worf.png" alt="Worf — English">
+        <figcaption>Worf 🖖 — English</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/screenshots/room-alex.png" alt="Alex — Español">
+        <figcaption>Alex 🤖 — Español</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/screenshots/room-lila.png" alt="לילי — ערבית">
+        <figcaption>לילי 🌸 — ערבית</figcaption>
+      </figure>
     </div>
   </div>
 
@@ -481,7 +508,7 @@
 
     <div class="screenshots-row">
       <img src="/screenshots/recording.png" alt="הקלטה">
-      <img src="/screenshots/wave.png" alt="גל קול בזמן הקלטה">
+      <img src="/screenshots/wave.png" alt="גל קול בזמן הקלטה" style="max-width:260px;">
     </div>
   </div>
 
