@@ -1324,13 +1324,17 @@
       function draw() {
         analyser.getByteTimeDomainData(data);
         ctx.clearRect(0, 0, W, H);
+        ctx.shadowBlur  = 10;
+        ctx.shadowColor = '#8B2FC9';
         ctx.beginPath();
         ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth   = 2;
+        ctx.lineWidth   = 2.5;
         ctx.lineJoin    = 'round';
+        const AMP  = 4;   // amplify so quiet audio still looks alive
         const step = W / (data.length - 1);
         for (let i = 0; i < data.length; i++) {
-          const y = ((data[i] / 255) * H);
+          const v = (data[i] - 128) / 128;          // -1 … +1
+          const y = Math.max(2, Math.min(H - 2, H / 2 + v * (H / 2) * AMP));
           i === 0 ? ctx.moveTo(0, y) : ctx.lineTo(i * step, y);
         }
         ctx.stroke();
