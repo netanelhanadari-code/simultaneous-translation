@@ -287,6 +287,51 @@
     text-decoration: none;
   }
 
+  /* ── Invite box ── */
+  .invite-box {
+    margin: 32px 0 8px;
+    background: linear-gradient(135deg, rgba(139,47,201,.18), rgba(77,155,149,.12));
+    border: 1px solid rgba(139,47,201,.4);
+    border-radius: var(--radius);
+    padding: 28px 20px 24px;
+    text-align: center;
+  }
+  .invite-emoji {
+    font-size: 2.4rem;
+    margin-bottom: 10px;
+    animation: bob 2s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+  .invite-text {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .invite-btn {
+    background: linear-gradient(135deg, var(--accent), #4d9b95);
+    color: #fff;
+    border: none;
+    font-family: 'Heebo', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+  }
+  .invite-btn:active { opacity: .85; transform: scale(.97); }
+  .invite-copied {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--teal);
+    font-weight: 600;
+  }
+
   /* ── Footer ── */
   .footer {
     text-align: center;
@@ -588,6 +633,16 @@
     </div>
   </div>
 
+  <!-- קריאה לשיתוף -->
+  <div class="invite-box">
+    <div class="invite-emoji">🐟</div>
+    <p class="invite-text" data-key="invite_text">למה שרק אתם תהנו??<br>תזמינו חברים להצטרף אליכם</p>
+    <button class="invite-btn" id="share-invite-btn" onclick="shareApp()">
+      <span data-key="invite_btn">שתפו את בייבל פיש</span> 🚀
+    </button>
+    <p class="invite-copied" id="invite-copied" style="display:none;" data-key="invite_copied">הקישור הועתק! 📋</p>
+  </div>
+
   <div class="footer">
     <p data-key="footer">Babel Fish · עומדים ביחד · כל הזכויות שמורות</p>
   </div>
@@ -668,6 +723,9 @@
       share_cta: 'Want to try? Open the app and create a new room.',
       share_btn: '→ Open Babel Fish',
       perspectives_label: 'Same room — four languages, four perspectives:',
+      invite_text: "Why should only you enjoy this??<br>Invite friends to join you",
+      invite_btn: 'Share Babel Fish',
+      invite_copied: 'Link copied! 📋',
       footer: 'Babel Fish · Standing Together · All rights reserved'
     },
     ar: {
@@ -710,6 +768,9 @@
       share_cta: 'تريد تجربته؟ افتح التطبيق وأنشئ غرفة جديدة.',
       share_btn: '← افتح بابل فيش',
       perspectives_label: 'نفس الغرفة — أربع لغات، أربع وجهات نظر:',
+      invite_text: 'لماذا تستمتعون وحدكم؟؟<br>ادعوا أصدقاءكم للانضمام إليكم',
+      invite_btn: 'شارك بابل فيش',
+      invite_copied: 'تم نسخ الرابط! 📋',
       footer: 'بابل فيش · نقف معاً · جميع الحقوق محفوظة'
     }
   };
@@ -771,6 +832,28 @@
 
   function resetToHebrew() {
     location.reload();
+  }
+
+  // ── Share app ─────────────────────────────────────────────────────────────
+  async function shareApp() {
+    const url  = location.origin + '/home.html';
+    const text = 'בייבל פיש — אפליקציה לתרגום סימולטני בזמן אמת 🐟';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Babel Fish', text, url }); return; }
+      catch(e) { if (e.name === 'AbortError') return; }
+    }
+    // fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch(e) {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    const copied = document.getElementById('invite-copied');
+    copied.style.display = 'block';
+    setTimeout(() => { copied.style.display = 'none'; }, 3000);
   }
 
   function showOverlay(msg) {
