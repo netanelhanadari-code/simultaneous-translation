@@ -135,7 +135,7 @@
     const myName   = localStorage.getItem('bf_name')    || '';
     const myEmoji  = localStorage.getItem('bf_emoji')   || '';
     const myUiLang = localStorage.getItem('bf_ui_lang') || localStorage.getItem('bf_lang') || 'he';
-    if (!myName) { location.href = '/settings.html?from=/home.html'; }
+    if (!myName) { location.href = '/lang-select.html'; }
     if (myUiLang === 'ar') { document.documentElement.setAttribute('lang', 'ar'); }
     if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
 

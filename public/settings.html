@@ -159,18 +159,45 @@
       ar: { title: '⚙️ الإعدادات', name: 'الاسم', namePh: 'اسمك', emoji: 'إيموجي (اختياري — يظهر في قائمة الأعضاء)', emojiPh: 'أو الصق أي إيموجي 😊', emojiClear: 'بدون إيموجي', phone: 'رقم الهاتف', phoneSub: 'يُستخدم للتعريف الفريد + يُعرض للأعضاء', lang: 'لغة التواصل — اللغة التي أكتب وأتحدث بها', uiLang: 'لغة الواجهة — لغة الأزرار والقوائم', save: 'حفظ', saved: '✓ تم الحفظ', avatarHint: 'الصورة تحل محل الإيموجي' },
       en: { title: '⚙️ Settings', name: 'Name', namePh: 'Your name', emoji: 'Emoji (optional — shown in members list)', emojiPh: 'Or paste any emoji 😊', emojiClear: 'No emoji', phone: 'Phone number', phoneSub: 'Used for unique ID + shown to members', lang: 'Communication language — language I write and speak in', uiLang: 'Interface language — language of buttons and menus', save: 'Save', saved: '✓ Saved', avatarHint: 'Photo replaces emoji' },
     };
-    const su = SETT_UI[myUiLang] || SETT_UI.he;
-    document.querySelector('h1').textContent          = su.title;
-    document.getElementById('labelName').textContent  = su.name;
-    nameInput.placeholder                             = su.namePh;
-    document.getElementById('labelEmoji').textContent = su.emoji;
-    document.getElementById('emojiInput').placeholder = su.emojiPh;
-    document.getElementById('emojiClear').textContent = su.emojiClear;
-    document.getElementById('labelPhone').innerHTML   = `${su.phone} <span style="color:#e07070;">*</span> <small style="font-weight:normal;color:var(--muted)">(${su.phoneSub})</small>`;
-    document.getElementById('labelLang').textContent  = su.lang;
-    document.getElementById('labelUiLang').textContent= su.uiLang;
-    document.getElementById('saveBtn').textContent    = su.save;
-    document.getElementById('avatarHint').textContent = su.avatarHint;
+    function applySettUI(su) {
+      document.querySelector('h1').textContent          = su.title;
+      document.getElementById('labelName').textContent  = su.name;
+      nameInput.placeholder                             = su.namePh;
+      document.getElementById('labelEmoji').textContent = su.emoji;
+      document.getElementById('emojiInput').placeholder = su.emojiPh;
+      document.getElementById('emojiClear').textContent = su.emojiClear;
+      document.getElementById('labelPhone').innerHTML   = `${su.phone} <span style="color:#e07070;">*</span> <small style="font-weight:normal;color:var(--muted)">(${su.phoneSub})</small>`;
+      document.getElementById('labelLang').textContent  = su.lang;
+      document.getElementById('labelUiLang').textContent= su.uiLang;
+      document.getElementById('saveBtn').textContent    = su.save;
+      document.getElementById('avatarHint').textContent = su.avatarHint;
+    }
+    applySettUI(SETT_UI[myUiLang] || SETT_UI.he);
+
+    // If lang not in built-in dictionary → try DB, then translate+cache
+    if (!SETT_UI[myUiLang]) {
+      (async () => {
+        try {
+          const cached = await fetch(`/api/page-content?lang=${encodeURIComponent(myUiLang)}`).then(r => r.json());
+          const keys = ['title','name','namePh','emoji','emojiPh','emojiClear',
+                        'phone','phoneSub','lang','uiLang','save','saved','avatarHint'];
+          const fromDB = {};
+          keys.forEach(k => { if (cached['sett_' + k]) fromDB[k] = cached['sett_' + k]; });
+          if (Object.keys(fromDB).length === keys.length) { applySettUI(fromDB); return; }
+          // Translate missing
+          const toTranslate = {};
+          keys.forEach(k => { if (!fromDB[k]) toTranslate['sett_' + k] = SETT_UI.he[k]; });
+          const result = await fetch('/api/page-content/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lang: myUiLang, texts: toTranslate })
+          }).then(r => r.json());
+          const su2 = { ...fromDB };
+          Object.entries(result).forEach(([k, v]) => { su2[k.replace(/^sett_/, '')] = v; });
+          applySettUI(su2);
+        } catch(e) { /* keep default */ }
+      })();
+    }
 
     // ── Language search ───────────────────────────────────────────────────────
     const ALL_LANGS = [

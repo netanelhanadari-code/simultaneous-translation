@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babel Fish</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+
+  :root {
+    --bg:     #12082a;
+    --surface:#1e0f3a;
+    --border: #3d1f6b;
+    --accent: #8B2FC9;
+    --text:   #f0e8ff;
+    --muted:  #9b7fc4;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Heebo', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px 48px;
+    overflow-x: hidden;
+  }
+
+  /* ── Splash ── */
+  #splash {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1.5rem;
+    transition: opacity .5s ease;
+  }
+  #splash.hidden { opacity: 0; pointer-events: none; }
+  #splash img { width: min(220px, 62vw); object-fit: contain; }
+
+  /* ── Globe ── */
+  .globe-wrap {
+    position: relative;
+    width: min(220px, 60vw);
+    height: min(220px, 60vw);
+    margin-bottom: 20px;
+  }
+  .globe-wrap svg {
+    width: 100%; height: 100%;
+    overflow: visible;
+  }
+
+  /* Letter animations */
+  .gl { animation: gl-pulse 3s ease-in-out infinite; }
+  .gl:nth-child(1)  { animation-delay: 0s; }
+  .gl:nth-child(2)  { animation-delay: .4s; }
+  .gl:nth-child(3)  { animation-delay: .8s; }
+  .gl:nth-child(4)  { animation-delay: 1.2s; }
+  .gl:nth-child(5)  { animation-delay: 1.6s; }
+  .gl:nth-child(6)  { animation-delay: 2.0s; }
+  .gl:nth-child(7)  { animation-delay: 2.4s; }
+  .gl:nth-child(8)  { animation-delay: 2.8s; }
+  @keyframes gl-pulse {
+    0%,100% { opacity: .5; }
+    50%      { opacity: 1; }
+  }
+
+  /* Globe glow pulse */
+  .globe-glow { animation: glow-breathe 4s ease-in-out infinite; }
+  @keyframes glow-breathe {
+    0%,100% { opacity: .6; r: 82; }
+    50%      { opacity: .9; r: 88; }
+  }
+
+  /* ── Title ── */
+  .tagline {
+    font-size: clamp(13px, 3.5vw, 16px);
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  /* ── Language buttons ── */
+  .lang-section { width: 100%; max-width: 420px; }
+
+  .primary-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .secondary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 360px) {
+    .secondary-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .lang-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Heebo', sans-serif;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 16px 8px;
+  }
+  .lang-btn:active { transform: scale(.97); }
+  .lang-btn:hover  { border-color: var(--accent); background: rgba(139,47,201,.12); }
+
+  .lang-btn.primary {
+    padding: 22px 12px;
+    border-radius: 14px;
+  }
+  .lang-btn.primary:hover { border-color: var(--accent); }
+
+  .btn-name {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .btn-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .lang-btn.secondary .btn-name {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* ── Other language ── */
+  .other-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .other-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .other-input:focus { border-color: var(--accent); }
+  .other-input::placeholder { color: var(--muted); }
+
+  .other-go {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    font-family: 'Heebo', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity .15s;
+    white-space: nowrap;
+  }
+  .other-go:disabled { opacity: .5; cursor: default; }
+
+  /* ── Loading overlay ── */
+  #loading {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(18,8,42,.8);
+    backdrop-filter: blur(6px);
+    z-index: 500;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  #loading.show { display: flex; }
+  #loading p { color: var(--text); font-size: 15px; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- Splash -->
+<div id="splash">
+  <img src="logo.png" alt="עומדים ביחד">
+  <img src="babel-fish.png" alt="Babel Fish">
+</div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p id="loading-msg">מכין את האפליקציה…</p>
+</div>
+
+<!-- Globe -->
+<div class="globe-wrap">
+  <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="glow-grad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%"   stop-color="#8B2FC9" stop-opacity=".25"/>
+        <stop offset="100%" stop-color="#8B2FC9" stop-opacity="0"/>
+      </radialGradient>
+      <clipPath id="globe-clip">
+        <circle cx="120" cy="120" r="88"/>
+      </clipPath>
+    </defs>
+
+    <!-- Glow -->
+    <circle class="globe-glow" cx="120" cy="120" r="84" fill="url(#glow-grad)"/>
+
+    <!-- Grid lines (clipped inside globe) -->
+    <g clip-path="url(#globe-clip)" fill="none" stroke="#3d1f6b" stroke-width=".9">
+      <!-- Latitude -->
+      <ellipse cx="120" cy="86"  rx="74" ry="20"/>
+      <ellipse cx="120" cy="120" rx="88" ry="26"/>
+      <ellipse cx="120" cy="154" rx="74" ry="20"/>
+      <!-- Longitude -->
+      <ellipse cx="120" cy="120" rx="28" ry="88"/>
+      <ellipse cx="120" cy="120" rx="62" ry="88"/>
+      <line x1="120" y1="32" x2="120" y2="208"/>
+    </g>
+
+    <!-- Globe outline -->
+    <circle cx="120" cy="120" r="88" fill="none" stroke="#6d28d9" stroke-width="1.4"/>
+
+    <!-- Script letters -->
+    <text class="gl" x="120" y="76"  text-anchor="middle" fill="#c084fc" font-size="24" font-family="serif">א</text>
+    <text class="gl" x="170" y="118" text-anchor="middle" fill="#c084fc" font-size="21" font-family="serif">ع</text>
+    <text class="gl" x="70"  y="112" text-anchor="middle" fill="#c084fc" font-size="20" font-family="serif">A</text>
+    <text class="gl" x="148" y="155" text-anchor="middle" fill="#c084fc" font-size="18" font-family="serif">Я</text>
+    <text class="gl" x="92"  y="160" text-anchor="middle" fill="#c084fc" font-size="17" font-family="serif">አ</text>
+    <text class="gl" x="132" y="170" text-anchor="middle" fill="#c084fc" font-size="14" font-family="serif">文</text>
+    <text class="gl" x="158" y="80"  text-anchor="middle" fill="#c084fc" font-size="13" font-family="serif">ñ</text>
+    <text class="gl" x="82"  y="74"  text-anchor="middle" fill="#c084fc" font-size="12" font-family="serif">γ</text>
+  </svg>
+</div>
+
+<!-- Tagline (multilingual) -->
+<p class="tagline">
+  באיזו שפה נדבר?<br>
+  <span style="font-size:.9em;opacity:.7">بأي لغة نتحدث؟ · In which language? · На каком языке?</span>
+</p>
+
+<!-- Language buttons -->
+<div class="lang-section">
+
+  <div class="primary-row">
+    <button class="lang-btn primary" onclick="pick('he')">
+      <span class="btn-name">עברית</span>
+      <span class="btn-sub">Hebrew</span>
+    </button>
+    <button class="lang-btn primary" onclick="pick('ar')">
+      <span class="btn-name">العربية</span>
+      <span class="btn-sub">Arabic</span>
+    </button>
+  </div>
+
+  <div class="secondary-row">
+    <button class="lang-btn secondary" onclick="pick('en')">
+      <span class="btn-name">English</span>
+    </button>
+    <button class="lang-btn secondary" onclick="pick('ru')">
+      <span class="btn-name">Русский</span>
+    </button>
+    <button class="lang-btn secondary" onclick="pick('am')">
+      <span class="btn-name">አማርኛ</span>
+    </button>
+    <button class="lang-btn secondary" onclick="pick('es')">
+      <span class="btn-name">Español</span>
+    </button>
+  </div>
+
+  <div class="other-row">
+    <input class="other-input" id="otherInput" type="text"
+           placeholder="שפה אחרת / Other / أخرى"
+           onkeydown="if(event.key==='Enter') pickOther()">
+    <button class="other-go" id="otherGo" onclick="pickOther()">→</button>
+  </div>
+
+</div>
+
+<script>
+  // ── Splash ───────────────────────────────────────────────────────────────
+  const splash = document.getElementById('splash');
+  const navType = performance.getEntriesByType('navigation')[0]?.type;
+  const isFreshLoad = navType === 'reload' || !sessionStorage.getItem('bf_splash_shown');
+  if (!isFreshLoad) {
+    splash.remove();
+  } else {
+    sessionStorage.setItem('bf_splash_shown', '1');
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      setTimeout(() => splash.remove(), 500);
+    }, 1200);
+  }
+
+  // ── Known UI langs (already in settings.html SETT_UI) ───────────────────
+  const KNOWN_LANGS = new Set(['he', 'ar', 'en', 'ru']);
+
+  async function pick(lang) {
+    save(lang);
+    if (KNOWN_LANGS.has(lang)) {
+      location.href = '/settings.html';
+      return;
+    }
+    // New lang: pre-warm DB cache via translate endpoint
+    showLoading(`מכין את האפליקציה ב-${lang}…`);
+    try {
+      const cached = await fetch(`/api/page-content?lang=${encodeURIComponent(lang)}`).then(r => r.json());
+      const settKeys = ['title','name','namePh','emoji','emojiPh','emojiClear',
+                        'phone','phoneSub','lang','uiLang','save','saved','avatarHint'];
+      const allCached = settKeys.every(k => cached['sett_' + k]);
+      if (!allCached) {
+        // Translate settings strings
+        const HE = { sett_title:'⚙️ הגדרות', sett_name:'שם', sett_namePh:'שמך',
+          sett_emoji:"אימוג'י (אופציונלי — יופיע ברשימת החברים)",
+          sett_emojiPh:"או הדבק כל אימוג'י 😊", sett_emojiClear:"ללא אימוג'י",
+          sett_phone:'מספר טלפון', sett_phoneSub:'משמש לזיהוי ייחודי + מוצג לחברים',
+          sett_lang:'שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת',
+          sett_uiLang:'שפת ממשק — שפת הכפתורים והתפריטים',
+          sett_save:'שמור', sett_saved:'✓ נשמר', sett_avatarHint:"תמונה מחליפה אימוג'י" };
+        await fetch('/api/page-content/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lang, texts: HE })
+        });
+      }
+    } catch(e) { /* proceed anyway */ }
+    location.href = '/settings.html';
+  }
+
+  function pickOther() {
+    const val = document.getElementById('otherInput').value.trim();
+    if (!val) return;
+    pick(val);
+  }
+
+  function save(lang) {
+    localStorage.setItem('bf_lang',    lang);
+    localStorage.setItem('bf_ui_lang', lang);
+  }
+
+  function showLoading(msg) {
+    document.getElementById('loading-msg').textContent = msg;
+    document.getElementById('loading').classList.add('show');
+  }
+</script>
+</body>
+</html>

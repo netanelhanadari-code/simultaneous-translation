@@ -827,6 +827,56 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
   res.json({ ok: true, id: msgId, translations });
 });
 
+// ── Page content cache (translations) ────────────────────────────────────────
+// SQL: create table if not exists page_content (key text, lang text, text text, primary key (key, lang));
+
+app.get('/api/page-content', async (req, res) => {
+  const { lang } = req.query;
+  if (!lang || !SB_URL) return res.json({});
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/page_content?lang=eq.${encodeURIComponent(lang)}&select=key,text`, { headers: sbHeaders() });
+    if (!r.ok) return res.json({});
+    const rows = await r.json();
+    const map = {};
+    rows.forEach(row => { map[row.key] = row.text; });
+    res.json(map);
+  } catch { res.json({}); }
+});
+
+app.post('/api/page-content/translate', express.json(), async (req, res) => {
+  const { lang, texts } = req.body;
+  if (!lang || !texts || typeof texts !== 'object') return res.status(400).json({ error: 'missing' });
+  const entries = Object.entries(texts);
+  if (!entries.length) return res.json({});
+  const translated = {};
+  await Promise.all(entries.map(async ([key, src]) => {
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini', temperature: 0, max_tokens: 300,
+          messages: [
+            { role: 'system', content: `Translate the following UI label/text to ${lang}. Return ONLY the translated text, nothing else.` },
+            { role: 'user', content: src }
+          ]
+        })
+      });
+      const data = await r.json();
+      translated[key] = data.choices?.[0]?.message?.content?.trim() || src;
+    } catch { translated[key] = src; }
+  }));
+  if (SB_URL) {
+    const rows = Object.entries(translated).map(([key, text]) => ({ key, lang, text }));
+    await fetch(`${SB_URL}/rest/v1/page_content`, {
+      method: 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(rows)
+    }).catch(() => {});
+  }
+  res.json(translated);
+});
+
 // ── Feedback ─────────────────────────────────────────────────────────────────
 app.post('/api/feedback', express.json(), async (req, res) => {
   const { name, room_id, device, severity, what_happened, expected } = req.body;
