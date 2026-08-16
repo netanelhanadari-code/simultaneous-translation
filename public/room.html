@@ -377,6 +377,7 @@
       <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
       <button id="recordBtn">🎤</button>
     </div>
+    <canvas id="waveCanvas" style="display:none;width:100%;height:40px;border-radius:8px;margin:2px 0;"></canvas>
     <canvas id="imgCanvas" style="display:none;"></canvas>
     <div id="status" style="font-size:.8rem;color:var(--muted);text-align:center;min-height:1em;"></div>
   </footer>
@@ -1310,6 +1311,40 @@
     // ── Recording ──────────────────────────────────────────────────────────
     let mediaRecorder, audioChunks = [], stream, recordStart, shouldSend = false;
     let audioCtx, analyser, volumeCheckInterval, maxVolume = 0;
+    let waveAnimFrame;
+
+    function startWave() {
+      const canvas = document.getElementById('waveCanvas');
+      canvas.width  = canvas.offsetWidth  || 300;
+      canvas.height = canvas.offsetHeight || 40;
+      canvas.style.display = 'block';
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      function draw() {
+        analyser.getByteTimeDomainData(data);
+        ctx.clearRect(0, 0, W, H);
+        ctx.beginPath();
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth   = 2;
+        ctx.lineJoin    = 'round';
+        const step = W / (data.length - 1);
+        for (let i = 0; i < data.length; i++) {
+          const y = ((data[i] / 255) * H);
+          i === 0 ? ctx.moveTo(0, y) : ctx.lineTo(i * step, y);
+        }
+        ctx.stroke();
+        waveAnimFrame = requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    function stopWave() {
+      cancelAnimationFrame(waveAnimFrame);
+      const canvas = document.getElementById('waveCanvas');
+      canvas.style.display = 'none';
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    }
     const recordBtn = document.getElementById('recordBtn');
     const statusEl  = document.getElementById('status');
     const SILENCE_RMS_THRESHOLD = 0.01; // below this the whole recording is considered silent
@@ -1360,6 +1395,7 @@
         recordBtn.classList.add('recording');
         recordBtn.textContent = '▶';
         statusEl.textContent = 'מקליט... לחץ לשליחה';
+        startWave();
       } catch(e) {
         statusEl.textContent = 'אין גישה למיק';
         setTimeout(() => statusEl.textContent = '', 2000);
@@ -1370,6 +1406,7 @@
       if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
       if (Date.now() - recordStart < 300) shouldSend = false;
       stopVolumeMonitor();
+      stopWave();
       if (maxVolume < SILENCE_RMS_THRESHOLD) shouldSend = false; // never heard any real sound — skip Whisper entirely
       mediaRecorder.stop();
       stream?.getTracks().forEach(t => t.stop());
