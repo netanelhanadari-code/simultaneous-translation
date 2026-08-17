@@ -12,6 +12,18 @@ const VAPID_EMAIL   = process.env.VAPID_EMAIL       || 'mailto:admin@example.com
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
 }
+// ── Twilio (SMS OTP) ─────────────────────────────────────────────────────────
+const TWILIO_SID   = process.env.TWILIO_ACCOUNT_SID || '';
+const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN  || '';
+const TWILIO_FROM  = process.env.TWILIO_FROM        || '';
+let twilioClient = null;
+if (TWILIO_SID && TWILIO_TOKEN) {
+  try { twilioClient = require('twilio')(TWILIO_SID, TWILIO_TOKEN); console.log('[twilio] initialized'); }
+  catch(e) { console.warn('[twilio] not installed:', e.message); }
+}
+const otpStore = new Map(); // phone -> { code, expires, attempts, sendCount }
+function generateOTP() { return String(Math.floor(100000 + Math.random() * 900000)); }
+
 // ── Supabase REST helpers ────────────────────────────────────────────────────
 const SB_RAW = process.env.SUPABASE_URL || '';
 const SB_URL = SB_RAW.replace(/\/rest\/v1\/?$/, ''); // strip trailing /rest/v1 if user pasted full URL
@@ -1150,6 +1162,54 @@ app.get('/api/admin/storage-usage', async (req, res) => {
 });
 
 // ── User profile endpoints ────────────────────────────────────────────────────
+// ── OTP endpoints ─────────────────────────────────────────────────────────────
+app.post('/api/send-otp', express.json(), async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'phone required' });
+  if (!twilioClient) return res.status(503).json({ error: 'SMS not configured' });
+
+  const existing = otpStore.get(phone);
+  if (existing && existing.expires > Date.now() && (existing.sendCount || 0) >= 3) {
+    return res.status(429).json({ error: 'too many requests' });
+  }
+
+  const code = generateOTP();
+  const expires = Date.now() + 5 * 60 * 1000;
+  otpStore.set(phone, { code, expires, attempts: 0, sendCount: (existing?.sendCount || 0) + 1 });
+
+  console.log(`[otp] sending to ${phone.slice(0, 4)}***`);
+  try {
+    await twilioClient.messages.create({
+      body: `קוד האימות שלך ל-Babel Fish: ${code}`,
+      from: TWILIO_FROM,
+      to: phone
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('[twilio] send error:', e.message);
+    otpStore.delete(phone);
+    res.status(500).json({ error: 'failed to send SMS' });
+  }
+});
+
+app.post('/api/verify-otp', express.json(), (req, res) => {
+  const { phone, code } = req.body;
+  if (!phone || !code) return res.status(400).json({ error: 'phone and code required' });
+
+  const record = otpStore.get(phone);
+  if (!record) return res.status(400).json({ error: 'no_otp' });
+  if (Date.now() > record.expires) { otpStore.delete(phone); return res.status(400).json({ error: 'expired' }); }
+
+  record.attempts++;
+  if (record.attempts > 3) { otpStore.delete(phone); return res.status(429).json({ error: 'too_many' }); }
+  if (record.code !== String(code).trim()) {
+    return res.status(400).json({ error: 'invalid', attemptsLeft: 3 - record.attempts });
+  }
+
+  otpStore.delete(phone);
+  res.json({ ok: true });
+});
+
 app.get('/api/profile', async (req, res) => {
   const { phone } = req.query;
   if (!phone || !SB_URL) return res.json({});
