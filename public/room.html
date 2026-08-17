@@ -220,10 +220,9 @@
     #sendBtn {
       width: 44px; height: 44px; border-radius: 50%;
       background: var(--accent); border: none; cursor: pointer;
-      font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; display: none; align-items: center; justify-content: center;
       flex-shrink: 0; transition: opacity .15s;
     }
-    #sendBtn:disabled { opacity: .4; cursor: default; }
     #recordBtn {
       width: 58px; height: 58px; border-radius: 50%;
       background: var(--accent); border: none;
@@ -1220,7 +1219,9 @@
     })();
 
     textInput.addEventListener('input', () => {
-      sendBtn.disabled = !textInput.value.trim();
+      const hasText = !!textInput.value.trim();
+      sendBtn.style.display  = hasText ? 'flex' : 'none';
+      recordBtn.style.display = hasText ? 'none' : 'flex';
       textInput.style.height = 'auto';
       textInput.style.height = Math.min(textInput.scrollHeight, 100) + 'px';
     });
@@ -1233,7 +1234,8 @@
       if (!text) return;
       textInput.value = '';
       textInput.style.height = 'auto';
-      sendBtn.disabled = true;
+      sendBtn.style.display  = 'none';
+      recordBtn.style.display = 'flex';
       const reply_to = replyingTo;
       cancelReply();
       try {
