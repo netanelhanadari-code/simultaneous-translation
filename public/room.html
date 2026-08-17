@@ -330,14 +330,15 @@
     .sheet-member-row.clickable:active { background: rgba(139,47,201,.15); }
     .sheet-member-me { color: var(--muted); font-size: .78rem; margin-right: auto; }
     .dm-action-row {
-      padding: .3rem .8rem .3rem 2.2rem;
+      display: flex; justify-content: center; padding: .3rem .8rem .5rem;
     }
     .dm-action-row button {
-      background: rgba(139,47,201,.15); border: 1px solid var(--accent);
-      color: var(--accent); border-radius: 8px; padding: .35rem .8rem;
-      font-size: .82rem; cursor: pointer; font-family: inherit;
+      background: var(--accent); border: none; color: #fff;
+      border-radius: 10px; padding: .45rem 1.4rem;
+      font-size: .88rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      box-shadow: 0 2px 8px rgba(139,47,201,.4);
     }
-    .dm-action-row button:hover { background: rgba(139,47,201,.28); }
+    .dm-action-row button:active { opacity: .85; }
   </style>
 </head>
 <body>
@@ -534,13 +535,28 @@
       tooltipTimer = setTimeout(() => { tooltip.style.display = 'none'; }, 2000);
     }
 
+    function closeMembersPanel() {
+      const panel = document.getElementById('members-panel');
+      if (!panel.classList.contains('open')) return;
+      panel.querySelectorAll('.dm-action-row').forEach(el => el.remove());
+      panel.classList.remove('open');
+      const btn = document.getElementById('members-toggle');
+      const count = document.getElementById('members-count').textContent;
+      btn.innerHTML = `<span id="members-count">${count}</span> ▾`;
+    }
     function toggleMembersBar() {
       const panel = document.getElementById('members-panel');
       const isOpen = panel.classList.toggle('open');
       const btn = document.getElementById('members-toggle');
       const count = document.getElementById('members-count').textContent;
       btn.innerHTML = `<span id="members-count">${count}</span> ${isOpen ? '▴' : '▾'}`;
+      if (isOpen) history.pushState({ membersOpen: true }, '');
+      else panel.querySelectorAll('.dm-action-row').forEach(el => el.remove());
     }
+    // Close panel when tapping messages area
+    document.getElementById('messages').addEventListener('click', closeMembersPanel);
+    // Close panel on browser back
+    window.addEventListener('popstate', e => { closeMembersPanel(); });
 
     function renderMembers() {
       const bar = document.getElementById('members-bar');
