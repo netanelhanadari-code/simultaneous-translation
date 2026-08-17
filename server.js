@@ -1496,6 +1496,15 @@ wss.on('connection', (ws, req) => {
       }
     }).catch(() => {});
 
+    // Auto-add to WLCM welcome room (every user who joins any room gets added silently)
+    if (roomId !== 'WLCM') {
+      sbQuery('room_members', `room_id=eq.WLCM&name=eq.${encodeURIComponent(name)}&limit=1`).then(rows => {
+        if (!rows.length) {
+          sbInsert('room_members', { room_id: 'WLCM', name, emoji, lang, phone, last_seen: new Date().toISOString() }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     // Upsert global profile + lazy-translate other members' names to this member's language
     if (phone) {
       (async () => {

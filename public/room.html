@@ -766,6 +766,22 @@
           data.messages.forEach(addMessage);
           scrollBottom();
         }
+        // Silently add WLCM welcome room to home screen if not already there
+        if (roomId !== 'WLCM') {
+          try {
+            const stored = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
+            if (!stored.find(r => r.id === 'WLCM')) {
+              const wr = await fetch('/api/rooms/WLCM');
+              if (wr.ok) {
+                const wd = await wr.json();
+                const wNames = wd.names || {};
+                const wName = wNames[myUiLang] || wNames.he || wd.name || 'ברוכים הבאים';
+                stored.push({ id: 'WLCM', name: wName, names: wNames, type: 'group', ts: 0 });
+                localStorage.setItem('bf_rooms', JSON.stringify(stored.slice(0, 10)));
+              }
+            }
+          } catch(e) {}
+        }
       } catch(e) { console.error('loadRoom:', e); }
     }
 
