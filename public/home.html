@@ -31,9 +31,15 @@
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: var(--bg); color: var(--text);
-      min-height: calc(var(--vh, 1vh) * 100);
+      height: calc(var(--vh, 1vh) * 100);
       display: flex; flex-direction: column;
+      overflow: hidden;
       -webkit-user-select: none; user-select: none;
+    }
+    .scroll-area {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      display: flex; flex-direction: column;
     }
     header {
       background: var(--surface); border-bottom: 1px solid var(--border);
@@ -75,16 +81,33 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .room-chip-code { font-size: .72rem; color: var(--muted); letter-spacing: 1px; }
-    .room-chip-leave {
-      background: none; border: none; color: var(--muted);
-      font-size: 1rem; cursor: pointer; padding: .3rem .4rem; border-radius: 6px; flex-shrink: 0;
-    }
-    .room-chip-leave:hover { color: #e07070; background: rgba(224,112,112,.1); }
     .empty { text-align: center; color: var(--muted); font-size: .9rem; padding: 2.5rem 1rem; line-height: 1.7; }
     footer {
-      margin-top: auto; padding: 1rem 1.2rem 1.3rem;
+      padding: 1rem 1.2rem 1.3rem;
       display: flex; flex-direction: column; gap: .5rem;
+      flex-shrink: 0;
     }
+    /* Context menu */
+    #chip-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.45);
+    }
+    #chip-overlay.open { display: block; }
+    #chip-menu {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 201;
+      background: var(--surface); border-top: 1px solid var(--border);
+      border-radius: 18px 18px 0 0; padding: 1rem .8rem 1.5rem;
+      display: flex; flex-direction: column; gap: .5rem;
+      transform: translateY(100%); transition: transform .22s ease;
+    }
+    #chip-menu.open { transform: translateY(0); }
+    .chip-menu-btn {
+      width: 100%; padding: .85rem 1rem; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--text); font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .chip-menu-btn.danger { color: #e07070; border-color: rgba(224,112,112,.35); }
+    .chip-menu-btn.cancel { color: var(--muted); }
     .notice {
       font-size: .72rem; color: var(--muted); line-height: 1.5; text-align: center;
     }
@@ -106,13 +129,21 @@
     <button class="settings-btn" onclick="location.href='/settings.html?from=/home.html'" title="הגדרות">⚙️</button>
   </header>
 
-  <div class="actions">
-    <button class="action-btn primary" onclick="location.href='/join.html?mode=create'">➕ קבוצה חדשה</button>
-    <button class="action-btn" onclick="location.href='/join.html?mode=join'">🔗 הצטרף</button>
+  <div class="scroll-area">
+    <div class="actions">
+      <button class="action-btn primary" onclick="location.href='/join.html?mode=create'">➕ קבוצה חדשה</button>
+      <button class="action-btn" onclick="location.href='/join.html?mode=join'">🔗 הצטרף</button>
+    </div>
+
+    <p class="section-label" id="rooms-label" style="display:none;">הקבוצות שלי</p>
+    <div class="rooms-list" id="rooms-list"></div>
   </div>
 
-  <p class="section-label" id="rooms-label" style="display:none;">הקבוצות שלי</p>
-  <div class="rooms-list" id="rooms-list"></div>
+  <div id="chip-overlay"></div>
+  <div id="chip-menu">
+    <button class="chip-menu-btn danger" id="chip-main-btn"></button>
+    <button class="chip-menu-btn cancel" id="chip-cancel-btn"></button>
+  </div>
 
   <footer>
     <p class="notice warn" id="noticeWarn"></p>
@@ -141,9 +172,9 @@
     if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
 
     const HOME_UI = {
-      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️', warn: '⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.', terms: 'בשימוש באפליקציה אני מסכים/ה', termsLink: 'לתנאי השימוש' },
-      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️', warn: '⚠️ Babel Fish غير محمية من الاختراق أو انتهاك الخصوصية. لا تشاركوا معلومات حساسة عن أشخاص أو نشاط الحركة.', terms: 'باستخدام التطبيق أوافق', termsLink: 'على شروط الاستخدام' },
-      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️', warn: '⚠️ Babel Fish is not protected against hacking or privacy breaches. Do not share sensitive information about people or movement activity.', terms: 'By using this app I agree', termsLink: 'to the Terms of Use' },
+      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️', warn: '⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.', terms: 'בשימוש באפליקציה אני מסכים/ה', termsLink: 'לתנאי השימוש', deleteChat: 'מחק שיחה', leaveGroup: 'צא מהקבוצה', cancel: 'ביטול', deleteConfirm: 'למחוק את השיחה?', leaveConfirm: 'לצאת מהקבוצה?' },
+      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️', warn: '⚠️ Babel Fish غير محمية من الاختراق أو انتهاك الخصوصية. لا تشاركوا معلومات حساسة عن أشخاص أو نشاط الحركة.', terms: 'باستخدام التطبيق أوافق', termsLink: 'على شروط الاستخدام', deleteChat: 'حذف المحادثة', leaveGroup: 'مغادرة المجموعة', cancel: 'إلغاء', deleteConfirm: 'هل تريد حذف المحادثة؟', leaveConfirm: 'هل تريد مغادرة المجموعة؟' },
+      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️', warn: '⚠️ Babel Fish is not protected against hacking or privacy breaches. Do not share sensitive information about people or movement activity.', terms: 'By using this app I agree', termsLink: 'to the Terms of Use', deleteChat: 'Delete chat', leaveGroup: 'Leave group', cancel: 'Cancel', deleteConfirm: 'Delete this chat?', leaveConfirm: 'Leave this group?' },
     };
     const homeUi = HOME_UI[myUiLang] || HOME_UI.he;
 
@@ -162,10 +193,70 @@
     }
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    function leaveRoom(id, e) {
-      e.stopPropagation();
-      saveMyRooms(getMyRooms().filter(r => r.id !== id));
+    // Context menu for long-press on room chip
+    let chipMenuTargetId = null;
+    let chipMenuIsDM = false;
+
+    function openChipMenu(id, isDM) {
+      chipMenuTargetId = id;
+      chipMenuIsDM = isDM;
+      const mainBtn = document.getElementById('chip-main-btn');
+      const cancelBtn = document.getElementById('chip-cancel-btn');
+      mainBtn.textContent = isDM ? homeUi.deleteChat : homeUi.leaveGroup;
+      cancelBtn.textContent = homeUi.cancel;
+      document.getElementById('chip-overlay').classList.add('open');
+      document.getElementById('chip-menu').classList.add('open');
+    }
+
+    function closeChipMenu() {
+      document.getElementById('chip-overlay').classList.remove('open');
+      document.getElementById('chip-menu').classList.remove('open');
+      chipMenuTargetId = null;
+    }
+
+    function confirmChipAction() {
+      if (!chipMenuTargetId) return;
+      const confirm = chipMenuIsDM ? homeUi.deleteConfirm : homeUi.leaveConfirm;
+      if (!window.confirm(confirm)) { closeChipMenu(); return; }
+      saveMyRooms(getMyRooms().filter(r => r.id !== chipMenuTargetId));
+      closeChipMenu();
       renderRooms({});
+    }
+
+    document.getElementById('chip-overlay').addEventListener('click', closeChipMenu);
+    document.getElementById('chip-cancel-btn').addEventListener('click', closeChipMenu);
+    document.getElementById('chip-main-btn').addEventListener('click', confirmChipAction);
+
+    function setupChipLongPress(chip, id, isDM) {
+      let timer = null;
+      let moved = false;
+      let longPressed = false;
+      let startX = 0, startY = 0;
+
+      chip.addEventListener('pointerdown', e => {
+        moved = false;
+        longPressed = false;
+        startX = e.clientX; startY = e.clientY;
+        timer = setTimeout(() => {
+          if (!moved) {
+            longPressed = true;
+            navigator.vibrate?.(40);
+            openChipMenu(id, isDM);
+          }
+        }, 550);
+      });
+      chip.addEventListener('pointermove', e => {
+        if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) {
+          moved = true;
+          clearTimeout(timer);
+        }
+      });
+      chip.addEventListener('pointerup', () => clearTimeout(timer));
+      chip.addEventListener('pointercancel', () => clearTimeout(timer));
+      // Swallow the click event that fires after a long-press
+      chip.addEventListener('click', e => {
+        if (longPressed) { e.stopImmediatePropagation(); longPressed = false; }
+      }, true);
     }
 
     function enterRoom(id) {
@@ -211,10 +302,9 @@
           `<div class="room-chip-info">
             <div class="room-chip-name">${isDM ? '👤 ' : '💬 '}${esc(displayName)}</div>
             <div class="room-chip-code">${isDM ? homeUi.dm : r.id}</div>
-          </div>
-          <button class="room-chip-leave" title="הסר">✕</button>`;
+          </div>`;
         chip.addEventListener('click', () => enterRoom(r.id));
-        chip.querySelector('.room-chip-leave').addEventListener('click', e => leaveRoom(r.id, e));
+        setupChipLongPress(chip, r.id, isDM);
         list.appendChild(chip);
       });
     }
