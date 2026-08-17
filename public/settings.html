@@ -140,15 +140,15 @@
       </select>
     </div>
 
-    <button class="save-btn" id="saveBtn" onclick="save()">שמור</button>
+    <button class="save-btn" id="saveBtn" onclick="save()">🌐 תרגם שם ושמור</button>
     <p class="saved-msg" id="savedMsg"></p>
   </div>
 
   <!-- Name translations card -->
   <div class="card" id="nameTransCard" style="display:none;">
     <div class="field">
-      <label id="labelNameTrans" style="font-size:.9rem;font-weight:600;color:var(--text);">🌐 שמות מתורגמים</label>
-      <p style="font-size:.75rem;color:var(--muted);margin-top:.1rem;" id="nameTransHint">ערוך את האנגלית ולחץ "תרגם מחדש" כדי לתקן את שמך בכל השפות</p>
+      <label id="labelNameTrans" style="font-size:.9rem;font-weight:600;color:var(--text);">🌐 תרגום שם — בדוק ותקן</label>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.1rem;" id="nameTransHint">השם תורגם אוטומטית בשמירה. תקן לפי הצורך ולחץ שמור.</p>
     </div>
     <div class="field">
       <label id="labelNameEn">English</label>
@@ -162,10 +162,8 @@
       <label id="labelNameAr">العربية</label>
       <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية">
     </div>
-    <div style="display:flex;gap:.6rem;">
-      <button class="save-btn" id="retransBtn" onclick="retranslateNames()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם מחדש מאנגלית</button>
-      <button class="save-btn" id="saveTransBtn" onclick="saveNameTranslations()" style="flex:1;">✓ שמור</button>
-    </div>
+    <button class="save-btn" id="retransBtn" onclick="retranslateNames()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);margin-bottom:.3rem;">🔁 תקן מאנגלית — תרגם מחדש מהשדה למעלה</button>
+    <button class="save-btn" id="saveTransBtn" onclick="saveNameTranslations()">✓ שמור שמות</button>
     <p class="saved-msg" id="transSavedMsg"></p>
   </div>
 
@@ -413,6 +411,10 @@
         setTimeout(() => pi.style.borderColor = '', 2000);
         return;
       }
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ שומר ומתרגם...';
+
       const oldName = localStorage.getItem('bf_name') || '';
       const oldPhone = localStorage.getItem('bf_phone') || '';
       localStorage.setItem('bf_name',    name);
@@ -420,9 +422,7 @@
       localStorage.setItem('bf_ui_lang', uiLangSelect.value);
       localStorage.setItem('bf_emoji',   emojiInput.value.trim());
       localStorage.setItem('bf_phone',   phone);
-      // Name changed for an already-registered user — reattribute past
-      // messages + merge the member row in every room, instead of leaving
-      // a duplicate "ghost" entry under the old name.
+      // Name changed for an already-registered user — reattribute past messages
       if (oldName && oldPhone && oldName !== name) {
         try {
           await fetch('/api/rename-member', {
@@ -432,8 +432,30 @@
           });
         } catch(e) { console.error('rename-member:', e); }
       }
+
+      // Auto-translate name in the background (fire-and-forget — don't block redirect)
+      try {
+        const tr = await fetch('/api/profile/translate-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        }).then(r => r.json());
+        // Persist translations to server
+        await fetch('/api/profile/name-translations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, name_translations: tr })
+        });
+        currentNameTrans = tr;
+        document.getElementById('nameEnInput').value = tr.en || '';
+        document.getElementById('nameHeInput').value = tr.he || '';
+        document.getElementById('nameArInput').value = tr.ar || '';
+      } catch(e) { console.error('auto-translate:', e); }
+
       savedMsg.textContent = su.saved;
-      setTimeout(() => { savedMsg.textContent = ''; location.href = '/home.html'; }, 800);
+      btn.disabled = false;
+      btn.textContent = '🌐 תרגם שם ושמור';
+      setTimeout(() => { savedMsg.textContent = ''; location.href = returnTo; }, 700);
     }
 
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
@@ -483,15 +505,23 @@
       const en = document.getElementById('nameEnInput').value.trim();
       const he = document.getElementById('nameHeInput').value.trim();
       const ar = document.getElementById('nameArInput').value.trim();
+      const btn = document.getElementById('saveTransBtn');
+      btn.disabled = true;
       try {
         await fetch('/api/profile/name-translations', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone, name_translations: { en, he, ar } })
         });
+        currentNameTrans = { en, he, ar };
         document.getElementById('transSavedMsg').textContent = '✓ נשמר';
         setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
-      } catch(e) { console.error('saveNameTranslations:', e); }
+      } catch(e) {
+        document.getElementById('transSavedMsg').textContent = 'שגיאה';
+        console.error('saveNameTranslations:', e);
+      } finally {
+        btn.disabled = false;
+      }
     }
 
 

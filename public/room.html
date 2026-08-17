@@ -629,13 +629,15 @@
           + (phone ? `<span class="row-phone">${esc(phone)}</span>` : '');
         row.style.cursor = 'pointer';
         row.addEventListener('click', () => {
-          // TTS — read display name aloud (translated if available)
-          const utt = new SpeechSynthesisUtterance(displayName);
-          if (/[؀-ۿ]/.test(displayName)) utt.lang = 'ar';
-          else if (/[֐-׿]/.test(displayName)) utt.lang = 'he';
-          else utt.lang = 'en';
-          speechSynthesis.cancel();
-          speechSynthesis.speak(utt);
+          // TTS — read display name aloud only when TTS is on
+          if (ttsOn) {
+            const utt = new SpeechSynthesisUtterance(displayName);
+            if (/[؀-ۿ]/.test(displayName)) utt.lang = 'ar';
+            else if (/[֐-׿]/.test(displayName)) utt.lang = 'he';
+            else utt.lang = 'en';
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utt);
+          }
           // Remove any existing DM/admin action row
           panel.querySelectorAll('.dm-action-row').forEach(el => el.remove());
           if (name !== myName) {

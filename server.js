@@ -1157,6 +1157,23 @@ app.get('/api/profile', async (req, res) => {
   res.json(profiles[0] || {});
 });
 
+// Translate a name to he/ar/en from any source language (used by settings on save)
+app.post('/api/profile/translate-name', express.json(), async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Missing name' });
+  if (!process.env.OPENAI_API_KEY) return res.json({ he: name, ar: name, en: name });
+  try {
+    const [he, ar, en] = await Promise.all([
+      translateMemberName(name, 'he'),
+      translateMemberName(name, 'ar'),
+      translateMemberName(name, 'en'),
+    ]);
+    res.json({ he, ar, en });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Patch name_translations — client sends corrected English; server re-translates to he/ar
 app.patch('/api/profile/name-translations', express.json(), async (req, res) => {
   const { phone, name_translations } = req.body;
