@@ -261,8 +261,7 @@
 
     // 📝 Feedback — show unhandled count
     const fbTotal    = Array.isArray(feedback) ? feedback.length : 0;
-    const handled    = getFbHandled();
-    const fbHandled  = Array.isArray(feedback) ? feedback.filter(f => handled.has(f.created_at || f.id || '')).length : 0;
+    const fbHandled  = Array.isArray(feedback) ? feedback.filter(f => f.resolved).length : 0;
     const fbPending  = fbTotal - fbHandled;
     const fbClass    = fbPending > 0 ? 'warn' : 'ok';
     const fbSub      = fbTotal > 0 ? `${fbHandled} טופלו · ${fbTotal} סה"כ` : 'אין פידבק עדיין';
@@ -366,15 +365,6 @@
     } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
-  // ── Feedback handled state (localStorage) ────────────────────────────────
-  function getFbHandled() {
-    try { return new Set(JSON.parse(localStorage.getItem('bf_admin_fb_handled') || '[]')); }
-    catch { return new Set(); }
-  }
-  function saveFbHandled(set) {
-    localStorage.setItem('bf_admin_fb_handled', JSON.stringify([...set]));
-  }
-
   // ── Feedback ─────────────────────────────────────────────────────────────
   async function loadFeedback() {
     const statusEl = document.getElementById('feedbackStatus');
@@ -386,12 +376,10 @@
       statusEl.textContent = '';
       if (!rows.length) { listEl.innerHTML = '<p class="empty">אין פידבק</p>'; return; }
 
-      const handled = getFbHandled();
       listEl.innerHTML = '';
 
       rows.forEach(f => {
-        const key       = f.created_at || f.id || '';
-        const isHandled = handled.has(key);
+        const isHandled = !!f.resolved;
 
         const div = document.createElement('div');
         div.className = 'fb-row' + (isHandled ? ' handled' : '');
@@ -401,11 +389,21 @@
         cb.className = 'fb-check';
         cb.checked = isHandled;
         cb.title = isHandled ? 'מסומן כטופל — לחץ לביטול' : 'סמן כטופל';
-        cb.addEventListener('change', () => {
-          const h = getFbHandled();
-          if (cb.checked) h.add(key); else h.delete(key);
-          saveFbHandled(h);
+        cb.addEventListener('change', async () => {
           div.classList.toggle('handled', cb.checked);
+          cb.disabled = true;
+          try {
+            await fetch(`/api/feedback/${f.id}?secret=${encodeURIComponent(SECRET)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ resolved: cb.checked })
+            });
+          } catch(e) {
+            cb.checked = !cb.checked;
+            div.classList.toggle('handled', cb.checked);
+          } finally {
+            cb.disabled = false;
+          }
         });
 
         const main = document.createElement('div');

@@ -912,6 +912,21 @@ app.get('/api/feedback', async (req, res) => {
   res.json(await r.json());
 });
 
+app.patch('/api/feedback/:id', express.json(), async (req, res) => {
+  const secret = req.query.secret || req.body.secret;
+  if (!secret || secret !== process.env.REPORT_SECRET) return res.status(403).json({ error: 'forbidden' });
+  const { resolved } = req.body;
+  if (typeof resolved !== 'boolean') return res.status(400).json({ error: 'resolved must be boolean' });
+  if (!SB_URL) return res.json({ ok: true });
+  const r = await fetch(`${SB_URL}/rest/v1/feedback?id=eq.${encodeURIComponent(req.params.id)}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ resolved })
+  });
+  if (!r.ok) return res.status(500).json({ error: 'db error' });
+  res.json({ ok: true });
+});
+
 // ── OpenAI usage/cost report (admin, read-only key) ──────────────────────────
 // Protected by REPORT_SECRET env var (separate from the OpenAI key) so the
 // endpoint isn't publicly scrapeable. OPENAI_ADMIN_KEY must be a restricted
