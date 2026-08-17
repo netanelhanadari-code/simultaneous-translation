@@ -319,9 +319,10 @@
       <div class="room-name" id="roomNameEl">טוען...</div>
       <span class="room-code" id="codeEl" title="לחץ להעתיק">📋 ...</span>
     </div>
+    <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()" title="קריאה אוטומטית">🔊</button>
+    <button class="tts-toggle" id="notifyBtn" onclick="toggleNotify()" title="צליל התרעה">🔔</button>
     <button class="back-btn" onclick="loadRoom()" title="רענן" style="font-size:1.1rem;">↻</button>
     <button class="back-btn" id="roomSettingsBtn" onclick="openRoomSettings()" title="הגדרות קבוצה" style="display:none;">⚙️</button>
-    <div class="lang-badge" id="langBadge" style="cursor:pointer;" onclick="location.href='/settings.html?from='+encodeURIComponent(location.href)" title="הגדרות"></div>
   </header>
 
   <div id="chip-tooltip" class="chip-tooltip"></div>
@@ -368,8 +369,6 @@
       <button class="reply-cancel" onclick="cancelReply()" title="בטל">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;width:100%;">
-      <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()" title="קריאה אוטומטית">🔊</button>
-      <button class="tts-toggle" id="notifyBtn" onclick="toggleNotify()" title="צליל התרעה">🔔</button>
       <textarea id="textInput" rows="1" placeholder="הקלד הודעה..."></textarea>
       <button id="sendBtn" onclick="sendText()" disabled>➤</button>
       <button id="attachBtn" onclick="document.getElementById('imageInput').click()" title="שלח תמונה">📎</button>
