@@ -372,6 +372,12 @@
         <p id="notifMsg" style="font-size:.78rem;color:var(--muted);text-align:center;min-height:1em;"></p>
       </div>
 
+      <!-- יוצר הקבוצה -->
+      <div class="sheet-section" id="creatorSection" style="display:none;">
+        <div class="section-label">יוצר הקבוצה</div>
+        <div id="creatorNameEl" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:.65rem .9rem;font-size:.95rem;color:var(--text);"></div>
+      </div>
+
       <!-- שם הקבוצה (מייסד בלבד) -->
       <div id="renameSection" style="display:none;" class="sheet-section">
         <div class="section-label" id="editNameLabel">שם הקבוצה</div>
@@ -625,8 +631,12 @@
         if (!isDM) currentRoomNames = names;
         // Show rename section only for room creator
         if (!isDM) {
-          const creatorPhone = data.creator_phone || '';
+          creatorPhone = data.creator_phone || '';
           const isCreator = myPhone && creatorPhone && myPhone === creatorPhone;
+          if (data.allMembers) {
+            const m = data.allMembers.find(m => m.phone === creatorPhone);
+            creatorName = m?.name || null;
+          }
           document.getElementById('renameSection').style.display = isCreator ? '' : 'none';
         }
         const displayName = isDM
@@ -967,6 +977,7 @@
     }
 
     let currentRoomNames = {};
+    let creatorPhone = '', creatorName = null;
     function openRoomSettings() {
       initPushUI();
       document.getElementById('settingsTitle').textContent = ui.settingsTitle;
@@ -983,6 +994,15 @@
       // Checkbox change listener
       const cb = document.getElementById('notifCheck');
       cb.onchange = () => togglePushNotifications();
+      // Creator section
+      const creatorSec = document.getElementById('creatorSection');
+      const creatorEl  = document.getElementById('creatorNameEl');
+      if (creatorName) {
+        creatorEl.textContent = creatorName;
+        creatorSec.style.display = '';
+      } else {
+        creatorSec.style.display = 'none';
+      }
       document.getElementById('roomSettingsSheet').style.display = '';
     }
     async function saveRoomName() {
