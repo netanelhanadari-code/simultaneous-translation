@@ -319,6 +319,16 @@
     }
     .notif-check-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
     .sheet-btn-row { display: flex; gap: .5rem; width: 100%; }
+    .sheet-member-row {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .55rem .9rem; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: .9rem; color: var(--text);
+    }
+    .sheet-member-row.clickable { cursor: pointer; transition: background .12s; }
+    .sheet-member-row.clickable:hover { background: rgba(255,255,255,.05); }
+    .sheet-member-row.clickable:active { background: rgba(139,47,201,.15); }
+    .sheet-member-me { color: var(--muted); font-size: .78rem; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -375,7 +385,13 @@
       <!-- יוצר הקבוצה -->
       <div class="sheet-section" id="creatorSection" style="display:none;">
         <div class="section-label">יוצר הקבוצה</div>
-        <div id="creatorNameEl" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:.65rem .9rem;font-size:.95rem;color:var(--text);"></div>
+        <div id="creatorRow" style="width:100%;"></div>
+      </div>
+
+      <!-- חברי הקבוצה -->
+      <div class="sheet-section" id="membersSec" style="display:none;">
+        <div class="section-label">חברי הקבוצה</div>
+        <div id="membersSheetList" style="width:100%;display:flex;flex-direction:column;gap:.4rem;max-height:220px;overflow-y:auto;"></div>
       </div>
 
       <!-- שם הקבוצה (מייסד בלבד) -->
@@ -994,14 +1010,43 @@
       // Checkbox change listener
       const cb = document.getElementById('notifCheck');
       cb.onchange = () => togglePushNotifications();
+      // Helper: build a member row element
+      function makeSheetMemberRow(name, memberData) {
+        const row = document.createElement('div');
+        row.className = 'sheet-member-row' + (name !== myName ? ' clickable' : '');
+        const em = memberData?.emoji || '👤';
+        const avatarHtml = memberData?.avatar
+          ? `<span style="width:26px;height:26px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="${memberData.avatar}" style="width:100%;height:100%;object-fit:cover;"></span>`
+          : `<span style="font-size:1.1rem;flex-shrink:0;">${em}</span>`;
+        const meTag = name === myName ? `<span class="sheet-member-me">אתה</span>` : '';
+        row.innerHTML = avatarHtml + `<span style="flex:1;">${esc(name)}</span>` + meTag;
+        if (name !== myName) {
+          row.title = `פתח צ'אט פרטי עם ${name}`;
+          row.addEventListener('click', () => { closeRoomSettings(); openDM(name); });
+        }
+        return row;
+      }
       // Creator section
       const creatorSec = document.getElementById('creatorSection');
-      const creatorEl  = document.getElementById('creatorNameEl');
+      const creatorRowEl = document.getElementById('creatorRow');
+      creatorRowEl.innerHTML = '';
       if (creatorName) {
-        creatorEl.textContent = creatorName;
+        creatorRowEl.appendChild(makeSheetMemberRow(creatorName, allMembers.get(creatorName)));
         creatorSec.style.display = '';
       } else {
         creatorSec.style.display = 'none';
+      }
+      // Members section
+      const membersSec  = document.getElementById('membersSec');
+      const membersList = document.getElementById('membersSheetList');
+      membersList.innerHTML = '';
+      if (allMembers.size > 0) {
+        allMembers.forEach((data, name) => {
+          membersList.appendChild(makeSheetMemberRow(name, data));
+        });
+        membersSec.style.display = '';
+      } else {
+        membersSec.style.display = 'none';
       }
       document.getElementById('roomSettingsSheet').style.display = '';
     }
