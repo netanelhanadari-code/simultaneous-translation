@@ -329,6 +329,15 @@
     .sheet-member-row.clickable:hover { background: rgba(255,255,255,.05); }
     .sheet-member-row.clickable:active { background: rgba(139,47,201,.15); }
     .sheet-member-me { color: var(--muted); font-size: .78rem; margin-right: auto; }
+    .dm-action-row {
+      padding: .3rem .8rem .3rem 2.2rem;
+    }
+    .dm-action-row button {
+      background: rgba(139,47,201,.15); border: 1px solid var(--accent);
+      color: var(--accent); border-radius: 8px; padding: .35rem .8rem;
+      font-size: .82rem; cursor: pointer; font-family: inherit;
+    }
+    .dm-action-row button:hover { background: rgba(139,47,201,.28); }
   </style>
 </head>
 <body>
@@ -380,18 +389,6 @@
           <span id="notifCheckText">קבל התראות על הודעות חדשות</span>
         </label>
         <p id="notifMsg" style="font-size:.78rem;color:var(--muted);text-align:center;min-height:1em;"></p>
-      </div>
-
-      <!-- יוצר הקבוצה -->
-      <div class="sheet-section" id="creatorSection" style="display:none;">
-        <div class="section-label">יוצר הקבוצה</div>
-        <div id="creatorRow" style="width:100%;"></div>
-      </div>
-
-      <!-- חברי הקבוצה -->
-      <div class="sheet-section" id="membersSec" style="display:none;">
-        <div class="section-label">חברי הקבוצה</div>
-        <div id="membersSheetList" style="width:100%;display:flex;flex-direction:column;gap:.4rem;max-height:220px;overflow-y:auto;"></div>
       </div>
 
       <!-- שם הקבוצה (מייסד בלבד) -->
@@ -572,14 +569,7 @@
           + chipAvatar
           + `<span class="chip-label">${esc(shortName)}</span>`;
         chip.addEventListener('click', () => {
-          showTooltip(chip, `${name} · ${LANG_NAMES[lang]||lang}`);
-          const utt = new SpeechSynthesisUtterance(name);
-          // Detect script of the name itself — don't assume it matches the member's comm lang
-          if (/[؀-ۿ]/.test(name)) utt.lang = 'ar';
-          else if (/[֐-׿]/.test(name)) utt.lang = 'he';
-          else utt.lang = 'en';
-          speechSynthesis.cancel();
-          speechSynthesis.speak(utt);
+          if (!panel.classList.contains('open')) toggleMembersBar();
         });
         bar.appendChild(chip);
 
@@ -595,11 +585,28 @@
           + `<span class="row-name">${esc(name)}</span>`
           + (phone ? `<span class="row-phone">${esc(phone)}</span>` : '')
           + `<span class="row-lang">${LANG_NAMES[lang]||lang}</span>`;
-        if (name !== myName) {
-          row.style.cursor = 'pointer';
-          row.title = `פתח צ'אט פרטי עם ${name}`;
-          row.addEventListener('click', () => openDM(name));
-        }
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+          // TTS — read name aloud
+          const utt = new SpeechSynthesisUtterance(name);
+          if (/[؀-ۿ]/.test(name)) utt.lang = 'ar';
+          else if (/[֐-׿]/.test(name)) utt.lang = 'he';
+          else utt.lang = 'en';
+          speechSynthesis.cancel();
+          speechSynthesis.speak(utt);
+          // Remove any existing DM action row
+          panel.querySelectorAll('.dm-action-row').forEach(el => el.remove());
+          // Show DM button for others
+          if (name !== myName) {
+            const dmRow = document.createElement('div');
+            dmRow.className = 'dm-action-row';
+            const dmBtn = document.createElement('button');
+            dmBtn.textContent = '💬 שיחה פרטית';
+            dmBtn.onclick = () => { toggleMembersBar(); openDM(name); };
+            dmRow.appendChild(dmBtn);
+            row.insertAdjacentElement('afterend', dmRow);
+          }
+        });
         panel.appendChild(row);
       });
     }
@@ -1010,44 +1017,6 @@
       // Checkbox change listener
       const cb = document.getElementById('notifCheck');
       cb.onchange = () => togglePushNotifications();
-      // Helper: build a member row element
-      function makeSheetMemberRow(name, memberData) {
-        const row = document.createElement('div');
-        row.className = 'sheet-member-row' + (name !== myName ? ' clickable' : '');
-        const em = memberData?.emoji || '👤';
-        const avatarHtml = memberData?.avatar
-          ? `<span style="width:26px;height:26px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="${memberData.avatar}" style="width:100%;height:100%;object-fit:cover;"></span>`
-          : `<span style="font-size:1.1rem;flex-shrink:0;">${em}</span>`;
-        const meTag = name === myName ? `<span class="sheet-member-me">אתה</span>` : '';
-        row.innerHTML = avatarHtml + `<span style="flex:1;">${esc(name)}</span>` + meTag;
-        if (name !== myName) {
-          row.title = `פתח צ'אט פרטי עם ${name}`;
-          row.addEventListener('click', () => { closeRoomSettings(); openDM(name); });
-        }
-        return row;
-      }
-      // Creator section
-      const creatorSec = document.getElementById('creatorSection');
-      const creatorRowEl = document.getElementById('creatorRow');
-      creatorRowEl.innerHTML = '';
-      if (creatorName) {
-        creatorRowEl.appendChild(makeSheetMemberRow(creatorName, allMembers.get(creatorName)));
-        creatorSec.style.display = '';
-      } else {
-        creatorSec.style.display = 'none';
-      }
-      // Members section
-      const membersSec  = document.getElementById('membersSec');
-      const membersList = document.getElementById('membersSheetList');
-      membersList.innerHTML = '';
-      if (allMembers.size > 0) {
-        allMembers.forEach((data, name) => {
-          membersList.appendChild(makeSheetMemberRow(name, data));
-        });
-        membersSec.style.display = '';
-      } else {
-        membersSec.style.display = 'none';
-      }
       document.getElementById('roomSettingsSheet').style.display = '';
     }
     async function saveRoomName() {
