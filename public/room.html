@@ -556,8 +556,6 @@
       });
     }
 
-    document.getElementById('langBadge').textContent = (myEmoji || '') + ' ' + (LANG_NAMES[myLang] || myLang);
-
     // Apply UI language
     const UI = {
       he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה', settingsTitle: 'הגדרות קבוצה', copyLink: '📋 העתק קישור', linkCopied: '✓ הועתק!', notifOn: '🔔 התראות פעילות — לחץ לביטול', notifOff: '🔕 הפעל התראות לחדר זה', notifUnsupported: '🔕 לא נתמך בדפדפן זה', notifDenied: 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן', notifCancelled: 'התראות בוטלו', notifActive: '✓ תקבל התראות כשמגיעות הודעות', notifNoKey: 'שרת לא מוגדר לפוש', notifNoPerm: 'לא אושרה הרשאה', editName: '✏️ עריכת שם הקבוצה', saveName: 'שמור שם', nameSaved: '✓ נשמר', nameError: 'שגיאה', iosBanner: '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה', deleteConfirm: 'למחוק את ההודעה?', editedTag: 'נערך', editAction: '✏️ ערוך', deleteAction: '🗑️ מחק', cancelAction: 'ביטול', saveAction: 'שמור' },
