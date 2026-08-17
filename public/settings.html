@@ -144,6 +144,31 @@
     <p class="saved-msg" id="savedMsg"></p>
   </div>
 
+  <!-- Name translations card -->
+  <div class="card" id="nameTransCard" style="display:none;">
+    <div class="field">
+      <label id="labelNameTrans" style="font-size:.9rem;font-weight:600;color:var(--text);">🌐 שמות מתורגמים</label>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.1rem;" id="nameTransHint">ערוך את האנגלית ולחץ "תרגם מחדש" כדי לתקן את שמך בכל השפות</p>
+    </div>
+    <div class="field">
+      <label id="labelNameEn">English</label>
+      <input id="nameEnInput" type="text" dir="ltr" style="text-align:left;" placeholder="Your name in English">
+    </div>
+    <div class="field">
+      <label id="labelNameHe">עברית</label>
+      <input id="nameHeInput" type="text" dir="rtl" placeholder="שמך בעברית" readonly style="opacity:.7;">
+    </div>
+    <div class="field">
+      <label id="labelNameAr">العربية</label>
+      <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية" readonly style="opacity:.7;">
+    </div>
+    <div style="display:flex;gap:.6rem;">
+      <button class="save-btn" id="retransBtn" onclick="retranslateNames()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם מחדש מאנגלית</button>
+      <button class="save-btn" id="saveTransBtn" onclick="saveNameTranslations()" style="flex:1;">✓ שמור</button>
+    </div>
+    <p class="saved-msg" id="transSavedMsg"></p>
+  </div>
+
   <script>
     const nameInput    = document.getElementById('nameInput');
     const langSelect   = document.getElementById('langSelect');
@@ -407,10 +432,74 @@
         } catch(e) { console.error('rename-member:', e); }
       }
       savedMsg.textContent = su.saved;
-      setTimeout(() => { savedMsg.textContent = ''; location.href = returnTo; }, 800);
+      setTimeout(() => { savedMsg.textContent = ''; location.href = '/home.html'; }, 800);
     }
 
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+
+    // ── Name translations ─────────────────────────────────────────────────────
+    let currentNameTrans = {};
+
+    async function loadNameTranslations() {
+      const phone = localStorage.getItem('bf_phone') || '';
+      if (!phone) return;
+      document.getElementById('nameTransCard').style.display = '';
+      try {
+        const profile = await fetch(`/api/profile?phone=${encodeURIComponent(phone)}`).then(r => r.json());
+        currentNameTrans = profile.name_translations || {};
+        document.getElementById('nameEnInput').value = currentNameTrans.en || '';
+        document.getElementById('nameHeInput').value = currentNameTrans.he || '';
+        document.getElementById('nameArInput').value = currentNameTrans.ar || '';
+      } catch(e) { console.error('loadNameTranslations:', e); }
+    }
+
+    async function retranslateNames() {
+      const phone = localStorage.getItem('bf_phone') || '';
+      const en = document.getElementById('nameEnInput').value.trim();
+      if (!phone || !en) return;
+      const btn = document.getElementById('retransBtn');
+      btn.disabled = true; btn.textContent = '⏳';
+      try {
+        const r = await fetch('/api/profile/name-translations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, name_translations: { ...currentNameTrans, en } })
+        });
+        const data = await r.json();
+        currentNameTrans = data.name_translations || {};
+        document.getElementById('nameEnInput').value = currentNameTrans.en || en;
+        document.getElementById('nameHeInput').value = currentNameTrans.he || '';
+        document.getElementById('nameArInput').value = currentNameTrans.ar || '';
+        document.getElementById('transSavedMsg').textContent = '✓ תורגם ונשמר';
+        setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
+      } catch(e) { console.error('retranslateNames:', e); }
+      btn.disabled = false; btn.textContent = '🔁 תרגם מחדש מאנגלית';
+    }
+
+    async function saveNameTranslations() {
+      const phone = localStorage.getItem('bf_phone') || '';
+      if (!phone) return;
+      const en = document.getElementById('nameEnInput').value.trim();
+      const he = document.getElementById('nameHeInput').value.trim();
+      const ar = document.getElementById('nameArInput').value.trim();
+      try {
+        await fetch('/api/profile/name-translations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, name_translations: { en, he, ar } })
+        });
+        document.getElementById('transSavedMsg').textContent = '✓ נשמר';
+        setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
+      } catch(e) { console.error('saveNameTranslations:', e); }
+    }
+
+    // Make he/ar inputs editable too
+    document.getElementById('nameHeInput').removeAttribute('readonly');
+    document.getElementById('nameArInput').removeAttribute('readonly');
+    document.getElementById('nameHeInput').style.opacity = '';
+    document.getElementById('nameArInput').style.opacity = '';
+
+    loadNameTranslations();
   </script>
 </body>
 </html>

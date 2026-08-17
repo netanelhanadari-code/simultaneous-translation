@@ -322,6 +322,63 @@ app.get('/api/dm', async (req, res) => {
   res.json({ id });
 });
 
+// Translate a member's display name to another language.
+// Handles transliteration + semantic meaning (e.g. "נתי המלך בצפון" → "Nati, King of the North")
+async function translateMemberName(name, toLang) {
+  if (!name || !process.env.OPENAI_API_KEY) return name;
+  const toName = LANG_NAMES[toLang] || toLang;
+  const systemPrompt = `You are a name translator. The input is a person's display name — it may be a plain name, a nickname, or a name with a title/description (e.g. "Nati King of the North" or "נתי המלך בצפון").
+Translate or transliterate it to ${toName}:
+- Transliterate the personal name phonetically
+- Translate any titles, descriptions, or words that carry meaning
+- Output ONLY the result, nothing else — no quotes, no explanations`;
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: name }],
+        temperature: 0.2, max_tokens: 60
+      })
+    });
+    const d = await r.json();
+    return d.choices?.[0]?.message?.content?.trim() || name;
+  } catch(e) { return name; }
+}
+
+// Upsert user_profiles — keeps name/lang/emoji fresh on every WS join
+async function upsertUserProfile(phone, name, lang, emoji) {
+  if (!phone || !SB_URL) return;
+  try {
+    const existing = await sbQuery('user_profiles', `phone=eq.${encodeURIComponent(phone)}&limit=1`);
+    if (existing.length) {
+      await fetch(`${SB_URL}/rest/v1/user_profiles?phone=eq.${encodeURIComponent(phone)}`, {
+        method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ name, lang, emoji, updated_at: new Date().toISOString() })
+      });
+    } else {
+      await sbInsert('user_profiles', { phone, name, lang, emoji, name_translations: {} });
+    }
+  } catch(e) { console.error('[upsertUserProfile]', e.message); }
+}
+
+// Ensure a member has a name_translation for targetLang — translate and persist if missing
+async function ensureNameTranslation(phone, name, targetLang) {
+  if (!phone || !name || !SB_URL || !process.env.OPENAI_API_KEY) return;
+  try {
+    const profiles = await sbQuery('user_profiles', `phone=eq.${encodeURIComponent(phone)}&select=name_translations&limit=1`);
+    const current = profiles[0]?.name_translations || {};
+    if (current[targetLang]) return; // already cached
+    const translated = await translateMemberName(name, targetLang);
+    const updated = { ...current, [targetLang]: translated };
+    await fetch(`${SB_URL}/rest/v1/user_profiles?phone=eq.${encodeURIComponent(phone)}`, {
+      method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ name_translations: updated })
+    });
+  } catch(e) { console.error('[ensureNameTranslation]', e.message); }
+}
+
 // Translate a short name string (for room names only — lightweight prompt)
 // fromLang is optional — if omitted, GPT auto-detects source language
 async function translateRoomName(text, fromLang, toLang) {
@@ -428,6 +485,17 @@ app.get('/api/rooms/:id', async (req, res) => {
     let room = roomRows[0];
     const messages = (await sbQuery('messages', `room_id=eq.${id}&order=created_at.desc&limit=500`)).reverse();
     const allMembers = await sbQuery('room_members', `room_id=eq.${id}&order=last_seen.desc`);
+
+    // Enrich allMembers with name_translations from user_profiles
+    const phones = (allMembers || []).map(m => m.phone).filter(Boolean);
+    if (phones.length > 0 && SB_URL) {
+      const profiles = await sbQuery('user_profiles',
+        `phone=in.(${phones.map(p => encodeURIComponent(p)).join(',')})&select=phone,name_translations`
+      ).catch(() => []);
+      const profMap = {};
+      profiles.forEach(p => { profMap[p.phone] = p.name_translations || {}; });
+      allMembers.forEach(m => { m.name_translations = profMap[m.phone] || {}; });
+    }
 
     // Lazy backfill: translate names for existing rooms that don't have them yet
     if (room && SB_URL && (!room.names || Object.keys(room.names).length === 0) && !id.startsWith('D')) {
@@ -1016,6 +1084,40 @@ app.get('/api/admin/storage-usage', async (req, res) => {
   }
 });
 
+// ── User profile endpoints ────────────────────────────────────────────────────
+app.get('/api/profile', async (req, res) => {
+  const { phone } = req.query;
+  if (!phone || !SB_URL) return res.json({});
+  const profiles = await sbQuery('user_profiles', `phone=eq.${encodeURIComponent(phone)}&limit=1`).catch(() => []);
+  res.json(profiles[0] || {});
+});
+
+// Patch name_translations — client sends corrected English; server re-translates to he/ar
+app.patch('/api/profile/name-translations', express.json(), async (req, res) => {
+  const { phone, name_translations } = req.body;
+  if (!phone || !name_translations) return res.status(400).json({ error: 'Missing params' });
+  if (!SB_URL) return res.json({ ok: true, name_translations });
+
+  const result = { ...name_translations };
+  const en = result.en;
+  if (en && process.env.OPENAI_API_KEY) {
+    // Re-translate from the corrected English to he + ar
+    const [he, ar] = await Promise.all([
+      translateMemberName(en, 'he'),
+      translateMemberName(en, 'ar'),
+    ]);
+    result.he = he;
+    result.ar = ar;
+  }
+
+  await fetch(`${SB_URL}/rest/v1/user_profiles?phone=eq.${encodeURIComponent(phone)}`, {
+    method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ name_translations: result })
+  }).catch(e => console.error('[profile/name-translations]', e.message));
+
+  res.json({ ok: true, name_translations: result });
+});
+
 // ── Rename a user across every room they're in ────────────────────────────────
 // Identity is anchored by phone (collected at registration), since `name` is
 // the room_members primary key and messages.sender_name is just plain text.
@@ -1057,6 +1159,14 @@ app.post('/api/rename-member', express.json(), async (req, res) => {
     const payload = JSON.stringify({ type: 'member_renamed', old_name: oldName, new_name: newName });
     const roomWs = rooms.get(roomId);
     if (roomWs?.members) roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  }
+
+  // Also update global profile with new name (reset translations — they'll be rebuilt lazily)
+  if (SB_URL) {
+    await fetch(`${SB_URL}/rest/v1/user_profiles?phone=eq.${encodeURIComponent(phone)}`, {
+      method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ name: newName, name_translations: {}, updated_at: new Date().toISOString() })
+    }).catch(() => {});
   }
 
   res.json({ ok: true, rooms: roomIds });
@@ -1299,6 +1409,20 @@ wss.on('connection', (ws, req) => {
         sbInsert('room_members', { room_id: roomId, name, emoji, lang, phone }).catch(() => {});
       }
     }).catch(() => {});
+
+    // Upsert global profile + lazy-translate other members' names to this member's language
+    if (phone) {
+      (async () => {
+        await upsertUserProfile(phone, name, lang, emoji);
+        // Translate every other member's name to the newcomer's language (if missing)
+        const dbMembers = await sbQuery('room_members', `room_id=eq.${roomId}&select=phone,name`).catch(() => []);
+        await Promise.all(
+          dbMembers
+            .filter(m => m.phone && m.name !== name)
+            .map(m => ensureNameTranslation(m.phone, m.name, lang))
+        );
+      })().catch(e => console.error('[profile/lazy-translate]', e.message));
+    }
 
     // Send current member list to newcomer (online only, from WS)
     const memberList = [...room.members.values()].map(m => ({ name: m.name, lang: m.lang, emoji: m.emoji, phone: m.phone || '', avatar: m.avatar || '', online: true }));

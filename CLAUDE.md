@@ -288,13 +288,23 @@ function linkify(html) { ... }
 - [x] **user-select:none** — נוסף לכל הדפים (room.html, admin.html, feedback.html) למניעת popup גוגל בלחיצה ארוכה
 - [x] **Admin dashboard** — נוסף טאב דשבורד ראשי עם 4 כרטיסים: מסומנות / עלות API / סטורג' / פידבק
 - [x] **Feedback checkboxes** — נוספו checkboxes לטאב הפידבק בadmin, מתמידים ב-localStorage
-- [ ] **Image upload** — קוד מוכן ב-server.js ו-room.html, **אך צריך:**
-  - צור bucket בשם `images` ב-Supabase (Public, allow anon upload)
-  - הרץ migration: `alter table messages add column if not exists image_url text;`
+- [x] **Image upload** — טופל (bucket + migration בוצעו)
 - [x] **Bug: feedback checkboxes מתאפסים** — תוקן: הוסף `input[type="checkbox"]` לרשימת user-select:text; key אוחד ל-`f.created_at || f.id || ''`
 - [x] **feedback.html** — נכתב מחדש לגמרי (FROM SCRATCH): עיצוב חדש, RTL נקי ללא `dir="rtl"` על html, splash screen זהה ל-home.html (שני לוגואים: logo.png + babel-fish.png), שדות מדויקים לפי DB
-- [ ] **הודעות ברוכים הבאים** בחאן אל-אחמר — לבדוק אם נכתבו מחדש אחרי מחיקת הגרבאג'
+- [x] **guide.html — lang bar** — גלובוס ובחירת שפה ממורכזים (`position:absolute` על back-btn, `justify-content:center`); שם ليلى תוקן לערבית + "العربية" במקום "ערבית" בכיתוב
+- [x] **Screenshots — מחיקת קודי קבוצות** — 6 תמונות (home, room, room-worf, room-alex, room-lila, recording): קודי הקבוצות הוחלפו ב-`•••••` בצבע ה-muted של האפליקציה
+- [x] **guide.html — CTA שיתוף** — נוסף בלוק "למה שרק אתם תהנו??" עם כפתור שיתוף (navigator.share בנייד, clipboard fallback בדסקטופ); מתורגם ל-en/ar ב-BUILT_IN
+- [x] **הודעות גרבאג' בחאן אל-אחמר** — נמחקו (אושר 17/8). הודעות ברוכים הבאים שוחזרו.
 - [ ] **וידאו הדגמה** — תסריט מוכן (`תסריט וידאו - Babel Fish.md`), עדיין לא צולם/הופק
+
+### פידבק פתוח (מ-16-17/8)
+- [ ] **פס הכתיבה צפוף** — האייקונים (🎤🌐🔊) גדולים מדי, לא נשאר מקום לשדה הכתיבה
+- [ ] **כפתור שליחה דינמי** — כשמתחילים להקליד, כפתור הקלטה הופך לכפתור שליחה (▶→📤); כפתור שליחה קבוע מבוטל
+- [ ] **שיתוף חדר — דף נפרד** — קישור שתף חדר → דף עם QR + שיתוף ישיר (וואטסאפ, מייל)
+- [ ] **הגדרות קבוצה — כפתור שיתוף** — כפתור לשליחת הזמנה (לא רק copy link)
+- [ ] **דף פידבק — רוחב** — הדף צר מדי, צריך להרחיב
+- [ ] **שרת ישן (Render)** — לשקול ping תקופתי כדי למנוע sleep של Render free tier (למשל: cron חיצוני או UptimeRobot)
+- [ ] **הגדרות משתמש — redirect אחרי שמירה** — אחרי save, לחזור לדף הקודם (history.back() או לדף הבית)
 
 ### תשתית
 - [x] **SQL migrations** — הורצו ב-Supabase (flagged/edited/avatar/push_subscriptions/feedback)
