@@ -345,7 +345,8 @@
   <header>
     <button class="back-btn" onclick="location.href='/home.html'">‹</button>
     <div class="room-info">
-      <div class="room-name" id="roomNameEl">טוען...</div>
+      <div class="room-name" id="roomNameEl" style="cursor:pointer;" onclick="openDescSheet()">טוען...</div>
+      <div id="roomDescPreview" style="font-size:.65rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:none;cursor:pointer;" onclick="openDescSheet()"></div>
       <span class="room-code" id="codeEl" title="לחץ להעתיק">📋 ...</span>
     </div>
     <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()" title="קריאה אוטומטית">🔊</button>
@@ -409,6 +410,25 @@
     </div>
   </div>
 
+  <!-- Group description sheet -->
+  <div id="descSheetOverlay" style="display:none;" class="sheet-overlay" onclick="if(event.target===this)closeDescSheet()">
+    <div class="sheet" style="position:relative;">
+      <button class="sheet-close" onclick="closeDescSheet()">✕</button>
+      <h3 id="descSheetTitle" style="margin-bottom:1rem;">מידע על הקבוצה</h3>
+      <div id="descViewMode">
+        <p id="descTextEl" style="font-size:.9rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:1rem;min-height:2rem;direction:auto;"></p>
+        <button id="editDescBtn" class="copy-btn" onclick="switchToDescEdit()" style="display:none;width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);">✏️ ערוך תיאור</button>
+      </div>
+      <div id="descEditMode" style="display:none;">
+        <textarea id="descTextarea" rows="5" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:.9rem;padding:.6rem .8rem;border-radius:8px;resize:vertical;direction:auto;outline:none;" placeholder="תיאור הקבוצה..."></textarea>
+        <div class="sheet-btn-row" style="margin-top:.6rem;">
+          <button class="copy-btn" onclick="closeDescEdit()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">ביטול</button>
+          <button class="copy-btn" id="saveDescBtn" onclick="saveRoomDesc()" style="flex:1;background:var(--accent);color:#fff;">✓ שמור</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div class="reply-bar" id="replyBar">
       <span class="reply-bar-text" id="replyBarText"></span>
@@ -461,6 +481,9 @@
 
     const LANG_NAMES = { he:'עברית', ar:'ערבית', en:'English', ru:'Русский', am:'አማርኛ' };
     const LANG_BCP47 = { he:'he-IL', ar:'ar-SA', en:'en-US', ru:'ru-RU', am:'am-ET', fr:'fr-FR', es:'es-ES', uk:'uk-UA', de:'de-DE', pt:'pt-BR', it:'it-IT', sv:'sv-SE', nl:'nl-NL', pl:'pl-PL', tr:'tr-TR', fa:'fa-IR', ur:'ur-PK', hi:'hi-IN', zh:'zh-CN', ja:'ja-JP', ko:'ko-KR', ro:'ro-RO', cs:'cs-CZ', hu:'hu-HU', fi:'fi-FI', da:'da-DK', no:'nb-NO', el:'el-GR', vi:'vi-VN', id:'id-ID', th:'th-TH', bg:'bg-BG', hr:'hr-HR', sk:'sk-SK', ms:'ms-MY' };
+
+    let myIsAdmin = false;
+    let currentRoomDesc = '';
 
     let ttsOn = localStorage.getItem('bf_mute_tts') !== '0';
     let notifyOn = localStorage.getItem('bf_mute_notify') !== '0';
@@ -573,10 +596,11 @@
       });
       document.getElementById('members-count').textContent = merged.size;
 
-      sorted.forEach(([name, { lang, emoji, phone, avatar, online, name_translations }]) => {
+      sorted.forEach(([name, { lang, emoji, phone, avatar, online, name_translations, is_admin }]) => {
         // Display name: translated if available, otherwise original
         const displayName = (name_translations && name_translations[myUiLang]) || name;
         const shortDisplay = displayName.length > 8 ? displayName.slice(0, 8) + '…' : displayName;
+        const isAdminMember = !!is_admin;
 
         // chip (one-line bar)
         const chip = document.createElement('div');
@@ -586,7 +610,7 @@
           : (emoji ? `<span class="chip-avatar">${emoji}</span>` : '');
         chip.innerHTML = `<span class="dot"></span>`
           + chipAvatar
-          + `<span class="chip-label">${esc(shortDisplay)}</span>`;
+          + `<span class="chip-label">${isAdminMember ? '👑' : ''}${esc(shortDisplay)}</span>`;
         chip.addEventListener('click', () => {
           if (!panel.classList.contains('open')) toggleMembersBar();
         });
@@ -601,7 +625,7 @@
         row.innerHTML =
           `<span class="dot"></span>`
           + rowAvatarHtml
-          + `<span class="row-name">${esc(displayName)}</span>`
+          + `<span class="row-name">${isAdminMember ? '👑 ' : ''}${esc(displayName)}</span>`
           + (phone ? `<span class="row-phone">${esc(phone)}</span>` : '');
         row.style.cursor = 'pointer';
         row.addEventListener('click', () => {
@@ -612,16 +636,37 @@
           else utt.lang = 'en';
           speechSynthesis.cancel();
           speechSynthesis.speak(utt);
-          // Remove any existing DM action row
+          // Remove any existing DM/admin action row
           panel.querySelectorAll('.dm-action-row').forEach(el => el.remove());
-          // Show DM button for others
           if (name !== myName) {
             const dmRow = document.createElement('div');
             dmRow.className = 'dm-action-row';
+            // DM button
             const dmBtn = document.createElement('button');
             dmBtn.textContent = ui.dmAction;
             dmBtn.onclick = () => { toggleMembersBar(); openDM(name); };
             dmRow.appendChild(dmBtn);
+            // Admin actions (only if I am admin and target has phone)
+            if (myIsAdmin && phone) {
+              if (isAdminMember) {
+                const demoteBtn = document.createElement('button');
+                demoteBtn.textContent = ui.removeAdminAction || '⬇️ הסר מניהול';
+                demoteBtn.style.cssText = 'background:var(--surface);border:1px solid var(--border);color:var(--muted);';
+                demoteBtn.onclick = () => toggleMemberAdmin(phone, false);
+                dmRow.appendChild(demoteBtn);
+              } else {
+                const promoteBtn = document.createElement('button');
+                promoteBtn.textContent = ui.makeAdminAction || '👑 הפוך למנהל';
+                promoteBtn.style.cssText = 'background:rgba(230,161,61,.15);border:1px solid rgba(230,161,61,.4);color:#e6a13d;';
+                promoteBtn.onclick = () => toggleMemberAdmin(phone, true);
+                dmRow.appendChild(promoteBtn);
+              }
+              const kickBtn = document.createElement('button');
+              kickBtn.textContent = ui.kickAction || '🚫 הוצא מהקבוצה';
+              kickBtn.style.cssText = 'background:rgba(217,105,79,.15);border:1px solid rgba(217,105,79,.4);color:#d9694f;';
+              kickBtn.onclick = () => kickMember(phone, name);
+              dmRow.appendChild(kickBtn);
+            }
             row.insertAdjacentElement('afterend', dmRow);
           }
         });
@@ -631,9 +676,9 @@
 
     // Apply UI language
     const UI = {
-      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה', settingsTitle: 'הגדרות קבוצה', copyLink: '📋 העתק קישור', linkCopied: '✓ הועתק!', notifOn: '🔔 התראות פעילות — לחץ לביטול', notifOff: '🔕 הפעל התראות לחדר זה', notifUnsupported: '🔕 לא נתמך בדפדפן זה', notifDenied: 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן', notifCancelled: 'התראות בוטלו', notifActive: '✓ תקבל התראות כשמגיעות הודעות', notifNoKey: 'שרת לא מוגדר לפוש', notifNoPerm: 'לא אושרה הרשאה', editName: 'שם הקבוצה', saveName: 'שמור', nameSaved: '✓ נשמר', nameError: 'שגיאה', iosBanner: '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה', deleteConfirm: 'למחוק את ההודעה?', editedTag: 'נערך', editAction: '✏️ ערוך', deleteAction: '🗑️ מחק', cancelAction: 'ביטול', saveAction: 'שמור', shareLabel: 'שיתוף', notifLabel: 'התראות', notifCheckText: 'קבל התראות על הודעות חדשות', translateBtn: '🔁 תרגם', copyBtn: '📋 העתק', whatsappBtn: '📱 וואטסאפ', emailBtn: '📧 מייל', dmAction: '💬 שיחה פרטית' },
-      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل', settingsTitle: 'إعدادات المجموعة', copyLink: '📋 نسخ الرابط', linkCopied: '✓ تم النسخ!', notifOn: '🔔 التنبيهات مفعّلة — اضغط للإلغاء', notifOff: '🔕 تفعيل التنبيهات لهذه الغرفة', notifUnsupported: '🔕 غير مدعوم في هذا المتصفح', notifDenied: 'إذن التنبيهات محظور — غيّر في إعدادات المتصفح', notifCancelled: 'تم إلغاء التنبيهات', notifActive: '✓ ستصلك تنبيهات عند وصول رسائل', notifNoKey: 'الخادم غير مهيأ للإشعارات', notifNoPerm: 'لم يتم منح الإذن', editName: 'اسم المجموعة', saveName: 'حفظ', nameSaved: '✓ تم الحفظ', nameError: 'خطأ', iosBanner: '📲 لإضافة Babel Fish إلى الشاشة الرئيسية: اضغط <strong style="color:var(--text)">مشاركة ↑</strong> ← "إضافة إلى الشاشة الرئيسية" — ثم ستصلك التنبيهات حتى عند إغلاق التطبيق', deleteConfirm: 'حذف الرسالة؟', editedTag: 'مُعدّلة', editAction: '✏️ تعديل', deleteAction: '🗑️ حذف', cancelAction: 'إلغاء', saveAction: 'حفظ', shareLabel: 'مشاركة', notifLabel: 'تنبيهات', notifCheckText: 'تلقّي تنبيهات على الرسائل الجديدة', translateBtn: '🔁 ترجم', copyBtn: '📋 نسخ', whatsappBtn: '📱 واتساب', emailBtn: '📧 بريد', dmAction: '💬 محادثة خاصة' },
-      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record', settingsTitle: 'Group Settings', copyLink: '📋 Copy Link', linkCopied: '✓ Copied!', notifOn: '🔔 Notifications on — tap to disable', notifOff: '🔕 Enable notifications for this room', notifUnsupported: '🔕 Not supported in this browser', notifDenied: 'Notification permission blocked — change in browser settings', notifCancelled: 'Notifications disabled', notifActive: '✓ You will receive notifications when messages arrive', notifNoKey: 'Server not configured for push', notifNoPerm: 'Permission not granted', editName: 'Room Name', saveName: 'Save', nameSaved: '✓ Saved', nameError: 'Error', iosBanner: '📲 To add Babel Fish to your home screen: tap <strong style="color:var(--text)">Share ↑</strong> → "Add to Home Screen" — then you\'ll get notifications even when the app is closed', deleteConfirm: 'Delete this message?', editedTag: 'edited', editAction: '✏️ Edit', deleteAction: '🗑️ Delete', cancelAction: 'Cancel', saveAction: 'Save', shareLabel: 'Share', notifLabel: 'Notifications', notifCheckText: 'Receive notifications for new messages', translateBtn: '🔁 Translate', copyBtn: '📋 Copy', whatsappBtn: '📱 WhatsApp', emailBtn: '📧 Email', dmAction: '💬 Private chat' },
+      he: { placeholder: 'הקלד הודעה...', empty: '📭 אין הודעות עדיין<br><small>הקלד או לחץ והחזק לשליחה קולית</small>', members: 'חברים', record: 'לחץ והחזק להקלטה', settingsTitle: 'הגדרות קבוצה', copyLink: '📋 העתק קישור', linkCopied: '✓ הועתק!', notifOn: '🔔 התראות פעילות — לחץ לביטול', notifOff: '🔕 הפעל התראות לחדר זה', notifUnsupported: '🔕 לא נתמך בדפדפן זה', notifDenied: 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן', notifCancelled: 'התראות בוטלו', notifActive: '✓ תקבל התראות כשמגיעות הודעות', notifNoKey: 'שרת לא מוגדר לפוש', notifNoPerm: 'לא אושרה הרשאה', editName: 'שם הקבוצה', saveName: 'שמור', nameSaved: '✓ נשמר', nameError: 'שגיאה', iosBanner: '📲 להוספת Babel Fish למסך הבית: לחץ <strong style="color:var(--text)">שתף ↑</strong> ← "הוסף למסך הבית" — ואז תקבל התראות גם כשהאפליקציה סגורה', deleteConfirm: 'למחוק את ההודעה?', editedTag: 'נערך', editAction: '✏️ ערוך', deleteAction: '🗑️ מחק', cancelAction: 'ביטול', saveAction: 'שמור', shareLabel: 'שיתוף', notifLabel: 'התראות', notifCheckText: 'קבל התראות על הודעות חדשות', translateBtn: '🔁 תרגם', copyBtn: '📋 העתק', whatsappBtn: '📱 וואטסאפ', emailBtn: '📧 מייל', dmAction: '💬 שיחה פרטית', makeAdminAction: '👑 הפוך למנהל', removeAdminAction: '⬇️ הסר מניהול', kickAction: '🚫 הוצא מהקבוצה', kickConfirm: 'להוציא את החבר מהקבוצה?', lastAdminMsg: 'אי אפשר להסיר את המנהל האחרון', descTitle: 'מידע על הקבוצה', noDesc: 'אין תיאור עדיין', kickedMsg: 'הוצאת מהקבוצה על ידי מנהל' },
+      ar: { placeholder: 'اكتب رسالة...', empty: '📭 لا توجد رسائل بعد<br><small>اكتب أو اضغط مطولاً للإرسال الصوتي</small>', members: 'أعضاء', record: 'اضغط مطولاً للتسجيل', settingsTitle: 'إعدادات المجموعة', copyLink: '📋 نسخ الرابط', linkCopied: '✓ تم النسخ!', notifOn: '🔔 التنبيهات مفعّلة — اضغط للإلغاء', notifOff: '🔕 تفعيل التنبيهات لهذه الغرفة', notifUnsupported: '🔕 غير مدعوم في هذا المتصفح', notifDenied: 'إذن التنبيهات محظور — غيّر في إعدادات المتصفح', notifCancelled: 'تم إلغاء التنبيهات', notifActive: '✓ ستصلك تنبيهات عند وصول رسائل', notifNoKey: 'الخادم غير مهيأ للإشعارات', notifNoPerm: 'لم يتم منح الإذن', editName: 'اسم المجموعة', saveName: 'حفظ', nameSaved: '✓ تم الحفظ', nameError: 'خطأ', iosBanner: '📲 لإضافة Babel Fish إلى الشاشة الرئيسية: اضغط <strong style="color:var(--text)">مشاركة ↑</strong> ← "إضافة إلى الشاشة الرئيسية" — ثم ستصلك التنبيهات حتى عند إغلاق التطبيق', deleteConfirm: 'حذف الرسالة؟', editedTag: 'مُعدّلة', editAction: '✏️ تعديل', deleteAction: '🗑️ حذف', cancelAction: 'إلغاء', saveAction: 'حفظ', shareLabel: 'مشاركة', notifLabel: 'تنبيهات', notifCheckText: 'تلقّي تنبيهات على الرسائل الجديدة', translateBtn: '🔁 ترجم', copyBtn: '📋 نسخ', whatsappBtn: '📱 واتساب', emailBtn: '📧 بريد', dmAction: '💬 محادثة خاصة', makeAdminAction: '👑 اجعله مشرفاً', removeAdminAction: '⬇️ إزالة من الإشراف', kickAction: '🚫 إخراج من المجموعة', kickConfirm: 'إخراج هذا العضو؟', lastAdminMsg: 'لا يمكن إزالة آخر مشرف', descTitle: 'معلومات المجموعة', noDesc: 'لا يوجد وصف بعد', kickedMsg: 'تمت إزالتك من المجموعة من قِبل المشرف' },
+      en: { placeholder: 'Type a message...', empty: '📭 No messages yet<br><small>Type or hold the button to record voice</small>', members: 'Members', record: 'Hold to record', settingsTitle: 'Group Settings', copyLink: '📋 Copy Link', linkCopied: '✓ Copied!', notifOn: '🔔 Notifications on — tap to disable', notifOff: '🔕 Enable notifications for this room', notifUnsupported: '🔕 Not supported in this browser', notifDenied: 'Notification permission blocked — change in browser settings', notifCancelled: 'Notifications disabled', notifActive: '✓ You will receive notifications when messages arrive', notifNoKey: 'Server not configured for push', notifNoPerm: 'Permission not granted', editName: 'Room Name', saveName: 'Save', nameSaved: '✓ Saved', nameError: 'Error', iosBanner: '📲 To add Babel Fish to your home screen: tap <strong style="color:var(--text)">Share ↑</strong> → "Add to Home Screen" — then you\'ll get notifications even when the app is closed', deleteConfirm: 'Delete this message?', editedTag: 'edited', editAction: '✏️ Edit', deleteAction: '🗑️ Delete', cancelAction: 'Cancel', saveAction: 'Save', shareLabel: 'Share', notifLabel: 'Notifications', notifCheckText: 'Receive notifications for new messages', translateBtn: '🔁 Translate', copyBtn: '📋 Copy', whatsappBtn: '📱 WhatsApp', emailBtn: '📧 Email', dmAction: '💬 Private chat', makeAdminAction: '👑 Make admin', removeAdminAction: '⬇️ Remove admin', kickAction: '🚫 Remove from group', kickConfirm: 'Remove this member from the group?', lastAdminMsg: 'Cannot remove the last admin', descTitle: 'Group info', noDesc: 'No description yet', kickedMsg: 'You were removed from the group by an admin' },
     };
     const ui = UI[myUiLang] || UI.he;
     document.getElementById('textInput').placeholder = ui.placeholder;
@@ -703,7 +748,12 @@
           localStorage.setItem('bf_rooms', JSON.stringify(filtered.slice(0, 10)));
         } catch(e) {}
         if (data.allMembers) {
-          data.allMembers.forEach(m => allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '', phone: m.phone || '', avatar: m.avatar || '', name_translations: m.name_translations || {} }));
+          data.allMembers.forEach(m => {
+            allMembers.set(m.name, { lang: m.lang, emoji: m.emoji || '', phone: m.phone || '', avatar: m.avatar || '', name_translations: m.name_translations || {}, is_admin: m.is_admin || false });
+            if (m.phone && m.phone === myPhone) myIsAdmin = m.is_admin || false;
+          });
+          currentRoomDesc = data.description || '';
+          updateDescPreview();
           renderMembers();
         }
         if (data.messages && data.messages.length > 0) {
@@ -750,6 +800,30 @@
         } else if (msg.type === 'member_left') {
           activeMembers.delete(msg.name);
           renderMembers();
+        } else if (msg.type === 'member_kicked') {
+          if (msg.phone === myPhone) {
+            alert(ui.kickedMsg || 'הוצאת מהקבוצה');
+            location.href = '/home.html';
+          } else {
+            // remove kicked member from maps
+            for (const [n, info] of allMembers.entries()) {
+              if (info.phone === msg.phone) { allMembers.delete(n); activeMembers.delete(n); break; }
+            }
+            renderMembers();
+          }
+        } else if (msg.type === 'member_admin_changed') {
+          for (const [n, info] of allMembers.entries()) {
+            if (info.phone === msg.phone) {
+              info.is_admin = msg.is_admin;
+              allMembers.set(n, info);
+              if (info.phone === myPhone) myIsAdmin = msg.is_admin;
+              break;
+            }
+          }
+          renderMembers();
+        } else if (msg.type === 'room_description') {
+          currentRoomDesc = msg.description || '';
+          updateDescPreview();
         } else if (msg.type === 'room_renamed') {
           currentRoomNames = msg.names;
           const dn = msg.names[myUiLang] || msg.names.he || msg.names.ar || msg.names.en;
@@ -1183,13 +1257,12 @@
     // ── Message action menu (long-press → bottom sheet) ─────────────────────
     // Built to be extensible: add more buttons to the array below as new
     // per-message actions come up, without touching the long-press logic.
-    function showMessageMenu(msgId) {
+    function showMessageMenu(msgId, isMine = true) {
       const overlay = document.getElementById('msgMenuOverlay');
       const menu = document.getElementById('msgMenu');
-      const actions = [
-        { label: ui.editAction || '✏️ ערוך', cls: '', onClick: () => { closeMessageMenu(); startEditMessage(msgId); } },
-        { label: ui.deleteAction || '🗑️ מחק', cls: 'danger', onClick: () => { closeMessageMenu(); deleteMessage(msgId); } },
-      ];
+      const actions = [];
+      if (isMine) actions.push({ label: ui.editAction || '✏️ ערוך', cls: '', onClick: () => { closeMessageMenu(); startEditMessage(msgId); } });
+      actions.push({ label: ui.deleteAction || '🗑️ מחק', cls: 'danger', onClick: () => { closeMessageMenu(); deleteMessage(msgId); } });
       menu.innerHTML = '';
       actions.forEach(a => {
         const btn = document.createElement('button');
@@ -1217,7 +1290,7 @@
         await fetch(`/api/rooms/${roomId}/messages/${msgId}`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: myName })
+          body: JSON.stringify({ name: myName, phone: myPhone })
         });
       } catch(e) { console.error('delete message:', e); }
     }
@@ -1299,7 +1372,7 @@
       }
     }
 
-    // ── Long-press own message → action menu ─────────────────────────────────
+    // ── Long-press own message (or any message if admin) → action menu ────────
     // Cancels itself if the finger moves (a scroll gesture) or lifts before
     // the hold duration, so it never fights normal scrolling.
     (function setupLongPressDelete() {
@@ -1316,15 +1389,19 @@
       }
 
       messagesEl.addEventListener('pointerdown', e => {
-        const inner = e.target.closest('.bubble.mine .bubble-inner');
+        // own message — always actionable; others' messages — only if admin
+        const mineInner  = e.target.closest('.bubble.mine .bubble-inner');
+        const otherInner = myIsAdmin ? e.target.closest('.bubble.other .bubble-inner') : null;
+        const inner = mineInner || otherInner;
         if (!inner || !inner.id) return;
+        const isMine = !!mineInner;
         targetInner = inner;
         startX = e.clientX; startY = e.clientY;
         inner.classList.add('long-press-active');
         timer = setTimeout(() => {
           const msgId = inner.id.replace('msg-', '');
           cancel();
-          showMessageMenu(msgId);
+          showMessageMenu(msgId, isMine);
         }, LONG_PRESS_MS);
       });
       messagesEl.addEventListener('pointermove', e => {
@@ -1684,6 +1761,100 @@
         togglePushNotifications();
       }
     });
+
+    // ── Group description sheet ───────────────────────────────────────────────
+    function updateDescPreview() {
+      const preview = document.getElementById('roomDescPreview');
+      if (!preview || isDM) return;
+      if (currentRoomDesc) {
+        const firstLine = currentRoomDesc.split('\n')[0];
+        preview.textContent = firstLine;
+        preview.style.display = '';
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
+    function openDescSheet() {
+      if (isDM) return;
+      const overlay = document.getElementById('descSheetOverlay');
+      if (!overlay) return;
+      document.getElementById('descSheetTitle').textContent = ui.descTitle || 'מידע על הקבוצה';
+      document.getElementById('descTextEl').textContent = currentRoomDesc || (ui.noDesc || 'אין תיאור עדיין');
+      document.getElementById('editDescBtn').style.display = myIsAdmin ? '' : 'none';
+      document.getElementById('descViewMode').style.display = '';
+      document.getElementById('descEditMode').style.display = 'none';
+      overlay.style.display = 'flex';
+    }
+
+    function closeDescSheet() {
+      const overlay = document.getElementById('descSheetOverlay');
+      if (overlay) overlay.style.display = 'none';
+    }
+
+    function switchToDescEdit() {
+      document.getElementById('descTextarea').value = currentRoomDesc;
+      document.getElementById('descViewMode').style.display = 'none';
+      document.getElementById('descEditMode').style.display = '';
+      document.getElementById('descTextarea').focus();
+    }
+
+    function closeDescEdit() {
+      document.getElementById('descViewMode').style.display = '';
+      document.getElementById('descEditMode').style.display = 'none';
+    }
+
+    async function saveRoomDesc() {
+      const text = document.getElementById('descTextarea').value;
+      const btn = document.getElementById('saveDescBtn');
+      btn.disabled = true;
+      try {
+        const r = await fetch(`/api/rooms/${roomId}/description`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: myPhone, description: text })
+        });
+        if (!r.ok) throw new Error();
+        currentRoomDesc = text;
+        updateDescPreview();
+        document.getElementById('descTextEl').textContent = currentRoomDesc || (ui.noDesc || 'אין תיאור עדיין');
+        closeDescEdit();
+      } catch(e) {
+        alert('שגיאה בשמירה');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ── Admin actions ─────────────────────────────────────────────────────────
+    async function toggleMemberAdmin(targetPhone, makeAdmin) {
+      if (!myIsAdmin) return;
+      try {
+        const r = await fetch(`/api/rooms/${roomId}/members/${encodeURIComponent(targetPhone)}/admin`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: myPhone, is_admin: makeAdmin })
+        });
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          if (data.error === 'Last admin') alert(ui.lastAdminMsg || 'אי אפשר להסיר את המנהל האחרון');
+        }
+      } catch(e) { console.error('toggleMemberAdmin:', e); }
+      document.getElementById('members-panel').querySelectorAll('.dm-action-row').forEach(el => el.remove());
+    }
+
+    async function kickMember(targetPhone, targetName) {
+      if (!myIsAdmin) return;
+      if (!confirm(ui.kickConfirm || 'להוציא את החבר מהקבוצה?')) return;
+      try {
+        await fetch(`/api/rooms/${roomId}/members/${encodeURIComponent(targetPhone)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: myPhone })
+        });
+      } catch(e) { console.error('kickMember:', e); }
+      document.getElementById('members-panel').querySelectorAll('.dm-action-row').forEach(el => el.remove());
+    }
   </script>
 </body>
 </html>

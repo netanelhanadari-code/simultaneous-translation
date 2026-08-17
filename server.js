@@ -379,6 +379,13 @@ async function ensureNameTranslation(phone, name, targetLang) {
   } catch(e) { console.error('[ensureNameTranslation]', e.message); }
 }
 
+// Check if a phone belongs to an admin of a room
+async function isRoomAdmin(roomId, phone) {
+  if (!phone || !SB_URL) return false;
+  const rows = await sbQuery('room_members', `room_id=eq.${roomId}&phone=eq.${encodeURIComponent(phone)}&is_admin=eq.true&limit=1`).catch(() => []);
+  return rows.length > 0;
+}
+
 // Translate a short name string (for room names only — lightweight prompt)
 // fromLang is optional — if omitted, GPT auto-detects source language
 async function translateRoomName(text, fromLang, toLang) {
@@ -535,6 +542,62 @@ app.patch('/api/rooms/:id/name', express.json(), async (req, res) => {
   res.json({ ok: true });
 });
 
+// Update room description (admin only)
+app.patch('/api/rooms/:id/description', express.json(), async (req, res) => {
+  const { id } = req.params;
+  const { phone, description } = req.body;
+  if (!phone) return res.status(400).json({ error: 'Missing phone' });
+  if (!SB_URL) return res.status(503).json({ error: 'No DB' });
+  if (!(await isRoomAdmin(id, phone))) return res.status(403).json({ error: 'Not an admin' });
+  await fetch(`${SB_URL}/rest/v1/rooms?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ description })
+  }).catch(e => console.error('[desc-update]', e.message));
+  const payload = JSON.stringify({ type: 'room_description', description });
+  rooms.get(id)?.members?.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  res.json({ ok: true });
+});
+
+// Toggle admin status for a member (admin only, cannot demote self if last admin)
+app.patch('/api/rooms/:id/members/:memberPhone/admin', express.json(), async (req, res) => {
+  const { id, memberPhone } = req.params;
+  const { phone, is_admin } = req.body; // phone = requester, is_admin = desired state for target
+  if (!phone) return res.status(400).json({ error: 'Missing phone' });
+  if (!SB_URL) return res.status(503).json({ error: 'No DB' });
+  if (!(await isRoomAdmin(id, phone))) return res.status(403).json({ error: 'Not an admin' });
+  // Prevent removing self if last admin
+  if (!is_admin && memberPhone === phone) {
+    const admins = await sbQuery('room_members', `room_id=eq.${id}&is_admin=eq.true&select=phone`).catch(() => []);
+    if (admins.length <= 1) return res.status(400).json({ error: 'Last admin' });
+  }
+  await fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${id}&phone=eq.${encodeURIComponent(memberPhone)}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ is_admin: !!is_admin })
+  }).catch(e => console.error('[admin-toggle]', e.message));
+  const payload = JSON.stringify({ type: 'member_admin_changed', phone: memberPhone, is_admin: !!is_admin });
+  rooms.get(id)?.members?.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  res.json({ ok: true });
+});
+
+// Kick a member (admin only)
+app.delete('/api/rooms/:id/members/:memberPhone', express.json(), async (req, res) => {
+  const { id, memberPhone } = req.params;
+  const { phone } = req.body; // requester's phone
+  if (!phone) return res.status(400).json({ error: 'Missing phone' });
+  if (!SB_URL) return res.status(503).json({ error: 'No DB' });
+  if (!(await isRoomAdmin(id, phone))) return res.status(403).json({ error: 'Not an admin' });
+  if (memberPhone === phone) return res.status(400).json({ error: 'Cannot kick yourself' });
+  await fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${id}&phone=eq.${encodeURIComponent(memberPhone)}`, {
+    method: 'DELETE',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }
+  }).catch(e => console.error('[kick-member]', e.message));
+  const payload = JSON.stringify({ type: 'member_kicked', phone: memberPhone });
+  rooms.get(id)?.members?.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
+  res.json({ ok: true });
+});
+
 // Emoji reaction — toggle on/off
 app.post('/api/rooms/:id/messages/:msgId/react', express.json(), async (req, res) => {
   const { id, msgId } = req.params;
@@ -568,15 +631,17 @@ app.post('/api/rooms/:id/messages/:msgId/react', express.json(), async (req, res
   res.json({ ok: true, reactions });
 });
 
-// Delete a message — only the original sender may delete their own message
+// Delete a message — sender can delete own; admin can delete any
 app.delete('/api/rooms/:id/messages/:msgId', express.json(), async (req, res) => {
   const { id, msgId } = req.params;
-  const { name } = req.body;
+  const { name, phone } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
 
   const msgs = await sbQuery('messages', `id=eq.${msgId}&select=sender_name&limit=1`);
   if (!msgs[0]) return res.status(404).json({ error: 'Not found' });
-  if (msgs[0].sender_name !== name) return res.status(403).json({ error: 'Not your message' });
+  const isSender = msgs[0].sender_name === name;
+  const adminOk  = phone ? await isRoomAdmin(id, phone) : false;
+  if (!isSender && !adminOk) return res.status(403).json({ error: 'Not allowed' });
 
   if (SB_URL) {
     await fetch(`${SB_URL}/rest/v1/messages?id=eq.${msgId}`, {
@@ -1398,15 +1463,19 @@ wss.on('connection', (ws, req) => {
     room.members.set(ws, { name, lang, emoji, phone, avatar: '' });
     console.log('[+] Member   room=' + roomId + ' name=' + name + ' lang=' + lang);
 
-    // Persist member in DB
-    sbQuery('room_members', `room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}&limit=1`).then(rows => {
+    // Persist member in DB — detect if creator to grant admin
+    sbQuery('room_members', `room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}&limit=1`).then(async rows => {
+      const roomRows = phone ? await sbQuery('rooms', `id=eq.${roomId}&select=creator_phone&limit=1`).catch(() => []) : [];
+      const isCreator = !!(phone && roomRows[0]?.creator_phone && roomRows[0].creator_phone === phone);
       if (rows.length) {
+        const patch = { emoji, lang, phone, last_seen: new Date().toISOString() };
+        if (isCreator) patch.is_admin = true;
         fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(name)}`, {
           method: 'PATCH', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ emoji, lang, phone, last_seen: new Date().toISOString() })
+          body: JSON.stringify(patch)
         }).catch(() => {});
       } else {
-        sbInsert('room_members', { room_id: roomId, name, emoji, lang, phone }).catch(() => {});
+        sbInsert('room_members', { room_id: roomId, name, emoji, lang, phone, is_admin: isCreator }).catch(() => {});
       }
     }).catch(() => {});
 
