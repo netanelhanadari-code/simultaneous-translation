@@ -39,8 +39,9 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 32px 16px 64px;
+    align-items: stretch;
+    padding: 32px 0 64px;
+    overflow-x: hidden;
     -webkit-user-select: none;
     user-select: none;
   }
@@ -81,11 +82,12 @@
   /* ── Card ── */
   .card {
     width: 100%;
-    max-width: 640px;
+    max-width: none;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 24px 20px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    padding: 24px 16px;
     direction: rtl;
     text-align: right;
   }
@@ -203,9 +205,10 @@
   /* ── Reports list ── */
   .reports-wrap {
     width: 100%;
-    max-width: 640px;
+    max-width: none;
     margin-top: 16px;
     display: none;
+    padding: 0 16px;
   }
   .reports-wrap.open { display: block; }
 
