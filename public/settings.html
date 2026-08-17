@@ -156,11 +156,11 @@
     </div>
     <div class="field">
       <label id="labelNameHe">עברית</label>
-      <input id="nameHeInput" type="text" dir="rtl" placeholder="שמך בעברית" readonly style="opacity:.7;">
+      <input id="nameHeInput" type="text" dir="rtl" placeholder="שמך בעברית">
     </div>
     <div class="field">
       <label id="labelNameAr">العربية</label>
-      <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية" readonly style="opacity:.7;">
+      <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية">
     </div>
     <div style="display:flex;gap:.6rem;">
       <button class="save-btn" id="retransBtn" onclick="retranslateNames()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם מחדש מאנגלית</button>
@@ -197,7 +197,8 @@
       document.getElementById('saveBtn').textContent    = su.save;
       document.getElementById('avatarHint').textContent = su.avatarHint;
     }
-    applySettUI(SETT_UI[myUiLang] || SETT_UI.he);
+    const su = SETT_UI[myUiLang] || SETT_UI.he;
+    applySettUI(su);
 
     // If lang not in built-in dictionary → try DB, then translate+cache
     if (!SETT_UI[myUiLang]) {
@@ -493,11 +494,6 @@
       } catch(e) { console.error('saveNameTranslations:', e); }
     }
 
-    // Make he/ar inputs editable too
-    document.getElementById('nameHeInput').removeAttribute('readonly');
-    document.getElementById('nameArInput').removeAttribute('readonly');
-    document.getElementById('nameHeInput').style.opacity = '';
-    document.getElementById('nameArInput').style.opacity = '';
 
     loadNameTranslations();
   </script>

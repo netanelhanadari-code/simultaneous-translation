@@ -605,10 +605,10 @@
           + (phone ? `<span class="row-phone">${esc(phone)}</span>` : '');
         row.style.cursor = 'pointer';
         row.addEventListener('click', () => {
-          // TTS — read name aloud
-          const utt = new SpeechSynthesisUtterance(name);
-          if (/[؀-ۿ]/.test(name)) utt.lang = 'ar';
-          else if (/[֐-׿]/.test(name)) utt.lang = 'he';
+          // TTS — read display name aloud (translated if available)
+          const utt = new SpeechSynthesisUtterance(displayName);
+          if (/[؀-ۿ]/.test(displayName)) utt.lang = 'ar';
+          else if (/[֐-׿]/.test(displayName)) utt.lang = 'he';
           else utt.lang = 'en';
           speechSynthesis.cancel();
           speechSynthesis.speak(utt);
