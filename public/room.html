@@ -310,6 +310,15 @@
       width: 100%; background: var(--accent); color: #fff; border: none;
       border-radius: 10px; padding: .65rem; font-size: .95rem; cursor: pointer; font-weight: 600;
     }
+    .sheet-section { width: 100%; display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+    .section-label { align-self: flex-start; font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .notif-check-label {
+      display: flex; align-items: center; gap: .75rem; width: 100%; cursor: pointer;
+      font-size: .95rem; padding: .65rem .9rem; background: var(--bg);
+      border-radius: 10px; border: 1px solid var(--border);
+    }
+    .notif-check-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+    .sheet-btn-row { display: flex; gap: .5rem; width: 100%; }
   </style>
 </head>
 <body>
@@ -321,7 +330,6 @@
     </div>
     <button class="tts-toggle" id="ttsBtn" onclick="toggleTTS()" title="קריאה אוטומטית">🔊</button>
     <button class="tts-toggle" id="notifyBtn" onclick="toggleNotify()" title="צליל התרעה">🔔</button>
-    <button class="back-btn" onclick="loadRoom()" title="רענן" style="font-size:1.1rem;">↻</button>
     <button class="back-btn" id="roomSettingsBtn" onclick="openRoomSettings()" title="הגדרות קבוצה" style="display:none;">⚙️</button>
   </header>
 
@@ -341,24 +349,42 @@
     <div class="sheet" style="position:relative;">
       <button class="sheet-close" onclick="closeRoomSettings()">✕</button>
       <h3 id="settingsTitle">הגדרות קבוצה</h3>
-      <div class="qr-wrap"><img id="qrImg" src="" alt="QR"></div>
-      <div class="join-url" id="joinUrl"></div>
-      <button class="copy-btn" id="copyLinkBtn" onclick="copyJoinLink()">📋 העתק קישור</button>
-      <button class="copy-btn" id="notifBtn" onclick="togglePushNotifications()"
-        style="margin-top:.5rem;background:var(--surface);border:1px solid var(--border);color:var(--text);">
-        🔔 טוען...
-      </button>
-      <p id="notifMsg" style="font-size:.78rem;color:var(--muted);text-align:center;min-height:1em;margin-top:.2rem;"></p>
-      <div id="renameSection" style="display:none;">
-        <hr style="border-color:var(--border);margin:.8rem 0;">
-        <p id="editNameLabel" style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">✏️ עריכת שם הקבוצה</p>
-        <div style="display:flex;flex-direction:column;gap:.5rem;">
-          <input id="nameHe" placeholder="עברית" style="direction:rtl;">
-          <input id="nameAr" placeholder="عربي" style="direction:rtl;">
-          <input id="nameEn" placeholder="English" style="direction:ltr;text-align:left;">
+
+      <!-- שיתוף -->
+      <div class="sheet-section">
+        <div class="section-label">שיתוף</div>
+        <div class="qr-wrap"><img id="qrImg" src="" alt="QR"></div>
+        <div class="join-url" id="joinUrl"></div>
+        <div class="sheet-btn-row">
+          <button class="copy-btn" id="copyLinkBtn" onclick="copyJoinLink()" style="flex:1;">📋 העתק</button>
+          <button class="copy-btn" onclick="shareWhatsapp()" style="flex:1;background:#25D366;">📱 וואטסאפ</button>
+          <button class="copy-btn" onclick="shareEmail()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">📧 מייל</button>
         </div>
-        <button class="copy-btn" id="saveNameBtn" style="margin-top:.6rem;background:var(--accent);color:#fff;border-color:var(--accent);" onclick="saveRoomName()">שמור שם</button>
-        <p id="nameMsg" style="font-size:.8rem;color:#7fc47f;text-align:center;min-height:1em;margin-top:.3rem;"></p>
+      </div>
+
+      <!-- התראות -->
+      <div class="sheet-section">
+        <div class="section-label">התראות</div>
+        <label class="notif-check-label">
+          <input type="checkbox" id="notifCheck">
+          <span id="notifCheckText">קבל התראות על הודעות חדשות</span>
+        </label>
+        <p id="notifMsg" style="font-size:.78rem;color:var(--muted);text-align:center;min-height:1em;"></p>
+      </div>
+
+      <!-- שם הקבוצה (מייסד בלבד) -->
+      <div id="renameSection" style="display:none;" class="sheet-section">
+        <div class="section-label" id="editNameLabel">שם הקבוצה</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;width:100%;">
+          <input id="nameHe" placeholder="עברית" style="direction:rtl;width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.5rem .8rem;font-size:.9rem;">
+          <input id="nameAr" placeholder="عربي" style="direction:rtl;width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.5rem .8rem;font-size:.9rem;">
+          <input id="nameEn" placeholder="English" style="direction:ltr;text-align:left;width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.5rem .8rem;font-size:.9rem;">
+        </div>
+        <div class="sheet-btn-row">
+          <button class="copy-btn" id="translateNamesBtn" onclick="autoTranslateNames(event)" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם</button>
+          <button class="copy-btn" id="saveNameBtn" onclick="saveRoomName()" style="flex:1;background:var(--accent);color:#fff;">✓ שמור</button>
+        </div>
+        <p id="nameMsg" style="font-size:.8rem;color:#7fc47f;text-align:center;min-height:1em;"></p>
       </div>
     </div>
   </div>
@@ -943,19 +969,20 @@
     let currentRoomNames = {};
     function openRoomSettings() {
       initPushUI();
-      document.getElementById('settingsTitle').textContent  = ui.settingsTitle;
-      document.getElementById('copyLinkBtn').textContent    = ui.copyLink;
-      document.getElementById('editNameLabel').textContent  = ui.editName;
-      document.getElementById('saveNameBtn').textContent    = ui.saveName;
+      document.getElementById('settingsTitle').textContent = ui.settingsTitle;
+      document.getElementById('editNameLabel').textContent = ui.editName || 'שם הקבוצה';
+      document.getElementById('saveNameBtn').textContent   = ui.saveName || 'שמור';
       const joinUrl = `${location.origin}/join.html?code=${roomId}`;
       document.getElementById('joinUrl').textContent = joinUrl;
       document.getElementById('qrImg').src =
         `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
-      // Pre-fill name fields from current names
       document.getElementById('nameHe').value = currentRoomNames.he || '';
       document.getElementById('nameAr').value = currentRoomNames.ar || '';
       document.getElementById('nameEn').value = currentRoomNames.en || '';
       document.getElementById('nameMsg').textContent = '';
+      // Checkbox change listener
+      const cb = document.getElementById('notifCheck');
+      cb.onchange = () => togglePushNotifications();
       document.getElementById('roomSettingsSheet').style.display = '';
     }
     async function saveRoomName() {
@@ -991,8 +1018,41 @@
       const url = document.getElementById('joinUrl').textContent;
       navigator.clipboard.writeText(url).catch(() => {});
       const btn = document.getElementById('copyLinkBtn');
-      btn.textContent = ui.linkCopied;
-      setTimeout(() => { btn.textContent = ui.copyLink; }, 2000);
+      btn.textContent = ui.linkCopied || '✓ הועתק!';
+      setTimeout(() => { btn.textContent = '📋 העתק'; }, 2000);
+    }
+    function shareWhatsapp() {
+      const url  = document.getElementById('joinUrl').textContent;
+      const name = document.getElementById('roomNameEl').textContent;
+      window.open('https://wa.me/?text=' + encodeURIComponent(`הוזמנת לקבוצה "${name}" ב-Babel Fish:\n${url}`), '_blank');
+    }
+    function shareEmail() {
+      const url  = document.getElementById('joinUrl').textContent;
+      const name = document.getElementById('roomNameEl').textContent;
+      const sub  = encodeURIComponent(`הוזמנת לקבוצה "${name}" ב-Babel Fish`);
+      const body = encodeURIComponent(`הצטרף/י לקבוצה "${name}" ב-Babel Fish:\n${url}`);
+      window.open(`mailto:?subject=${sub}&body=${body}`, '_blank');
+    }
+    async function autoTranslateNames(e) {
+      const btn = e.currentTarget;
+      const fields = [
+        { id: 'nameHe', lang: 'he' },
+        { id: 'nameAr', lang: 'ar' },
+        { id: 'nameEn', lang: 'en' },
+      ];
+      const source = fields.find(f => document.getElementById(f.id).value.trim());
+      if (!source) return;
+      const text = document.getElementById(source.id).value.trim();
+      const targets = fields.filter(f => f.id !== source.id);
+      btn.disabled = true; btn.textContent = '⏳';
+      try {
+        await Promise.all(targets.map(async t => {
+          const r = await fetch(`/api/translate?from=${source.lang}&to=${t.lang}&text=${encodeURIComponent(text)}`);
+          const d = await r.json();
+          if (d.text) document.getElementById(t.id).value = d.text;
+        }));
+      } catch(e) {}
+      finally { btn.disabled = false; btn.textContent = '🔁 תרגם'; }
     }
     function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
 
@@ -1469,58 +1529,61 @@
     }
 
     async function initPushUI() {
-      const btn = document.getElementById('notifBtn');
+      const cb  = document.getElementById('notifCheck');
       const msg = document.getElementById('notifMsg');
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        btn.textContent = ui.notifUnsupported;
-        btn.disabled = true; return;
+        if (cb) { cb.disabled = true; }
+        const lbl = document.getElementById('notifCheckText');
+        if (lbl) lbl.textContent = ui.notifUnsupported || 'התראות לא נתמכות בדפדפן זה';
+        return;
       }
       try {
         swReg = await navigator.serviceWorker.register('/sw.js');
         const sub = await swReg.pushManager.getSubscription();
-        updateNotifBtn(!!sub);
-        if (Notification.permission === 'denied') {
-          msg.textContent = ui.notifDenied;
+        if (cb) cb.checked = !!sub;
+        if (Notification.permission === 'denied' && msg) {
+          msg.textContent = ui.notifDenied || 'הרשאת התראות חסומה — שנה בהגדרות הדפדפן';
+          if (cb) cb.disabled = true;
         }
-      } catch(e) { btn.textContent = '🔕 שגיאה'; }
+      } catch(e) { if (cb) cb.disabled = true; }
     }
 
     function updateNotifBtn(subscribed) {
-      const btn = document.getElementById('notifBtn');
-      if (subscribed) {
-        btn.textContent = ui.notifOn;
-        btn.style.borderColor = 'var(--accent)';
-        btn.style.color = 'var(--accent)';
-      } else {
-        btn.textContent = ui.notifOff;
-        btn.style.borderColor = 'var(--border)';
-        btn.style.color = 'var(--text)';
-      }
+      const cb = document.getElementById('notifCheck');
+      if (cb) cb.checked = subscribed;
     }
 
     async function togglePushNotifications() {
+      const cb  = document.getElementById('notifCheck');
       const msg = document.getElementById('notifMsg');
-      msg.textContent = '';
+      if (msg) msg.textContent = '';
       if (!swReg) return;
+      const wantSubscribe = cb ? cb.checked : true;
+      if (cb) cb.disabled = true;
       try {
         const existing = await swReg.pushManager.getSubscription();
-        if (existing) {
-          // Unsubscribe
+        if (!wantSubscribe && existing) {
           await existing.unsubscribe();
           await fetch('/api/push-subscribe', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ room_id: roomId, name: myName })
           });
-          updateNotifBtn(false);
-          msg.textContent = ui.notifCancelled;
-        } else {
-          // Subscribe
+          if (msg) msg.textContent = ui.notifCancelled;
+        } else if (wantSubscribe && !existing) {
           const perm = await Notification.requestPermission();
-          if (perm !== 'granted') { msg.textContent = ui.notifNoPerm; return; }
+          if (perm !== 'granted') {
+            if (cb) cb.checked = false;
+            if (msg) msg.textContent = ui.notifNoPerm;
+            return;
+          }
           const keyRes = await fetch('/api/vapid-public-key');
           const { key } = await keyRes.json();
-          if (!key) { msg.textContent = ui.notifNoKey; return; }
+          if (!key) {
+            if (cb) cb.checked = false;
+            if (msg) msg.textContent = ui.notifNoKey;
+            return;
+          }
           const sub = await swReg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(key)
@@ -1530,10 +1593,14 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ room_id: roomId, name: myName, lang: myLang, subscription: sub.toJSON() })
           });
-          updateNotifBtn(true);
-          msg.textContent = ui.notifActive;
+          if (msg) msg.textContent = ui.notifActive;
         }
-      } catch(e) { msg.textContent = 'שגיאה: ' + e.message; }
+      } catch(e) {
+        if (cb) cb.checked = !wantSubscribe;
+        if (msg) msg.textContent = 'שגיאה: ' + e.message;
+      } finally {
+        if (cb) cb.disabled = false;
+      }
     }
 
     // Also add iOS install banner hint
@@ -1553,6 +1620,8 @@
       if (isIosNonStandalone) return;
       const sub = await swReg.pushManager.getSubscription();
       if (!sub && Notification.permission === 'default') {
+        const cb = document.getElementById('notifCheck');
+        if (cb) cb.checked = true; // signal intent to subscribe
         togglePushNotifications();
       }
     });
