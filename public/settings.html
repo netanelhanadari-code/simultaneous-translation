@@ -170,7 +170,7 @@
       </select>
     </div>
 
-    <button class="save-btn" id="saveBtn" onclick="save()">🌐 תרגם שם ושמור</button>
+    <button class="save-btn" id="saveBtn" onclick="save()">🌐 תרגם</button>
     <p class="saved-msg" id="savedMsg"></p>
   </div>
 
@@ -192,8 +192,11 @@
       <label id="labelNameAr">العربية</label>
       <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية">
     </div>
-    <button class="save-btn" id="retransBtn" onclick="retranslateNames()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);margin-bottom:.3rem;">🔁 תקן מאנגלית — תרגם מחדש מהשדה למעלה</button>
-    <button class="save-btn" id="saveTransBtn" onclick="saveNameTranslations()">✓ שמור שמות</button>
+    <div style="display:flex;gap:.5rem;">
+      <button class="save-btn" id="retransFromNameBtn" onclick="retranslateFromName()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);flex:1;">🌐 תרגם</button>
+      <button class="save-btn" id="retransBtn" onclick="retranslateNames()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);flex:1;">🔁 מאנגלית</button>
+    </div>
+    <button class="save-btn" id="saveTransBtn" onclick="saveAndClose()">✓ שמור וסגור</button>
     <p class="saved-msg" id="transSavedMsg"></p>
   </div>
 
@@ -595,10 +598,16 @@
         document.getElementById('nameArInput').value = tr.ar || '';
       } catch(e) { console.error('auto-translate:', e); }
 
-      savedMsg.textContent = su.saved;
+      savedMsg.textContent = su.saved || '✓';
       btn.disabled = false;
-      btn.textContent = su.save;
-      setTimeout(() => { savedMsg.textContent = ''; location.href = returnTo; }, 700);
+      btn.textContent = su.save || '🌐 תרגם';
+      document.getElementById('nameTransCard').style.display = '';
+      setTimeout(() => { savedMsg.textContent = ''; }, 1500);
+    }
+
+    async function saveAndClose() {
+      await saveNameTranslations();
+      location.href = returnTo;
     }
 
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
@@ -617,6 +626,33 @@
         document.getElementById('nameHeInput').value = currentNameTrans.he || '';
         document.getElementById('nameArInput').value = currentNameTrans.ar || '';
       } catch(e) { console.error('loadNameTranslations:', e); }
+    }
+
+    async function retranslateFromName() {
+      const name = nameInput.value.trim();
+      const phone = localStorage.getItem('bf_phone') || '';
+      if (!name) return;
+      const btn = document.getElementById('retransFromNameBtn');
+      btn.disabled = true; btn.textContent = '⏳';
+      try {
+        const tr = await fetch('/api/profile/translate-name', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        }).then(r => r.json());
+        if (phone) {
+          await fetch('/api/profile/name-translations', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, name_translations: tr })
+          }).catch(() => {});
+        }
+        currentNameTrans = tr;
+        document.getElementById('nameEnInput').value = tr.en || '';
+        document.getElementById('nameHeInput').value = tr.he || '';
+        document.getElementById('nameArInput').value = tr.ar || '';
+        document.getElementById('transSavedMsg').textContent = su.translated || '✓';
+        setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
+      } catch(e) { console.error('retranslateFromName:', e); }
+      btn.disabled = false; btn.textContent = '🌐 תרגם';
     }
 
     async function retranslateNames() {
