@@ -1583,6 +1583,26 @@ wss.on('connection', (ws, req) => {
           body: JSON.stringify(patch)
         }).catch(() => {});
       } else {
+        // Check if this phone already exists under a different name — merge if so
+        if (phone && SB_URL) {
+          const dupes = await sbQuery('room_members',
+            `room_id=eq.${roomId}&phone=eq.${encodeURIComponent(phone)}&name=neq.${encodeURIComponent(name)}&limit=1`
+          ).catch(() => []);
+          if (dupes.length) {
+            const oldName = dupes[0].name;
+            // Notify the joining user
+            if (ws.readyState === WebSocket.OPEN) send(ws, { type: 'name_merged', old_name: oldName, new_name: name });
+            // Delete old entry
+            await fetch(`${SB_URL}/rest/v1/room_members?room_id=eq.${roomId}&name=eq.${encodeURIComponent(oldName)}`, {
+              method: 'DELETE', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }
+            }).catch(() => {});
+            // Broadcast rename to other members already in the room
+            const renameMsg = JSON.stringify({ type: 'member_renamed', old_name: oldName, new_name: name });
+            if (room.members) room.members.forEach((m, memberWs) => {
+              if (memberWs !== ws && memberWs.readyState === WebSocket.OPEN) memberWs.send(renameMsg);
+            });
+          }
+        }
         sbInsert('room_members', { room_id: roomId, name, emoji, lang, phone, is_admin: isCreator }).catch(() => {});
       }
     }).catch(() => {});

@@ -865,6 +865,8 @@
           document.getElementById('msg-' + msg.msg_id)?.closest('.bubble')?.remove();
         } else if (msg.type === 'message_edited') {
           applyMessageEdit(msg);
+        } else if (msg.type === 'name_merged') {
+          showToast(`הצטרפת בעבר כ-"${msg.old_name}" — אוחד לחשבונך הנוכחי`);
         } else if (msg.type === 'member_renamed') {
           // Someone else in this room changed their display name — update the
           // member list and any already-rendered message bubbles live.
@@ -1093,6 +1095,19 @@
     }
 
     function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function showToast(msg, duration = 4000) {
+      let t = document.getElementById('bf-toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'bf-toast';
+        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#2a1050;border:1px solid #8B2FC9;color:#f0e8ff;padding:.6rem 1.1rem;border-radius:20px;font-size:.85rem;z-index:9999;pointer-events:none;transition:opacity .3s;white-space:nowrap;max-width:90vw;text-align:center;';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.opacity = '1';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.opacity = '0'; }, duration);
+    }
     function linkify(html) {
       return html.replace(/https?:\/\/[^\s<>"'&]+/g, url =>
         `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;text-decoration:underline;word-break:break-all;">${url}</a>`
