@@ -626,7 +626,7 @@
           `<span class="dot"></span>`
           + rowAvatarHtml
           + `<span class="row-name">${isAdminMember ? '👑 ' : ''}${esc(displayName)}</span>`
-          + (phone ? `<span class="row-phone">${esc(phone)}</span>` : '');
+          ;
         row.style.cursor = 'pointer';
         row.addEventListener('click', () => {
           // TTS — read display name aloud only when TTS is on
