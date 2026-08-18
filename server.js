@@ -271,6 +271,7 @@ app.post('/api/tts', express.json(), async (req, res) => {
 });
 
 app.get('/', (req, res) => res.redirect('/home.html'));
+app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Persistent Rooms (IM mode) ────────────────────────────────────────────────

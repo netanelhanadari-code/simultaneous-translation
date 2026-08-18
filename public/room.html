@@ -1433,6 +1433,7 @@
     textInput.addEventListener('input', () => {
       const hasText = !!textInput.value.trim();
       sendBtn.style.display  = hasText ? 'flex' : 'none';
+      sendBtn.disabled = !hasText;
       recordBtn.style.display = hasText ? 'none' : 'flex';
       textInput.style.height = 'auto';
       textInput.style.height = Math.min(textInput.scrollHeight, 100) + 'px';
