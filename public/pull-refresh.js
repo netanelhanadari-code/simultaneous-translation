@@ -3,9 +3,9 @@
   const THRESHOLD = 75; // px to pull before triggering reload
   let startY = 0, curY = 0, pulling = false;
 
-  // The scrollable element: #messages in room.html, otherwise the document
+  // The scrollable element: #messages in room.html, .scroll-area in home.html, otherwise the document
   function scrollTop() {
-    const el = document.getElementById('messages');
+    const el = document.getElementById('messages') || document.querySelector('.scroll-area');
     return el ? el.scrollTop : (window.scrollY || document.documentElement.scrollTop);
   }
 
