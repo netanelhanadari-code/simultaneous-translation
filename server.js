@@ -1162,6 +1162,36 @@ app.get('/api/admin/storage-usage', async (req, res) => {
   }
 });
 
+// ── Admin: general stats ──────────────────────────────────────────────────────
+app.get('/api/admin/stats', async (req, res) => {
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  if (!SB_URL) return res.json({ rooms: 0, users: 0, messages: 0, messages_24h: 0 });
+  try {
+    const countHeader = { ...sbHeaders(), 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' };
+    const getCount = async (table, qs = '') => {
+      const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}select=id`, { headers: countHeader });
+      const cr = r.headers.get('content-range') || '';
+      return parseInt((cr.split('/')[1] || '0'), 10) || 0;
+    };
+    const since24h = new Date(Date.now() - 86400000).toISOString();
+    const [rooms, members, messages, messages_24h] = await Promise.all([
+      getCount('rooms'),
+      getCount('room_members'),
+      getCount('messages'),
+      getCount('messages', `created_at=gte.${encodeURIComponent(since24h)}&`),
+    ]);
+    // unique users = distinct phones (approximate via distinct name — phone is the real key)
+    const phoneRows = await sbQuery('room_members', 'select=phone').catch(() => []);
+    const uniqueUsers = new Set(phoneRows.map(r => r.phone).filter(Boolean)).size || members;
+    res.json({ rooms, users: uniqueUsers, messages, messages_24h });
+  } catch(e) {
+    console.error('[admin/stats]', e.message);
+    res.json({ rooms: 0, users: 0, messages: 0, messages_24h: 0, error: e.message });
+  }
+});
+
 // ── User profile endpoints ────────────────────────────────────────────────────
 // ── OTP endpoints ─────────────────────────────────────────────────────────────
 app.post('/api/send-otp', express.json(), async (req, res) => {

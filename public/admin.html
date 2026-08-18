@@ -227,20 +227,25 @@
       ${dashSkeleton('💰','עלות API — 7 ימים')}
       ${dashSkeleton('📦','סטורג\' תמונות')}
       ${dashSkeleton('📝','פידבקים')}
+      ${dashSkeleton('🏠','קבוצות')}
+      ${dashSkeleton('👥','משתמשים')}
+      ${dashSkeleton('💬','הודעות')}
     `;
 
     // Fetch everything in parallel
-    const [flaggedRes, usageRes, storageRes, feedbackRes] = await Promise.allSettled([
+    const [flaggedRes, usageRes, storageRes, feedbackRes, statsRes] = await Promise.allSettled([
       fetch(`/api/admin/flagged-messages?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
       fetch(`/api/admin/usage-report?secret=${encodeURIComponent(SECRET)}&days=7`).then(r => r.json()),
       fetch(`/api/admin/storage-usage?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
       fetch('/api/feedback').then(r => r.json()),
+      fetch(`/api/admin/stats?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
     ]);
 
     const flagged  = flaggedRes.status  === 'fulfilled' ? flaggedRes.value  : null;
     const usage    = usageRes.status    === 'fulfilled' ? usageRes.value    : null;
     const storage  = storageRes.status  === 'fulfilled' ? storageRes.value  : null;
     const feedback = feedbackRes.status === 'fulfilled' ? feedbackRes.value : null;
+    const stats    = statsRes.status    === 'fulfilled' ? statsRes.value    : null;
 
     // 🚩 Flagged
     const flagCount = Array.isArray(flagged) ? flagged.length : '—';
@@ -296,6 +301,27 @@
         <div class="dash-label">פידבקים לא טופלו</div>
         <div class="dash-value ${fbClass}">${fbTotal > 0 ? fbPending : '—'}</div>
         <div class="dash-sub">${fbSub}</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-icon">🏠</div>
+        <div class="dash-label">קבוצות</div>
+        <div class="dash-value ok">${stats?.rooms ?? '—'}</div>
+        <div class="dash-sub">סה"כ חדרים</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-icon">👥</div>
+        <div class="dash-label">משתמשים ייחודיים</div>
+        <div class="dash-value ok">${stats?.users ?? '—'}</div>
+        <div class="dash-sub">לפי מספר טלפון</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-icon">💬</div>
+        <div class="dash-label">הודעות</div>
+        <div class="dash-value ok">${stats?.messages ?? '—'}</div>
+        <div class="dash-sub">${stats?.messages_24h ?? '—'} ב-24 שעות אחרונות</div>
       </div>
     `;
   }
