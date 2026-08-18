@@ -170,7 +170,10 @@
       </select>
     </div>
 
-    <button class="save-btn" id="saveBtn" onclick="save()">🌐 תרגם</button>
+    <div style="display:flex;gap:.5rem;">
+      <button class="save-btn" id="saveBtn" onclick="save()" style="flex:1;">🌐 תרגם שמות</button>
+      <button class="save-btn" id="retransFromNameBtn" onclick="retranslateFromName()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם מאנגלית</button>
+    </div>
     <p class="saved-msg" id="savedMsg"></p>
   </div>
 
@@ -192,7 +195,6 @@
       <label id="labelNameAr">العربية</label>
       <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية">
     </div>
-    <button class="save-btn" id="retransFromNameBtn" onclick="retranslateFromName()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);width:100%;">🌐 תרגם שמות</button>
     <button class="save-btn" id="saveTransBtn" onclick="saveAndClose()">✓ שמור הגדרות</button>
     <p class="saved-msg" id="transSavedMsg"></p>
   </div>
@@ -629,6 +631,8 @@
       const name = nameInput.value.trim();
       const phone = localStorage.getItem('bf_phone') || '';
       if (!name) return;
+      // show name trans card if not visible
+      document.getElementById('nameTransCard').style.display = '';
       const btn = document.getElementById('retransFromNameBtn');
       btn.disabled = true; btn.textContent = '⏳';
       try {
@@ -649,7 +653,7 @@
         document.getElementById('transSavedMsg').textContent = su.translated || '✓';
         setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
       } catch(e) { console.error('retranslateFromName:', e); }
-      btn.disabled = false; btn.textContent = '🌐 תרגם';
+      btn.disabled = false; btn.textContent = '🔁 תרגם מאנגלית';
     }
 
     async function retranslateNames() {
