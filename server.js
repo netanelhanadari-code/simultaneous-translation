@@ -1229,6 +1229,43 @@ app.get('/api/admin/twilio-usage', async (req, res) => {
   }
 });
 
+// ── Admin: activity report ────────────────────────────────────────────────────
+app.get('/api/admin/activity-report', async (req, res) => {
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const days = Math.min(90, parseInt(req.query.days) || 30);
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceStr = since.toISOString();
+  try {
+    const msgs = await sbQuery('messages',
+      `select=created_at,sender_name&created_at=gte.${sinceStr}&order=created_at`);
+    if (!Array.isArray(msgs)) throw new Error('unexpected response');
+    // Group by day
+    const byDay = {};
+    for (const m of msgs) {
+      const day = (m.created_at || '').slice(0, 10);
+      if (!day) continue;
+      if (!byDay[day]) byDay[day] = { count: 0, users: new Set() };
+      byDay[day].count++;
+      if (m.sender_name) byDay[day].users.add(m.sender_name);
+    }
+    // Fill all days in range, oldest first
+    const result = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const day = d.toISOString().slice(0, 10);
+      result.push({ day, messages: byDay[day]?.count ?? 0, users: byDay[day]?.users.size ?? 0 });
+    }
+    res.json({ days, by_day: result });
+  } catch(e) {
+    console.error('[activity-report]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── OTP endpoints ─────────────────────────────────────────────────────────────
 app.post('/api/send-otp', express.json(), async (req, res) => {
   const { phone } = req.body;

@@ -34,37 +34,111 @@
     border-radius: 8px; padding: .55rem 1rem; font-size: .9rem;
     cursor: pointer; font-weight: 600;
   }
-  button.danger { background: var(--danger); }
-  button.secondary { background: var(--border); }
-  button:disabled { opacity: .5; cursor: default; }
+  button.danger    { background: var(--danger); }
+  button.secondary { background: var(--border); color: var(--text); }
+  button:disabled  { opacity: .5; cursor: default; }
   #app { display: none; }
+
+  /* ── Tabs ── */
   .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
   .tab-btn {
     background: var(--surface); border: 1px solid var(--border);
     color: var(--muted); border-radius: 8px; padding: .5rem .9rem; font-size: .85rem;
+    cursor: pointer;
   }
   .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+
+  /* ── Back bar ── */
+  .back-bar {
+    display: flex; align-items: center; gap: .6rem;
+    padding-bottom: .75rem; margin-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .back-bar strong { font-size: .95rem; }
+
+  /* ── Days selector ── */
+  .days-select { display: flex; gap: .4rem; margin-bottom: .8rem; }
+  .days-btn { padding: .35rem .7rem; font-size: .8rem; }
+
+  /* ── Misc ── */
+  .loading { color: var(--muted); font-size: .85rem; }
+  .empty   { color: var(--muted); font-size: .85rem; text-align: center; padding: 1rem; }
+  .err     { color: #e07070; font-size: .85rem; padding: .5rem 0; }
+  table    { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  th, td   { text-align: right; padding: .4rem .3rem; border-bottom: 1px solid var(--border); }
+  th       { color: var(--muted); font-weight: 600; }
+  .total-usd { font-size: 1.4rem; font-weight: 700; margin-bottom: .5rem; }
+  .section-divider {
+    margin-top: 1rem; padding-top: .8rem;
+    border-top: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: .8rem; font-weight: 700; color: var(--muted);
+    margin-bottom: .6rem; letter-spacing: .04em;
+  }
+
+  /* ── Dashboard grid ── */
+  .dash-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .75rem;
+  }
+  .dash-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: .85rem 1rem;
+    display: flex; flex-direction: column; gap: .3rem;
+  }
+  .dash-card.clickable {
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .dash-card.clickable:active { background: #1a0d35; }
+  .dash-icon  { font-size: 1.3rem; line-height: 1; }
+  .dash-label { font-size: .72rem; color: var(--muted); }
+  .dash-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; color: var(--text); }
+  .dash-value.ok   { color: var(--green); }
+  .dash-value.warn { color: var(--warn); }
+  .dash-value.bad  { color: var(--danger); }
+  .dash-sub { font-size: .72rem; color: var(--muted); }
+  .dash-bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: .2rem; }
+  .dash-bar-fill  { height: 100%; border-radius: 2px; transition: width .4s; }
+
+  .dash-group-label {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .78rem; font-weight: 700; letter-spacing: .04em;
+    color: var(--text); opacity: .8;
+    padding: .35rem .5rem .25rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; border-radius: 4px;
+    transition: opacity .15s;
+    margin-top: .25rem;
+  }
+  .dash-group-label:first-child { margin-top: 0; }
+  .dash-group-label:hover { opacity: 1; color: var(--accent); }
+  .dash-group-label::after { content: '›'; font-size: 1.1rem; opacity: .6; }
+
+  /* ── Activity charts ── */
+  .chart-stat-row {
+    display: flex; gap: .5rem; margin-bottom: 1rem;
+  }
+  .chart-stat {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .8rem; text-align: center;
+  }
+  .chart-stat-label { font-size: .7rem; color: var(--muted); margin-bottom: .2rem; }
+  .chart-stat-value { font-size: 1.3rem; font-weight: 700; }
+  .chart-title { font-size: .78rem; color: var(--muted); font-weight: 600; margin-bottom: .4rem; }
+
+  /* ── Flagged / Feedback rows ── */
   .row {
     display: flex; justify-content: space-between; align-items: flex-start;
     gap: .8rem; padding: .8rem 0; border-bottom: 1px solid var(--border);
   }
   .row:last-child { border-bottom: none; }
   .row-main { flex: 1; min-width: 0; }
-  .row-meta { font-size: .72rem; color: var(--muted); margin-bottom: .3rem; }
-  .row-text { font-size: .9rem; line-height: 1.4; word-break: break-word; }
+  .row-meta   { font-size: .72rem; color: var(--muted); margin-bottom: .3rem; }
+  .row-text   { font-size: .9rem; line-height: 1.4; word-break: break-word; }
   .row-reason { font-size: .72rem; color: var(--warn); margin-top: .3rem; }
-  .empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 1rem; }
-  .loading { color: var(--muted); font-size: .85rem; }
-  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-  th, td { text-align: right; padding: .4rem .3rem; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; }
-  .total-usd { font-size: 1.4rem; font-weight: 700; margin-bottom: .5rem; }
-  .days-select { display: flex; gap: .4rem; margin-bottom: .8rem; }
-  .days-btn { padding: .35rem .7rem; font-size: .8rem; }
-  .err { color: #e07070; font-size: .85rem; padding: .5rem 0; }
-  /* Feedback handled state */
   .fb-row { display: flex; align-items: flex-start; gap: .6rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
   .fb-row:last-child { border-bottom: none; }
   .fb-row.handled { opacity: .38; }
@@ -82,50 +156,6 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; color: #fff; font-weight: 700;
   }
-
-  /* ── Dashboard ── */
-  .dash-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .75rem;
-    margin-bottom: .75rem;
-  }
-  .dash-card {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; padding: .85rem 1rem;
-    display: flex; flex-direction: column; gap: .3rem;
-    cursor: default;
-  }
-  .dash-card.clickable { cursor: pointer; transition: border-color .15s; }
-  .dash-card.clickable:hover { border-color: var(--accent); }
-  .dash-icon { font-size: 1.3rem; line-height: 1; }
-  .dash-label { font-size: .72rem; color: var(--muted); }
-  .dash-value {
-    font-size: 1.6rem; font-weight: 700; line-height: 1.1;
-    color: var(--text);
-  }
-  .dash-value.ok   { color: var(--green); }
-  .dash-value.warn { color: var(--warn); }
-  .dash-value.bad  { color: var(--danger); }
-  .dash-sub { font-size: .72rem; color: var(--muted); }
-  .dash-bar-track {
-    height: 4px; background: var(--border);
-    border-radius: 2px; overflow: hidden; margin-top: .2rem;
-  }
-  .dash-bar-fill {
-    height: 100%; border-radius: 2px; transition: width .4s;
-  }
-  .dash-refresh {
-    display: flex; justify-content: flex-end; margin-bottom: .5rem;
-  }
-  .dash-group-label {
-    grid-column: 1 / -1;
-    font-size: .72rem; font-weight: 700; letter-spacing: .06em;
-    color: var(--muted); text-transform: uppercase;
-    padding: .25rem 0 .1rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: -.1rem;
-  }
 </style>
 </head>
 <body>
@@ -140,15 +170,15 @@
   <div id="app">
     <h1>Babel Fish — Admin</h1>
     <div class="tabs">
-      <button class="tab-btn active" data-tab="dash"     onclick="switchTab('dash')">📊 דשבורד</button>
-      <button class="tab-btn"        data-tab="flagged"  onclick="switchTab('flagged')">🚩 מסומנות</button>
-      <button class="tab-btn"        data-tab="usage"    onclick="switchTab('usage')">💰 API</button>
-      <button class="tab-btn"        data-tab="feedback" onclick="switchTab('feedback')">📝 פידבק</button>
+      <button class="tab-btn active" data-tab="all"       onclick="switchTab('all')">📊 הכל</button>
+      <button class="tab-btn"        data-tab="activity"  onclick="switchTab('activity')">📈 פעילות</button>
+      <button class="tab-btn"        data-tab="costs"     onclick="switchTab('costs')">💸 עלויות</button>
+      <button class="tab-btn"        data-tab="attention" onclick="switchTab('attention')">⚠ לטיפול</button>
     </div>
 
-    <!-- Dashboard -->
-    <div id="tab-dash" class="tab-panel active card">
-      <div class="dash-refresh">
+    <!-- ── הכל: Dashboard summary ──────────────────────────────────────────── -->
+    <div id="tab-all" class="tab-panel active card">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;">
         <button class="secondary days-btn" onclick="loadDashboard()">🔄 רענן</button>
       </div>
       <div class="dash-grid" id="dashGrid">
@@ -160,39 +190,60 @@
       <div id="dashErr"></div>
     </div>
 
-    <!-- Flagged -->
-    <div id="tab-flagged" class="tab-panel card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-        <span class="loading" id="flaggedStatus"></span>
-        <button class="secondary" onclick="loadFlagged()">🔄 רענן</button>
+    <!-- ── פעילות: detail ───────────────────────────────────────────────────── -->
+    <div id="tab-activity" class="tab-panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="switchTab('all')">← חזרה</button>
+        <strong>📈 פעילות</strong>
       </div>
-      <div id="flaggedList"></div>
-    </div>
-
-    <!-- Usage -->
-    <div id="tab-usage" class="tab-panel card">
       <div class="days-select">
-        <button class="days-btn secondary" onclick="loadUsage(7)">7 ימים</button>
-        <button class="days-btn secondary" onclick="loadUsage(30)">30 ימים</button>
-        <button class="days-btn secondary" onclick="loadUsage(90)">90 ימים</button>
+        <button class="days-btn secondary" onclick="loadActivity(7)">7 ימים</button>
+        <button class="days-btn secondary" onclick="loadActivity(14)">14 ימים</button>
+        <button class="days-btn secondary" onclick="loadActivity(30)">30 ימים</button>
       </div>
-      <div id="usageContent"><span class="loading">בחר טווח ימים</span></div>
-      <div id="storageWidget" style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-          <span style="font-size:.8rem;color:var(--muted);">📦 Supabase Storage — תמונות</span>
-          <button class="secondary days-btn" onclick="loadStorage()">🔄</button>
-        </div>
-        <div id="storageContent"><span class="loading">...</span></div>
-      </div>
+      <div id="activityContent"><span class="loading">טוען...</span></div>
     </div>
 
-    <!-- Feedback -->
-    <div id="tab-feedback" class="tab-panel card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-        <span class="loading" id="feedbackStatus"></span>
-        <button class="secondary" onclick="loadFeedback()">🔄 רענן</button>
+    <!-- ── עלויות: detail ───────────────────────────────────────────────────── -->
+    <div id="tab-costs" class="tab-panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="switchTab('all')">← חזרה</button>
+        <strong>💸 עלויות</strong>
       </div>
-      <div id="feedbackList"></div>
+      <div class="days-select">
+        <button class="days-btn secondary" onclick="loadCosts(7)">7 ימים</button>
+        <button class="days-btn secondary" onclick="loadCosts(30)">30 ימים</button>
+        <button class="days-btn secondary" onclick="loadCosts(90)">90 ימים</button>
+      </div>
+      <div id="costsContent"><span class="loading">טוען...</span></div>
+    </div>
+
+    <!-- ── לטיפול: detail ──────────────────────────────────────────────────── -->
+    <div id="tab-attention" class="tab-panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="switchTab('all')">← חזרה</button>
+        <strong>⚠ לטיפול</strong>
+      </div>
+
+      <!-- Flagged -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+          <span class="section-title" style="margin:0;">🚩 הודעות מסומנות</span>
+          <button class="secondary days-btn" onclick="loadFlagged()">🔄 רענן</button>
+        </div>
+        <span class="loading" id="flaggedStatus"></span>
+        <div id="flaggedList"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section-divider">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+          <span class="section-title" style="margin:0;">📝 פידבקים</span>
+          <button class="secondary days-btn" onclick="loadFeedback()">🔄 רענן</button>
+        </div>
+        <span class="loading" id="feedbackStatus"></span>
+        <div id="feedbackList"></div>
+      </div>
     </div>
   </div>
 
@@ -207,131 +258,122 @@
     document.getElementById('app').style.display = 'block';
     loadDashboard();
   }
-  document.getElementById('secretInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  document.getElementById('secretInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
 
   function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p =>
+      p.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'usage')    loadStorage();
-    if (name === 'dash')     loadDashboard();
-    if (name === 'flagged')  loadFlagged();
-    if (name === 'feedback') loadFeedback();
+    if (name === 'activity')  loadActivity(30);
+    if (name === 'costs')     loadCosts(30);
+    if (name === 'attention') { loadFlagged(); loadFeedback(); }
   }
 
   function fmtTime(iso) {
     if (!iso) return '';
-    return new Date(iso).toLocaleString('he-IL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return new Date(iso).toLocaleString('he-IL',
+      { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
   }
 
-  // ── Dashboard ─────────────────────────────────────────────────────────────
+  // ── Dashboard (הכל) ─────────────────────────────────────────────────────────
   async function loadDashboard() {
-    const grid = document.getElementById('dashGrid');
+    const grid  = document.getElementById('dashGrid');
     const errEl = document.getElementById('dashErr');
     errEl.textContent = '';
-    // Show skeleton
+
     grid.innerHTML = `
-      <div class="dash-group-label">📈 פעילות</div>
-      ${dashSkeleton('🏠','קבוצות')}
-      ${dashSkeleton('👥','משתמשים')}
-      ${dashSkeleton('💬','הודעות')}
-      <div class="dash-group-label">💸 עלויות</div>
-      ${dashSkeleton('💰','עלות API — 7 ימים')}
-      ${dashSkeleton('📱','SMS Twilio — 30 יום')}
-      ${dashSkeleton('📦','סטורג\' תמונות')}
-      <div class="dash-group-label">⚠ לטיפול</div>
-      ${dashSkeleton('🚩','הודעות מסומנות')}
-      ${dashSkeleton('📝','פידבקים')}
+      <div class="dash-group-label" onclick="switchTab('activity')">📈 פעילות</div>
+      ${sk('🏠','קבוצות')}${sk('👥','משתמשים')}
+      <div class="dash-card" style="grid-column:1/-1;">${ski('💬','הודעות')}</div>
+      <div class="dash-group-label" onclick="switchTab('costs')">💸 עלויות</div>
+      ${sk('💰','OpenAI')}${sk('📱','SMS Twilio')}
+      <div class="dash-card" style="grid-column:1/-1;">${ski('📦','סטורג\'')}</div>
+      <div class="dash-group-label" onclick="switchTab('attention')">⚠ לטיפול</div>
+      ${sk('🚩','מסומנות')}${sk('📝','פידבקים')}
     `;
 
-    // Fetch everything in parallel
-    const [flaggedRes, usageRes, storageRes, feedbackRes, statsRes, twilioRes] = await Promise.allSettled([
-      fetch(`/api/admin/flagged-messages?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
-      fetch(`/api/admin/usage-report?secret=${encodeURIComponent(SECRET)}&days=7`).then(r => r.json()),
-      fetch(`/api/admin/storage-usage?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
+    const [fR, uR, sR, fbR, stR, twR] = await Promise.allSettled([
+      fetch(`/api/admin/flagged-messages?secret=${enc(SECRET)}`).then(r => r.json()),
+      fetch(`/api/admin/usage-report?secret=${enc(SECRET)}&days=7`).then(r => r.json()),
+      fetch(`/api/admin/storage-usage?secret=${enc(SECRET)}`).then(r => r.json()),
       fetch('/api/feedback').then(r => r.json()),
-      fetch(`/api/admin/stats?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
-      fetch(`/api/admin/twilio-usage?secret=${encodeURIComponent(SECRET)}&days=30`).then(r => r.json()),
+      fetch(`/api/admin/stats?secret=${enc(SECRET)}`).then(r => r.json()),
+      fetch(`/api/admin/twilio-usage?secret=${enc(SECRET)}&days=30`).then(r => r.json()),
     ]);
 
-    const flagged  = flaggedRes.status  === 'fulfilled' ? flaggedRes.value  : null;
-    const usage    = usageRes.status    === 'fulfilled' ? usageRes.value    : null;
-    const storage  = storageRes.status  === 'fulfilled' ? storageRes.value  : null;
-    const feedback = feedbackRes.status === 'fulfilled' ? feedbackRes.value : null;
-    const stats    = statsRes.status    === 'fulfilled' ? statsRes.value    : null;
-    const twilio   = twilioRes.status   === 'fulfilled' ? twilioRes.value   : null;
+    const flagged  = ok(fR),  usage   = ok(uR),  storage  = ok(sR);
+    const feedback = ok(fbR), stats   = ok(stR), twilio   = ok(twR);
 
-    // 🚩 Flagged
-    const flagCount = Array.isArray(flagged) ? flagged.length : '—';
-    const flagClass = flagCount > 0 ? 'bad' : 'ok';
-    const flagSub   = flagCount > 0 ? 'לחץ לטיפול' : 'הכל נקי 🎉';
+    const flagCount  = Array.isArray(flagged) ? flagged.length : '—';
+    const flagClass  = flagCount > 0 ? 'bad' : 'ok';
+    const flagSub    = flagCount > 0 ? 'לחץ לטיפול' : 'הכל נקי 🎉';
 
-    // 💰 API cost
-    const usd    = usage?.total_usd ?? '—';
-    const usdNum = parseFloat(usd) || 0;
-    const usdClass = usdNum > 5 ? 'warn' : 'ok';
+    const usd        = usage?.total_usd ?? '—';
+    const usdClass   = parseFloat(usd) > 5 ? 'warn' : 'ok';
 
-    // 📦 Storage
-    const mb     = storage?.size_estimate_mb ?? 0;
-    const imgCnt = storage?.count ?? 0;
-    const pct    = Math.min(100, (mb / 1000) * 100);
-    const stColor = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
-    const stClass = pct > 80 ? 'bad' : pct > 50 ? 'warn' : 'ok';
+    const mb         = storage?.size_estimate_mb ?? 0;
+    const imgCnt     = storage?.count ?? 0;
+    const pct        = Math.min(100, (mb / 1000) * 100);
+    const stColor    = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
+    const stClass    = pct > 80 ? 'bad' : pct > 50 ? 'warn' : 'ok';
 
-    // 📝 Feedback — show unhandled count
     const fbTotal    = Array.isArray(feedback) ? feedback.length : 0;
     const fbHandled  = Array.isArray(feedback) ? feedback.filter(f => f.resolved).length : 0;
     const fbPending  = fbTotal - fbHandled;
     const fbClass    = fbPending > 0 ? 'warn' : 'ok';
     const fbSub      = fbTotal > 0 ? `${fbHandled} טופלו · ${fbTotal} סה"כ` : 'אין פידבק עדיין';
 
-    // 📱 Twilio cost
-    const twilioUsd    = twilio?.total_usd ?? null;
-    const twilioNum    = parseFloat(twilioUsd) || 0;
-    const twilioClass  = twilioNum > 20 ? 'bad' : twilioNum > 10 ? 'warn' : 'ok';
-    const twilioSub    = twilio ? `${twilio.sms_count ?? '—'} SMS · מספר $${twilio.number_usd ?? '—'}` : 'לא זמין';
+    const twilioUsd  = twilio?.total_usd ?? null;
+    const twilioClass = parseFloat(twilioUsd) > 20 ? 'bad' : parseFloat(twilioUsd) > 10 ? 'warn' : 'ok';
+    const twilioSub  = twilio
+      ? `${twilio.sms_count ?? '—'} SMS · מספר $${twilio.number_usd ?? '—'}`
+      : 'לא זמין';
 
     grid.innerHTML = `
-      <div class="dash-group-label">📈 פעילות</div>
+      <div class="dash-group-label" onclick="switchTab('activity')">📈 פעילות</div>
 
-      <div class="dash-card">
+      <div class="dash-card clickable" onclick="switchTab('activity')">
         <div class="dash-icon">🏠</div>
         <div class="dash-label">קבוצות</div>
         <div class="dash-value ok">${stats?.rooms ?? '—'}</div>
         <div class="dash-sub">סה"כ חדרים</div>
       </div>
 
-      <div class="dash-card">
+      <div class="dash-card clickable" onclick="switchTab('activity')">
         <div class="dash-icon">👥</div>
         <div class="dash-label">משתמשים ייחודיים</div>
         <div class="dash-value ok">${stats?.users ?? '—'}</div>
         <div class="dash-sub">לפי מספר טלפון</div>
       </div>
 
-      <div class="dash-card" style="grid-column:1/-1;">
+      <div class="dash-card clickable" onclick="switchTab('activity')" style="grid-column:1/-1;">
         <div class="dash-icon">💬</div>
         <div class="dash-label">הודעות</div>
         <div class="dash-value ok">${stats?.messages ?? '—'}</div>
         <div class="dash-sub">${stats?.messages_24h ?? '—'} ב-24 שעות אחרונות</div>
       </div>
 
-      <div class="dash-group-label">💸 עלויות</div>
+      <div class="dash-group-label" onclick="switchTab('costs')">💸 עלויות</div>
 
-      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור להוצאות API">
+      <div class="dash-card clickable" onclick="switchTab('costs')">
         <div class="dash-icon">💰</div>
         <div class="dash-label">OpenAI — 7 ימים</div>
         <div class="dash-value ${usdClass}">$${usd}</div>
         <div class="dash-sub">gpt-4o-mini + Whisper</div>
       </div>
 
-      <div class="dash-card">
+      <div class="dash-card clickable" onclick="switchTab('costs')">
         <div class="dash-icon">📱</div>
         <div class="dash-label">SMS Twilio — 30 יום</div>
         <div class="dash-value ${twilioClass}">${twilioUsd !== null ? '$' + twilioUsd : '—'}</div>
         <div class="dash-sub">${twilioSub}</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור לניהול סטורג'" style="grid-column:1/-1;">
+      <div class="dash-card clickable" onclick="switchTab('costs')" style="grid-column:1/-1;">
         <div class="dash-icon">📦</div>
         <div class="dash-label">סטורג' תמונות</div>
         <div class="dash-value ${stClass}">${mb.toFixed(1)} MB</div>
@@ -341,16 +383,16 @@
         </div>
       </div>
 
-      <div class="dash-group-label">⚠ לטיפול</div>
+      <div class="dash-group-label" onclick="switchTab('attention')">⚠ לטיפול</div>
 
-      <div class="dash-card clickable" onclick="switchTab('flagged')" title="עבור להודעות מסומנות">
+      <div class="dash-card clickable" onclick="switchTab('attention')">
         <div class="dash-icon">🚩</div>
         <div class="dash-label">הודעות מסומנות</div>
         <div class="dash-value ${flagClass}">${flagCount}</div>
         <div class="dash-sub">${flagSub}</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('feedback')" title="עבור לפידבק">
+      <div class="dash-card clickable" onclick="switchTab('attention')">
         <div class="dash-icon">📝</div>
         <div class="dash-label">פידבקים לא טופלו</div>
         <div class="dash-value ${fbClass}">${fbTotal > 0 ? fbPending : '—'}</div>
@@ -359,21 +401,147 @@
     `;
   }
 
-  function dashSkeleton(icon, label) {
-    return `<div class="dash-card">
-      <div class="dash-icon">${icon}</div>
-      <div class="dash-label">${label}</div>
-      <div class="dash-value" style="color:var(--border);">—</div>
-    </div>`;
+  // skeleton helpers
+  function ski(icon, label) {
+    return `<div class="dash-icon">${icon}</div><div class="dash-label">${label}</div><div class="dash-value" style="color:var(--border);">—</div>`;
+  }
+  function sk(icon, label) {
+    return `<div class="dash-card">${ski(icon, label)}</div>`;
   }
 
-  // ── Flagged messages ──────────────────────────────────────────────────────
+  // ── Activity ─────────────────────────────────────────────────────────────────
+  async function loadActivity(days) {
+    const el = document.getElementById('activityContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const r = await fetch(`/api/admin/activity-report?secret=${enc(SECRET)}&days=${days}`);
+      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const data = await r.json();
+      if (data.error) { el.innerHTML = `<p class="err">${esc(data.error)}</p>`; return; }
+
+      const totalMsgs = data.by_day.reduce((s, d) => s + d.messages, 0);
+      const peakUsers = Math.max(...data.by_day.map(d => d.users), 0);
+
+      el.innerHTML = `
+        <div class="chart-stat-row">
+          <div class="chart-stat">
+            <div class="chart-stat-label">💬 הודעות ב-${days} ימים</div>
+            <div class="chart-stat-value" style="color:var(--accent);">${totalMsgs.toLocaleString()}</div>
+          </div>
+          <div class="chart-stat">
+            <div class="chart-stat-label">👥 שיא משתמשים ביום</div>
+            <div class="chart-stat-value" style="color:var(--green);">${peakUsers}</div>
+          </div>
+        </div>
+        <div style="margin-bottom:1.2rem;">
+          <div class="chart-title">💬 הודעות לפי יום</div>
+          ${barChart(data.by_day.map(d => ({ label: d.day.slice(5), value: d.messages })), '#8B2FC9')}
+        </div>
+        <div>
+          <div class="chart-title">👥 משתמשים פעילים לפי יום</div>
+          ${barChart(data.by_day.map(d => ({ label: d.day.slice(5), value: d.users })), '#4caf7d')}
+        </div>
+      `;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  function barChart(items, color) {
+    if (!items || !items.length) return '<p class="empty">אין נתונים</p>';
+    const W = 360, H = 80, labelH = 14;
+    const max = Math.max(...items.map(d => d.value), 1);
+    const n = items.length;
+    const step = W / n;
+    const bw = Math.max(2, step - 2);
+    const showEvery = Math.ceil(n / 7);
+    let bars = '', labels = '';
+    items.forEach((d, i) => {
+      const bh = Math.max(d.value > 0 ? 2 : 0, (d.value / max) * H);
+      const x = i * step;
+      const y = H - bh;
+      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${color}" rx="2" opacity=".85"/>`;
+      if (bh > 14 && d.value > 0) {
+        bars += `<text x="${(x + bw/2).toFixed(1)}" y="${(y + 10).toFixed(1)}" text-anchor="middle" font-size="8" fill="#fff">${d.value}</text>`;
+      }
+      if (i % showEvery === 0 || i === n - 1) {
+        labels += `<text x="${(x + bw/2).toFixed(1)}" y="${H + labelH}" text-anchor="middle" font-size="9" fill="#9b7fc4">${d.label}</text>`;
+      }
+    });
+    return `<svg width="100%" viewBox="0 0 ${W} ${H + labelH + 4}" xmlns="http://www.w3.org/2000/svg" style="display:block;direction:ltr">${bars}${labels}</svg>`;
+  }
+
+  // ── Costs ─────────────────────────────────────────────────────────────────────
+  async function loadCosts(days) {
+    const el = document.getElementById('costsContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const [uR, twR, sR] = await Promise.allSettled([
+        fetch(`/api/admin/usage-report?secret=${enc(SECRET)}&days=${days}`).then(r => r.json()),
+        fetch(`/api/admin/twilio-usage?secret=${enc(SECRET)}&days=${days}`).then(r => r.json()),
+        fetch(`/api/admin/storage-usage?secret=${enc(SECRET)}`).then(r => r.json()),
+      ]);
+      const usage = ok(uR), twilio = ok(twR), storage = ok(sR);
+
+      let html = '';
+
+      // OpenAI
+      html += `<div class="section-title">💰 OpenAI</div>`;
+      if (!usage || usage.error) {
+        html += `<p class="err">${esc(usage?.error || 'שגיאה')}</p>`;
+      } else {
+        html += `<div class="total-usd">$${usage.total_usd ?? '—'}</div>`;
+        html += `<table><thead><tr><th>תאריך</th><th>עלות ($)</th></tr></thead><tbody>`;
+        (usage.by_day || []).slice().reverse().forEach(d => {
+          const ds = new Date(d.start * 1000).toLocaleDateString('he-IL',
+            { day:'2-digit', month:'2-digit' });
+          html += `<tr><td>${ds}</td><td>${d.amount_usd}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+
+      // Twilio
+      html += `<div class="section-divider"><div class="section-title">📱 SMS Twilio</div>`;
+      if (!twilio || twilio.error) {
+        html += `<p style="color:var(--muted);font-size:.85rem;">${esc(twilio?.error || 'לא זמין')}</p>`;
+      } else {
+        html += `<div class="total-usd">$${twilio.total_usd}</div>`;
+        html += `<table><tbody>
+          <tr><td>הודעות SMS</td><td>${twilio.sms_count ?? '—'}</td></tr>
+          <tr><td>עלות SMS</td><td>$${twilio.sms_usd ?? '—'}</td></tr>
+          <tr><td>עלות מספר</td><td>$${twilio.number_usd ?? '—'}</td></tr>
+        </tbody></table>`;
+      }
+      html += `</div>`;
+
+      // Storage
+      if (storage) {
+        const mb  = storage.size_estimate_mb ?? 0;
+        const cnt = storage.count ?? 0;
+        const pct = Math.min(100, (mb / 1000) * 100);
+        const col = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
+        html += `<div class="section-divider"><div class="section-title">📦 Supabase Storage</div>
+          <div style="font-size:.85rem;margin-bottom:.4rem;">
+            <strong style="color:${col};">${mb.toFixed(1)} MB</strong>
+            <span style="color:var(--muted);"> / 1,000 MB &nbsp;·&nbsp; ${cnt} תמונות</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:3px;transition:width .4s;"></div>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">תמונות נמחקות אחרי 30 יום</div>
+          ${pct > 80 ? '<div style="color:#e07070;font-size:.8rem;font-weight:600;margin-top:.4rem;">⚠ מעל 80% מהקיבולת</div>' : ''}
+        </div>`;
+      }
+
+      el.innerHTML = html;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  // ── Flagged ───────────────────────────────────────────────────────────────────
   async function loadFlagged() {
     const statusEl = document.getElementById('flaggedStatus');
-    const listEl = document.getElementById('flaggedList');
+    const listEl   = document.getElementById('flaggedList');
     statusEl.textContent = 'טוען...';
     try {
-      const r = await fetch(`/api/admin/flagged-messages?secret=${encodeURIComponent(SECRET)}`);
+      const r = await fetch(`/api/admin/flagged-messages?secret=${enc(SECRET)}`);
       if (r.status === 403) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
       const rows = await r.json();
       statusEl.textContent = '';
@@ -394,120 +562,68 @@
           const btn = e.target;
           btn.disabled = true; btn.textContent = 'מוחק...';
           try {
-            await fetch(`/api/admin/rooms/${encodeURIComponent(btn.dataset.room)}/messages/${btn.dataset.id}?secret=${encodeURIComponent(SECRET)}`, { method: 'DELETE' });
+            await fetch(
+              `/api/admin/rooms/${encodeURIComponent(btn.dataset.room)}/messages/${btn.dataset.id}?secret=${enc(SECRET)}`,
+              { method: 'DELETE' }
+            );
             row.remove();
             if (!listEl.children.length) listEl.innerHTML = '<p class="empty">אין הודעות מסומנות 🎉</p>';
-          } catch(err) { btn.disabled = false; btn.textContent = 'שגיאה — נסה שוב'; }
+          } catch { btn.disabled = false; btn.textContent = 'שגיאה'; }
         });
         listEl.appendChild(row);
       });
-    } catch(e) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+    } catch { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
-  // ── Usage report ──────────────────────────────────────────────────────────
-  async function loadUsage(days) {
-    const el = document.getElementById('usageContent');
-    el.innerHTML = '<span class="loading">טוען...</span>';
-    try {
-      const r = await fetch(`/api/admin/usage-report?secret=${encodeURIComponent(SECRET)}&days=${days}`);
-      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
-      const data = await r.json();
-      if (data.error) { el.innerHTML = `<p class="err">${esc(data.error)}</p>`; return; }
-      let html = `<div class="total-usd">$${data.total_usd ?? '—'}</div>`;
-      html += `<table><thead><tr><th>תאריך</th><th>עלות ($)</th></tr></thead><tbody>`;
-      (data.by_day || []).forEach(d => {
-        const dateStr = new Date(d.start * 1000).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit' });
-        html += `<tr><td>${dateStr}</td><td>${d.amount_usd}</td></tr>`;
-      });
-      html += `</tbody></table>`;
-      el.innerHTML = html;
-    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
-  }
-
-  // ── Feedback ─────────────────────────────────────────────────────────────
+  // ── Feedback ──────────────────────────────────────────────────────────────────
   async function loadFeedback() {
     const statusEl = document.getElementById('feedbackStatus');
     const listEl   = document.getElementById('feedbackList');
     statusEl.textContent = 'טוען...';
     try {
-      const r = await fetch('/api/feedback');
-      const rows = await r.json();
+      const rows = await fetch('/api/feedback').then(r => r.json());
       statusEl.textContent = '';
       if (!rows.length) { listEl.innerHTML = '<p class="empty">אין פידבק</p>'; return; }
-
       listEl.innerHTML = '';
-
       rows.forEach(f => {
         const isHandled = !!f.resolved;
-
         const div = document.createElement('div');
         div.className = 'fb-row' + (isHandled ? ' handled' : '');
-
         const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'fb-check';
-        cb.checked = isHandled;
-        cb.title = isHandled ? 'מסומן כטופל — לחץ לביטול' : 'סמן כטופל';
+        cb.type = 'checkbox'; cb.className = 'fb-check'; cb.checked = isHandled;
         cb.addEventListener('change', async () => {
           div.classList.toggle('handled', cb.checked);
           cb.disabled = true;
           try {
-            await fetch(`/api/feedback/${f.id}?secret=${encodeURIComponent(SECRET)}`, {
+            await fetch(`/api/feedback/${f.id}?secret=${enc(SECRET)}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ resolved: cb.checked })
             });
-          } catch(e) {
+          } catch {
             cb.checked = !cb.checked;
             div.classList.toggle('handled', cb.checked);
-          } finally {
-            cb.disabled = false;
-          }
+          } finally { cb.disabled = false; }
         });
-
         const main = document.createElement('div');
         main.className = 'row-main';
         main.innerHTML = `
-          <div class="row-meta">${esc(f.name)} · ${esc(f.room_id || '—')} · ${esc(f.device || '')} · ${fmtTime(f.created_at)}</div>
+          <div class="row-meta">${esc(f.name)} · ${esc(f.room_id||'—')} · ${esc(f.device||'')} · ${fmtTime(f.created_at)}</div>
           <div class="row-text"><strong>מה קרה:</strong> ${esc(f.what_happened)}</div>
           ${f.expected ? `<div class="row-text"><strong>ציפייה:</strong> ${esc(f.expected)}</div>` : ''}
         `;
-
-        div.appendChild(cb);
-        div.appendChild(main);
+        div.appendChild(cb); div.appendChild(main);
         listEl.appendChild(div);
       });
-    } catch(e) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+    } catch { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
-  // ── Storage usage ─────────────────────────────────────────────────────────
-  async function loadStorage() {
-    const el = document.getElementById('storageContent');
-    el.innerHTML = '<span class="loading">טוען...</span>';
-    try {
-      const r = await fetch(`/api/admin/storage-usage?secret=${encodeURIComponent(SECRET)}`);
-      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
-      const data = await r.json();
-      const count = data.count ?? 0;
-      const mb    = data.size_estimate_mb ?? 0;
-      const pct   = Math.min(100, (mb / 1000) * 100);
-      const color = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
-      el.innerHTML = `
-        <div style="font-size:.85rem;margin-bottom:.4rem;">
-          <strong style="color:${color};">${mb.toFixed(1)} MB</strong>
-          <span style="color:var(--muted);"> / 1,000 MB פנוי &nbsp;·&nbsp; ${count} תמונות פעילות</span>
-        </div>
-        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-          <div style="height:100%;width:${pct.toFixed(1)}%;background:${color};border-radius:3px;transition:width .4s;"></div>
-        </div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">תמונות נמחקות אוטומטית אחרי 30 יום</div>
-        ${pct > 80 ? '<div style="color:#e07070;font-size:.8rem;font-weight:600;margin-top:.4rem;">⚠ מעל 80% מהקיבולת — שקול מחיקה ידנית</div>' : ''}
-      `;
-    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
-  }
-
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function ok(settled) { return settled.status === 'fulfilled' ? settled.value : null; }
+  function enc(s) { return encodeURIComponent(s); }
   function esc(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(s ?? '').replace(/[&<>"']/g,
+      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 </script>
 </body>
