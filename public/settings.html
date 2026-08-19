@@ -571,28 +571,10 @@
         } catch(e) { console.error('rename-member:', e); }
       }
 
-      // Auto-translate name in the background (fire-and-forget — don't block redirect)
-      try {
-        const tr = await fetch('/api/profile/translate-name', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        }).then(r => r.json());
-        // Persist translations to server
-        await fetch('/api/profile/name-translations', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, name_translations: tr })
-        });
-        currentNameTrans = tr;
-        document.getElementById('nameEnInput').value = tr.en || '';
-        document.getElementById('nameHeInput').value = tr.he || '';
-        document.getElementById('nameArInput').value = tr.ar || '';
-      } catch(e) { console.error('auto-translate:', e); }
-
+      // Settings saved — translations are handled separately by translate buttons + saveAll
       savedMsg.textContent = su.saved || '✓';
       btn.disabled = false;
-      btn.textContent = su.translateNames || '🌐 תרגם שמות';
+      btn.textContent = su.saveSettings || '✓ שמור הגדרות';
       setTimeout(() => { savedMsg.textContent = ''; }, 1500);
     }
 
