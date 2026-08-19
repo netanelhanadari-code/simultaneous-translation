@@ -1193,6 +1193,42 @@ app.get('/api/admin/stats', async (req, res) => {
 });
 
 // ── User profile endpoints ────────────────────────────────────────────────────
+// ── Twilio usage/cost ──────────────────────────────────────────────────────────
+app.get('/api/admin/twilio-usage', async (req, res) => {
+  if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  if (!twilioClient) return res.status(503).json({ error: 'Twilio not configured' });
+
+  const days = Math.min(90, parseInt(req.query.days) || 30);
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  const dateStr = startDate.toISOString().split('T')[0];
+
+  try {
+    // Fetch outbound SMS + phone number rental costs in parallel
+    const [smsRecords, numRecords] = await Promise.all([
+      twilioClient.usage.records.list({ category: 'sms-outbound', startDate: dateStr }),
+      twilioClient.usage.records.list({ category: 'phonenumbers',  startDate: dateStr }),
+    ]);
+
+    const smsCost = smsRecords.reduce((s, r) => s + Math.abs(parseFloat(r.price || 0)), 0);
+    const numCost = numRecords.reduce((s, r) => s + Math.abs(parseFloat(r.price || 0)), 0);
+    const smsCount = smsRecords.reduce((s, r) => s + parseInt(r.count || 0), 0);
+
+    res.json({
+      total_usd:    (smsCost + numCost).toFixed(2),
+      sms_usd:      smsCost.toFixed(2),
+      number_usd:   numCost.toFixed(2),
+      sms_count:    smsCount,
+      days,
+    });
+  } catch(e) {
+    console.error('[twilio-usage]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── OTP endpoints ─────────────────────────────────────────────────────────────
 app.post('/api/send-otp', express.json(), async (req, res) => {
   const { phone } = req.body;

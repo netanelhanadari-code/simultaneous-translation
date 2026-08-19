@@ -230,15 +230,17 @@
       ${dashSkeleton('🏠','קבוצות')}
       ${dashSkeleton('👥','משתמשים')}
       ${dashSkeleton('💬','הודעות')}
+      ${dashSkeleton('📱','SMS Twilio — 30 יום')}
     `;
 
     // Fetch everything in parallel
-    const [flaggedRes, usageRes, storageRes, feedbackRes, statsRes] = await Promise.allSettled([
+    const [flaggedRes, usageRes, storageRes, feedbackRes, statsRes, twilioRes] = await Promise.allSettled([
       fetch(`/api/admin/flagged-messages?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
       fetch(`/api/admin/usage-report?secret=${encodeURIComponent(SECRET)}&days=7`).then(r => r.json()),
       fetch(`/api/admin/storage-usage?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
       fetch('/api/feedback').then(r => r.json()),
       fetch(`/api/admin/stats?secret=${encodeURIComponent(SECRET)}`).then(r => r.json()),
+      fetch(`/api/admin/twilio-usage?secret=${encodeURIComponent(SECRET)}&days=30`).then(r => r.json()),
     ]);
 
     const flagged  = flaggedRes.status  === 'fulfilled' ? flaggedRes.value  : null;
@@ -246,6 +248,7 @@
     const storage  = storageRes.status  === 'fulfilled' ? storageRes.value  : null;
     const feedback = feedbackRes.status === 'fulfilled' ? feedbackRes.value : null;
     const stats    = statsRes.status    === 'fulfilled' ? statsRes.value    : null;
+    const twilio   = twilioRes.status   === 'fulfilled' ? twilioRes.value   : null;
 
     // 🚩 Flagged
     const flagCount = Array.isArray(flagged) ? flagged.length : '—';
@@ -270,6 +273,12 @@
     const fbPending  = fbTotal - fbHandled;
     const fbClass    = fbPending > 0 ? 'warn' : 'ok';
     const fbSub      = fbTotal > 0 ? `${fbHandled} טופלו · ${fbTotal} סה"כ` : 'אין פידבק עדיין';
+
+    // 📱 Twilio cost
+    const twilioUsd    = twilio?.total_usd ?? null;
+    const twilioNum    = parseFloat(twilioUsd) || 0;
+    const twilioClass  = twilioNum > 20 ? 'bad' : twilioNum > 10 ? 'warn' : 'ok';
+    const twilioSub    = twilio ? `${twilio.sms_count ?? '—'} SMS · מספר $${twilio.number_usd ?? '—'}` : 'לא זמין';
 
     grid.innerHTML = `
       <div class="dash-card clickable" onclick="switchTab('flagged')" title="עבור להודעות מסומנות">
@@ -322,6 +331,13 @@
         <div class="dash-label">הודעות</div>
         <div class="dash-value ok">${stats?.messages ?? '—'}</div>
         <div class="dash-sub">${stats?.messages_24h ?? '—'} ב-24 שעות אחרונות</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-icon">📱</div>
+        <div class="dash-label">SMS Twilio — 30 יום</div>
+        <div class="dash-value ${twilioClass}">${twilioUsd !== null ? '$' + twilioUsd : '—'}</div>
+        <div class="dash-sub">${twilioSub}</div>
       </div>
     `;
   }
