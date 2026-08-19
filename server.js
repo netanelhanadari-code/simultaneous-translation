@@ -56,6 +56,7 @@ async function sbQuery(table, qs) {
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws' });
+const homeSubscribers = new Map(); // ws → Set<roomId> — home.html background listeners
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── Whisper transcription endpoint ────────────────────────────────────────────
@@ -785,6 +786,7 @@ app.post('/api/rooms/:id/text', express.json(), async (req, res) => {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
   sendPushToRoom(id, roomWs, sender_name, { sender_name, sender_emoji, translations, original_text }).catch(() => {});
+  notifyHomeSubscribers(id, sender_name, sender_emoji, original_text, translations);
   res.json({ ok: true, id: msgId });
 });
 
@@ -854,6 +856,7 @@ app.post('/api/rooms/:id/image', upload.single('image'), async (req, res) => {
   if (roomWs?.members) {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
+  notifyHomeSubscribers(id, sender_name, sender_emoji || '', '📷', { he: '📷', ar: '📷', en: '📷' });
   res.json({ ok: true, id: msgId, image_url });
 });
 
@@ -970,6 +973,7 @@ app.post('/api/rooms/:id/message', upload.single('audio'), async (req, res) => {
     roomWs.members.forEach((m, ws) => { if (ws.readyState === WebSocket.OPEN) ws.send(payload); });
   }
   sendPushToRoom(id, roomWs, sender_name, { sender_name, sender_emoji, translations, original_text }).catch(() => {});
+  notifyHomeSubscribers(id, sender_name, sender_emoji, original_text, translations);
   res.json({ ok: true, id: msgId, translations });
 });
 
@@ -1600,10 +1604,29 @@ function notifyAllListeners(room, obj) {
   room.listeners.forEach(ws => send(ws, obj));
 }
 
+function notifyHomeSubscribers(roomId, sender_name, sender_emoji, original_text, translations) {
+  if (!homeSubscribers.size) return;
+  const payload = JSON.stringify({ type: 'home_message', room_id: roomId, sender_name, sender_emoji, original_text, translations });
+  homeSubscribers.forEach((roomIds, ws) => {
+    if (roomIds.has(roomId) && ws.readyState === WebSocket.OPEN) ws.send(payload);
+  });
+}
+
 wss.on('connection', (ws, req) => {
   const params = new URL(req.url, 'http://x').searchParams;
   const role   = params.get('role');
   const roomId = params.get('room');
+
+  // Home page background subscriber — listens to multiple rooms without joining
+  if (role === 'home') {
+    const roomsParam = params.get('rooms') || '';
+    const subscribedRooms = new Set(roomsParam.split(',').filter(Boolean));
+    homeSubscribers.set(ws, subscribedRooms);
+    console.log('[+] HomeSubscriber rooms=' + roomsParam);
+    ws.on('close', () => { homeSubscribers.delete(ws); console.log('[-] HomeSubscriber'); });
+    ws.on('error', () => { homeSubscribers.delete(ws); });
+    return;
+  }
 
   if (!roomId) { ws.close(1008, 'Missing room'); return; }
 

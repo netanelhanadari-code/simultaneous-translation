@@ -1302,8 +1302,17 @@
     }
     const _notifyAudio = new Audio("/BBC_Records,_The_Hitch_Hiker's_Guide_To_The_Galaxy_(Sound_Effects_From_The_Radio_Dramatisation)_-_The_Book's_Activating_Code2.ogg");
     _notifyAudio.volume = 0.5;
+    // warm-up: first user touch unlocks the audio element so WS-triggered plays work
+    document.addEventListener('pointerdown', function() {
+      _notifyAudio.play().then(() => { _notifyAudio.pause(); _notifyAudio.currentTime = 0; }).catch(() => {});
+    }, { once: true, passive: true });
     function playTardisSound() {
       if (!notifyOn) return;
+      if (localStorage.getItem('bf_sound') === '0') return; // global mute
+      try {
+        const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
+        if (rooms.find(r => r.id === roomId)?.muted) return; // per-room mute
+      } catch(_) {}
       try {
         _notifyAudio.currentTime = 0;
         _notifyAudio.play().catch(() => {});

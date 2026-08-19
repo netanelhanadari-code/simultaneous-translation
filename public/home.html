@@ -120,6 +120,7 @@
     }
     .notice.warn { color: #c0845a; }
     .notice a { color: inherit; text-decoration: underline; }
+    .mute-icon { font-size: .8rem; opacity: .7; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -133,6 +134,7 @@
     <img class="logo" src="babel-fish.png" alt="Babel Fish">
     <div class="greeting" id="greeting"></div>
     <button class="settings-btn" onclick="location.href='/guide.html'" title="מדריך">ℹ️</button>
+    <button class="settings-btn" id="notifSettingsBtn" onclick="openNotifSheet()" title="הגדרות התראות">🔔</button>
     <button class="settings-btn" onclick="location.href='/settings.html?from=/home.html'" title="הגדרות">⚙️</button>
   </header>
 
@@ -146,8 +148,25 @@
     <div class="rooms-list" id="rooms-list"></div>
   </div>
 
+  <!-- ── Notification settings sheet ────────────────────────── -->
+  <div id="notif-overlay" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);" onclick="closeNotifSheet()"></div>
+  <div id="notif-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:301;background:#1e0f3a;border-top:1px solid #3d1f6b;border-radius:18px 18px 0 0;padding:1rem .8rem 1.8rem;transform:translateY(100%);transition:transform .22s ease;">
+    <div style="font-size:.85rem;font-weight:700;color:#9b7fc4;margin-bottom:.9rem;text-align:center;">🔔 הגדרות התראות</div>
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .2rem;border-bottom:1px solid #3d1f6b;">
+      <span style="font-size:.93rem;">🔊 צליל התרעות</span>
+      <input type="checkbox" id="soundToggle" onchange="onSoundToggle(this.checked)" style="width:20px;height:20px;accent-color:#8B2FC9;cursor:pointer;">
+    </label>
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .2rem;border-bottom:1px solid #3d1f6b;">
+      <span style="font-size:.93rem;">🖥 התראות על המסך</span>
+      <input type="checkbox" id="notifToggle" onchange="onNotifToggle(this.checked)" style="width:20px;height:20px;accent-color:#8B2FC9;cursor:pointer;">
+    </label>
+    <p id="notifSheetMsg" style="font-size:.75rem;color:#9b7fc4;text-align:center;margin-top:.6rem;min-height:1em;"></p>
+    <button onclick="closeNotifSheet()" style="width:100%;margin-top:.5rem;background:#3d1f6b;color:#f0e8ff;border:none;border-radius:10px;padding:.75rem;font-size:.95rem;cursor:pointer;">סגור</button>
+  </div>
+
   <div id="chip-overlay"></div>
   <div id="chip-menu">
+    <button class="chip-menu-btn" id="chip-mute-btn"></button>
     <button class="chip-menu-btn danger" id="chip-main-btn"></button>
     <button class="chip-menu-btn cancel" id="chip-cancel-btn"></button>
   </div>
@@ -209,8 +228,13 @@
       chipMenuIsDM = isDM;
       const mainBtn = document.getElementById('chip-main-btn');
       const cancelBtn = document.getElementById('chip-cancel-btn');
+      const muteBtn = document.getElementById('chip-mute-btn');
       mainBtn.textContent = isDM ? homeUi.deleteChat : homeUi.leaveGroup;
       cancelBtn.textContent = homeUi.cancel;
+      // Mute / unmute
+      const rooms = getMyRooms();
+      const room = rooms.find(r => r.id === id);
+      muteBtn.textContent = room?.muted ? '🔔 בטל השתקה' : '🔕 השתק קבוצה';
       document.getElementById('chip-overlay').classList.add('open');
       document.getElementById('chip-menu').classList.add('open');
     }
@@ -233,6 +257,14 @@
     document.getElementById('chip-overlay').addEventListener('click', closeChipMenu);
     document.getElementById('chip-cancel-btn').addEventListener('click', closeChipMenu);
     document.getElementById('chip-main-btn').addEventListener('click', confirmChipAction);
+    document.getElementById('chip-mute-btn').addEventListener('click', () => {
+      if (!chipMenuTargetId) return;
+      const rooms = getMyRooms();
+      const room = rooms.find(r => r.id === chipMenuTargetId);
+      if (room) { room.muted = !room.muted; saveMyRooms(rooms); }
+      closeChipMenu();
+      renderRooms(latestMapCache, {});
+    });
 
     function setupChipLongPress(chip, id, isDM) {
       let timer = null;
@@ -264,6 +296,143 @@
       chip.addEventListener('click', e => {
         if (longPressed) { e.stopImmediatePropagation(); longPressed = false; }
       }, true);
+    }
+
+    // ── Notification settings ─────────────────────────────────────────────────
+    let soundOn  = localStorage.getItem('bf_sound')  !== '0';
+    let notifOn  = localStorage.getItem('bf_notify') !== '0';
+
+    function updateNotifBtn() {
+      document.getElementById('notifSettingsBtn').textContent = (soundOn || notifOn) ? '🔔' : '🔕';
+    }
+    updateNotifBtn();
+
+    function openNotifSheet() {
+      const overlay = document.getElementById('notif-overlay');
+      const sheet   = document.getElementById('notif-sheet');
+      document.getElementById('soundToggle').checked = soundOn;
+      document.getElementById('notifToggle').checked = notifOn && Notification.permission === 'granted';
+      document.getElementById('notifSheetMsg').textContent = '';
+      overlay.style.display = 'block';
+      sheet.style.display = 'block';
+      requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+    }
+    function closeNotifSheet() {
+      const sheet = document.getElementById('notif-sheet');
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        document.getElementById('notif-overlay').style.display = 'none';
+        sheet.style.display = 'none';
+      }, 240);
+    }
+    function onSoundToggle(val) {
+      soundOn = val;
+      localStorage.setItem('bf_sound', val ? '1' : '0');
+      updateNotifBtn();
+      if (val) playNotifSound(); // demo
+    }
+    function onNotifToggle(val) {
+      if (val) {
+        Notification.requestPermission().then(perm => {
+          notifOn = perm === 'granted';
+          document.getElementById('notifToggle').checked = notifOn;
+          localStorage.setItem('bf_notify', notifOn ? '1' : '0');
+          const msg = document.getElementById('notifSheetMsg');
+          if (!notifOn) msg.textContent = 'הדפדפן חסם הרשאת התראות — שנה בהגדרות';
+          updateNotifBtn();
+        });
+      } else {
+        notifOn = false;
+        localStorage.setItem('bf_notify', '0');
+        updateNotifBtn();
+      }
+    }
+
+    // ── Notification sound ────────────────────────────────────────────────────
+    const _homeAudio = new Audio("/BBC_Records,_The_Hitch_Hiker's_Guide_To_The_Galaxy_(Sound_Effects_From_The_Radio_Dramatisation)_-_The_Book's_Activating_Code2.ogg");
+    _homeAudio.volume = 0.5;
+    let _homeAudioReady = false;
+    document.addEventListener('pointerdown', function() {
+      if (_homeAudioReady) return;
+      _homeAudio.play().then(() => { _homeAudio.pause(); _homeAudio.currentTime = 0; _homeAudioReady = true; }).catch(() => {});
+    }, { once: true, passive: true });
+    function playNotifSound() {
+      if (!soundOn) return;
+      try { _homeAudio.currentTime = 0; _homeAudio.play().catch(() => {}); setTimeout(() => _homeAudio.pause(), 1500); } catch(_) {}
+    }
+
+    // ── Live unread counts (from WebSocket) ───────────────────────────────────
+    let liveCounts = {};
+    let latestMapCache = {};
+
+    function incrementLive(roomId) {
+      liveCounts[roomId] = (liveCounts[roomId] || 0) + 1;
+      // Update badge on existing chip without full re-render
+      const chip = document.querySelector(`[data-room-id="${CSS.escape(roomId)}"]`);
+      if (chip) {
+        const count = liveCounts[roomId];
+        let badge = chip.querySelector('.unread-badge,.unread-dot');
+        if (!badge) { badge = document.createElement('span'); chip.insertBefore(badge, chip.firstChild); }
+        badge.className = 'unread-badge';
+        badge.textContent = count > 99 ? '99+' : count;
+        chip.classList.add('has-new');
+        // Move chip to top
+        chip.parentElement.insertBefore(chip, chip.parentElement.firstChild);
+      }
+    }
+
+    // ── Home WebSocket (background listener) ──────────────────────────────────
+    let _homeWs = null;
+    let _homeWsReconnectTimer = null;
+
+    function initHomeWS() {
+      const rooms = getMyRooms();
+      if (!rooms.length) return;
+      const roomIds = rooms.map(r => r.id).join(',');
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${proto}//${location.host}/ws?role=home&rooms=${encodeURIComponent(roomIds)}&name=${encodeURIComponent(myName)}`;
+      try { _homeWs?.close(); } catch(_) {}
+
+      const ws = new WebSocket(url);
+      _homeWs = ws;
+
+      ws.onmessage = e => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type !== 'home_message') return;
+          if (msg.sender_name === myName) return; // own message
+          const rooms = getMyRooms();
+          const room = rooms.find(r => r.id === msg.room_id);
+          if (!room) return;
+
+          // Sound
+          if (!room.muted) playNotifSound();
+
+          // Browser notification
+          if (notifOn && Notification.permission === 'granted') {
+            const text = msg.translations?.[myUiLang] || msg.original_text || '';
+            const roomName = room.names?.[myUiLang] || room.name || msg.room_id;
+            try {
+              const n = new Notification(`${msg.sender_emoji || '💬'} ${msg.sender_name} · ${roomName}`, {
+                body: text.slice(0, 120),
+                tag: msg.room_id,
+                icon: '/babel-fish.png'
+              });
+              n.onclick = () => { window.focus(); location.href = `/room.html?room=${msg.room_id}`; };
+            } catch(_) {}
+          }
+
+          // Update badge
+          incrementLive(msg.room_id);
+        } catch(_) {}
+      };
+
+      ws.onclose = () => {
+        if (_homeWs !== ws) return; // replaced
+        clearTimeout(_homeWsReconnectTimer);
+        _homeWsReconnectTimer = setTimeout(initHomeWS, 5000);
+      };
+      ws.onerror = () => ws.close();
     }
 
     function enterRoom(id) {
@@ -309,12 +478,14 @@
         const badgeHtml = unreadCount > 0
           ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>`
           : r.hasNew ? '<span class="unread-dot"></span>' : '';
+        chip.dataset.roomId = r.id;
+        const muteHtml = r.muted ? '<span class="mute-icon">🔕</span>' : '';
         chip.innerHTML =
           badgeHtml +
           `<div class="room-chip-info">
             <div class="room-chip-name">${isDM ? '👤 ' : '💬 '}${esc(displayName)}</div>
             <div class="room-chip-code">${isDM ? homeUi.dm : r.id}</div>
-          </div>`;
+          </div>` + muteHtml;
         chip.addEventListener('click', () => enterRoom(r.id));
         setupChipLongPress(chip, r.id, isDM);
         list.appendChild(chip);
@@ -350,10 +521,12 @@
           if (namesMap[r.id]) r.names = namesMap[r.id];
         });
         saveMyRooms(stored);
+        latestMapCache = latestMap;
         renderRooms(latestMap, countMap);
       } catch(e) { renderRooms({}); }
     }
     init();
+    initHomeWS();
 
     // Splash fade-out — only show the full splash on first load of the
     // session or an explicit refresh (F5). Navigating back to home.html
