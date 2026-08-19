@@ -47,8 +47,10 @@
     cursor: pointer;
   }
   .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
 
   /* ── Back bar ── */
   .back-bar {
@@ -170,14 +172,16 @@
   <div id="app">
     <h1>Babel Fish — Admin</h1>
     <div class="tabs">
-      <button class="tab-btn active" data-tab="all"       onclick="switchTab('all')">📊 הכל</button>
-      <button class="tab-btn"        data-tab="activity"  onclick="switchTab('activity')">📈 פעילות</button>
-      <button class="tab-btn"        data-tab="costs"     onclick="switchTab('costs')">💸 עלויות</button>
-      <button class="tab-btn"        data-tab="attention" onclick="switchTab('attention')">⚠ לטיפול</button>
+      <button class="tab-btn active" data-tab="all"       onclick="navigate('all')">📊 הכל</button>
+      <button class="tab-btn"        data-tab="activity"  onclick="navigate('activity')">📈 פעילות</button>
+      <button class="tab-btn"        data-tab="costs"     onclick="navigate('costs')">💸 עלויות</button>
+      <button class="tab-btn"        data-tab="attention" onclick="navigate('attention')">⚠ לטיפול</button>
     </div>
 
-    <!-- ── הכל: Dashboard summary ──────────────────────────────────────────── -->
-    <div id="tab-all" class="tab-panel active card">
+    <!-- ════════════════════════════════════════════════════════════════
+         הכל: Dashboard summary
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-all" class="panel active card">
       <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;">
         <button class="secondary days-btn" onclick="loadDashboard()">🔄 רענן</button>
       </div>
@@ -190,10 +194,12 @@
       <div id="dashErr"></div>
     </div>
 
-    <!-- ── פעילות: detail ───────────────────────────────────────────────────── -->
-    <div id="tab-activity" class="tab-panel card">
+    <!-- ════════════════════════════════════════════════════════════════
+         פעילות: detail
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-activity" class="panel card">
       <div class="back-bar">
-        <button class="secondary days-btn" onclick="switchTab('all')">← חזרה</button>
+        <button class="secondary days-btn" onclick="navigate('all')">← חזרה</button>
         <strong>📈 פעילות</strong>
       </div>
       <div class="days-select">
@@ -204,74 +210,155 @@
       <div id="activityContent"><span class="loading">טוען...</span></div>
     </div>
 
-    <!-- ── עלויות: detail ───────────────────────────────────────────────────── -->
-    <div id="tab-costs" class="tab-panel card">
+    <!-- ════════════════════════════════════════════════════════════════
+         עלויות: summary (3 cards)
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-costs" class="panel card">
       <div class="back-bar">
-        <button class="secondary days-btn" onclick="switchTab('all')">← חזרה</button>
+        <button class="secondary days-btn" onclick="navigate('all')">← חזרה</button>
         <strong>💸 עלויות</strong>
+        <div style="margin-right:auto;">
+          <span id="costsSummaryDaysLabel" style="font-size:.78rem;color:var(--muted);"></span>
+        </div>
       </div>
       <div class="days-select">
-        <button class="days-btn secondary" onclick="loadCosts(7)">7 ימים</button>
-        <button class="days-btn secondary" onclick="loadCosts(30)">30 ימים</button>
-        <button class="days-btn secondary" onclick="loadCosts(90)">90 ימים</button>
+        <button class="days-btn secondary" onclick="loadCostsSummary(7)">7 ימים</button>
+        <button class="days-btn secondary" onclick="loadCostsSummary(30)">30 ימים</button>
+        <button class="days-btn secondary" onclick="loadCostsSummary(90)">90 ימים</button>
       </div>
-      <div id="costsContent"><span class="loading">טוען...</span></div>
+      <div id="costsSummaryContent"><span class="loading">טוען...</span></div>
     </div>
 
-    <!-- ── לטיפול: detail ──────────────────────────────────────────────────── -->
-    <div id="tab-attention" class="tab-panel card">
+    <!-- ════════════════════════════════════════════════════════════════
+         עלויות OpenAI: detail
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-costs-openai" class="panel card">
       <div class="back-bar">
-        <button class="secondary days-btn" onclick="switchTab('all')">← חזרה</button>
+        <button class="secondary days-btn" onclick="navigate('costs')">← עלויות</button>
+        <strong>💰 OpenAI</strong>
+      </div>
+      <div class="days-select">
+        <button class="days-btn secondary" onclick="loadOpenAIDetail(7)">7 ימים</button>
+        <button class="days-btn secondary" onclick="loadOpenAIDetail(30)">30 ימים</button>
+        <button class="days-btn secondary" onclick="loadOpenAIDetail(90)">90 ימים</button>
+      </div>
+      <div id="openaiDetailContent"><span class="loading">טוען...</span></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         עלויות Twilio: detail
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-costs-twilio" class="panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="navigate('costs')">← עלויות</button>
+        <strong>📱 SMS Twilio</strong>
+      </div>
+      <div class="days-select">
+        <button class="days-btn secondary" onclick="loadTwilioDetail(7)">7 ימים</button>
+        <button class="days-btn secondary" onclick="loadTwilioDetail(30)">30 ימים</button>
+        <button class="days-btn secondary" onclick="loadTwilioDetail(90)">90 ימים</button>
+      </div>
+      <div id="twilioDetailContent"><span class="loading">טוען...</span></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         עלויות Storage: detail
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-costs-storage" class="panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="navigate('costs')">← עלויות</button>
+        <strong>📦 Supabase Storage</strong>
+      </div>
+      <div id="storageDetailContent"><span class="loading">טוען...</span></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         לטיפול: summary (2 cards)
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-attention" class="panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="navigate('all')">← חזרה</button>
         <strong>⚠ לטיפול</strong>
       </div>
+      <div id="attentionSummaryContent"><span class="loading">טוען...</span></div>
+    </div>
 
-      <!-- Flagged -->
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-          <span class="section-title" style="margin:0;">🚩 הודעות מסומנות</span>
-          <button class="secondary days-btn" onclick="loadFlagged()">🔄 רענן</button>
-        </div>
-        <span class="loading" id="flaggedStatus"></span>
-        <div id="flaggedList"></div>
+    <!-- ════════════════════════════════════════════════════════════════
+         לטיפול – הודעות מסומנות: detail
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-attention-flagged" class="panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="navigate('attention')">← לטיפול</button>
+        <strong>🚩 הודעות מסומנות</strong>
+        <button class="secondary days-btn" onclick="loadFlagged()" style="margin-right:auto;">🔄</button>
       </div>
+      <span class="loading" id="flaggedStatus"></span>
+      <div id="flaggedList"></div>
+    </div>
 
-      <!-- Feedback -->
-      <div class="section-divider">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-          <span class="section-title" style="margin:0;">📝 פידבקים</span>
-          <button class="secondary days-btn" onclick="loadFeedback()">🔄 רענן</button>
-        </div>
-        <span class="loading" id="feedbackStatus"></span>
-        <div id="feedbackList"></div>
+    <!-- ════════════════════════════════════════════════════════════════
+         לטיפול – פידבקים: detail
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-attention-feedback" class="panel card">
+      <div class="back-bar">
+        <button class="secondary days-btn" onclick="navigate('attention')">← לטיפול</button>
+        <strong>📝 פידבקים</strong>
+        <button class="secondary days-btn" onclick="loadFeedback()" style="margin-right:auto;">🔄</button>
       </div>
+      <span class="loading" id="feedbackStatus"></span>
+      <div id="feedbackList"></div>
     </div>
   </div>
 
 <script>
   let SECRET = '';
+  let currentView = 'all';
 
+  // ── Navigation ────────────────────────────────────────────────────────────────
+  function navigate(view, push = true) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('panel-' + view);
+    if (panel) panel.classList.add('active');
+
+    // Active tab = first segment of view name
+    const tab = view.split('-')[0];
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab === tab));
+
+    if (push) history.pushState({ view }, '');
+    currentView = view;
+    loadView(view);
+  }
+
+  window.addEventListener('popstate', e => {
+    navigate(e.state?.view || 'all', false);
+  });
+
+  function loadView(view) {
+    if (view === 'all')               loadDashboard();
+    else if (view === 'activity')     loadActivity(30);
+    else if (view === 'costs')        loadCostsSummary(30);
+    else if (view === 'costs-openai') loadOpenAIDetail(30);
+    else if (view === 'costs-twilio') loadTwilioDetail(30);
+    else if (view === 'costs-storage')loadStorageDetail();
+    else if (view === 'attention')    loadAttentionSummary();
+    else if (view === 'attention-flagged')  loadFlagged();
+    else if (view === 'attention-feedback') loadFeedback();
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────────
   function login() {
     const v = document.getElementById('secretInput').value.trim();
     if (!v) return;
     SECRET = v;
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    history.replaceState({ view: 'all' }, '');
     loadDashboard();
   }
   document.getElementById('secretInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') login();
   });
-
-  function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.tab === name));
-    document.querySelectorAll('.tab-panel').forEach(p =>
-      p.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'activity')  loadActivity(30);
-    if (name === 'costs')     loadCosts(30);
-    if (name === 'attention') { loadFlagged(); loadFeedback(); }
-  }
 
   function fmtTime(iso) {
     if (!iso) return '';
@@ -279,20 +366,20 @@
       { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
   }
 
-  // ── Dashboard (הכל) ─────────────────────────────────────────────────────────
+  // ── Dashboard (הכל) ──────────────────────────────────────────────────────────
   async function loadDashboard() {
     const grid  = document.getElementById('dashGrid');
     const errEl = document.getElementById('dashErr');
     errEl.textContent = '';
 
     grid.innerHTML = `
-      <div class="dash-group-label" onclick="switchTab('activity')">📈 פעילות</div>
+      <div class="dash-group-label" onclick="navigate('activity')">📈 פעילות</div>
       ${sk('🏠','קבוצות')}${sk('👥','משתמשים')}
       <div class="dash-card" style="grid-column:1/-1;">${ski('💬','הודעות')}</div>
-      <div class="dash-group-label" onclick="switchTab('costs')">💸 עלויות</div>
+      <div class="dash-group-label" onclick="navigate('costs')">💸 עלויות</div>
       ${sk('💰','OpenAI')}${sk('📱','SMS Twilio')}
       <div class="dash-card" style="grid-column:1/-1;">${ski('📦','סטורג\'')}</div>
-      <div class="dash-group-label" onclick="switchTab('attention')">⚠ לטיפול</div>
+      <div class="dash-group-label" onclick="navigate('attention')">⚠ לטיפול</div>
       ${sk('🚩','מסומנות')}${sk('📝','פידבקים')}
     `;
 
@@ -334,46 +421,46 @@
       : 'לא זמין';
 
     grid.innerHTML = `
-      <div class="dash-group-label" onclick="switchTab('activity')">📈 פעילות</div>
+      <div class="dash-group-label" onclick="navigate('activity')">📈 פעילות</div>
 
-      <div class="dash-card clickable" onclick="switchTab('activity')">
+      <div class="dash-card clickable" onclick="navigate('activity')">
         <div class="dash-icon">🏠</div>
         <div class="dash-label">קבוצות</div>
         <div class="dash-value ok">${stats?.rooms ?? '—'}</div>
         <div class="dash-sub">סה"כ חדרים</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('activity')">
+      <div class="dash-card clickable" onclick="navigate('activity')">
         <div class="dash-icon">👥</div>
         <div class="dash-label">משתמשים ייחודיים</div>
         <div class="dash-value ok">${stats?.users ?? '—'}</div>
         <div class="dash-sub">לפי מספר טלפון</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('activity')" style="grid-column:1/-1;">
+      <div class="dash-card clickable" onclick="navigate('activity')" style="grid-column:1/-1;">
         <div class="dash-icon">💬</div>
         <div class="dash-label">הודעות</div>
         <div class="dash-value ok">${stats?.messages ?? '—'}</div>
         <div class="dash-sub">${stats?.messages_24h ?? '—'} ב-24 שעות אחרונות</div>
       </div>
 
-      <div class="dash-group-label" onclick="switchTab('costs')">💸 עלויות</div>
+      <div class="dash-group-label" onclick="navigate('costs')">💸 עלויות</div>
 
-      <div class="dash-card clickable" onclick="switchTab('costs')">
+      <div class="dash-card clickable" onclick="navigate('costs-openai')">
         <div class="dash-icon">💰</div>
         <div class="dash-label">OpenAI — 7 ימים</div>
         <div class="dash-value ${usdClass}">$${usd}</div>
         <div class="dash-sub">gpt-4o-mini + Whisper</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('costs')">
+      <div class="dash-card clickable" onclick="navigate('costs-twilio')">
         <div class="dash-icon">📱</div>
         <div class="dash-label">SMS Twilio — 30 יום</div>
         <div class="dash-value ${twilioClass}">${twilioUsd !== null ? '$' + twilioUsd : '—'}</div>
         <div class="dash-sub">${twilioSub}</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('costs')" style="grid-column:1/-1;">
+      <div class="dash-card clickable" onclick="navigate('costs-storage')" style="grid-column:1/-1;">
         <div class="dash-icon">📦</div>
         <div class="dash-label">סטורג' תמונות</div>
         <div class="dash-value ${stClass}">${mb.toFixed(1)} MB</div>
@@ -383,16 +470,16 @@
         </div>
       </div>
 
-      <div class="dash-group-label" onclick="switchTab('attention')">⚠ לטיפול</div>
+      <div class="dash-group-label" onclick="navigate('attention')">⚠ לטיפול</div>
 
-      <div class="dash-card clickable" onclick="switchTab('attention')">
+      <div class="dash-card clickable" onclick="navigate('attention-flagged')">
         <div class="dash-icon">🚩</div>
         <div class="dash-label">הודעות מסומנות</div>
         <div class="dash-value ${flagClass}">${flagCount}</div>
         <div class="dash-sub">${flagSub}</div>
       </div>
 
-      <div class="dash-card clickable" onclick="switchTab('attention')">
+      <div class="dash-card clickable" onclick="navigate('attention-feedback')">
         <div class="dash-icon">📝</div>
         <div class="dash-label">פידבקים לא טופלו</div>
         <div class="dash-value ${fbClass}">${fbTotal > 0 ? fbPending : '—'}</div>
@@ -409,7 +496,7 @@
     return `<div class="dash-card">${ski(icon, label)}</div>`;
   }
 
-  // ── Activity ─────────────────────────────────────────────────────────────────
+  // ── Activity ──────────────────────────────────────────────────────────────────
   async function loadActivity(days) {
     const el = document.getElementById('activityContent');
     el.innerHTML = '<span class="loading">טוען...</span>';
@@ -469,9 +556,11 @@
     return `<svg width="100%" viewBox="0 0 ${W} ${H + labelH + 4}" xmlns="http://www.w3.org/2000/svg" style="display:block;direction:ltr">${bars}${labels}</svg>`;
   }
 
-  // ── Costs ─────────────────────────────────────────────────────────────────────
-  async function loadCosts(days) {
-    const el = document.getElementById('costsContent');
+  // ── Costs summary ─────────────────────────────────────────────────────────────
+  async function loadCostsSummary(days = 30) {
+    const el = document.getElementById('costsSummaryContent');
+    const lbl = document.getElementById('costsSummaryDaysLabel');
+    if (lbl) lbl.textContent = days + ' ימים';
     el.innerHTML = '<span class="loading">טוען...</span>';
     try {
       const [uR, twR, sR] = await Promise.allSettled([
@@ -481,57 +570,166 @@
       ]);
       const usage = ok(uR), twilio = ok(twR), storage = ok(sR);
 
-      let html = '';
+      const usd       = usage?.total_usd ?? '—';
+      const usdClass  = parseFloat(usd) > 5 ? 'warn' : 'ok';
 
-      // OpenAI
-      html += `<div class="section-title">💰 OpenAI</div>`;
+      const twilioUsd   = twilio?.total_usd ?? null;
+      const twilioClass = parseFloat(twilioUsd) > 20 ? 'bad' : parseFloat(twilioUsd) > 10 ? 'warn' : 'ok';
+      const twilioSub   = twilio
+        ? `${twilio.sms_count ?? '—'} SMS · מספר $${twilio.number_usd ?? '—'}`
+        : 'לא זמין';
+
+      const mb      = storage?.size_estimate_mb ?? 0;
+      const imgCnt  = storage?.count ?? 0;
+      const pct     = Math.min(100, (mb / 1000) * 100);
+      const stColor = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
+      const stClass = pct > 80 ? 'bad' : pct > 50 ? 'warn' : 'ok';
+
+      el.innerHTML = `
+        <div class="dash-grid">
+          <div class="dash-card clickable" onclick="navigate('costs-openai')" style="grid-column:1/-1;">
+            <div class="dash-icon">💰</div>
+            <div class="dash-label">OpenAI — ${days} ימים</div>
+            <div class="dash-value ${usdClass}">$${usd}</div>
+            <div class="dash-sub">gpt-4o-mini + Whisper &nbsp;·&nbsp; לפירוט ›</div>
+          </div>
+          <div class="dash-card clickable" onclick="navigate('costs-twilio')" style="grid-column:1/-1;">
+            <div class="dash-icon">📱</div>
+            <div class="dash-label">SMS Twilio — ${days} ימים</div>
+            <div class="dash-value ${twilioClass}">${twilioUsd !== null ? '$' + twilioUsd : '—'}</div>
+            <div class="dash-sub">${esc(twilioSub)} &nbsp;·&nbsp; לפירוט ›</div>
+          </div>
+          <div class="dash-card clickable" onclick="navigate('costs-storage')" style="grid-column:1/-1;">
+            <div class="dash-icon">📦</div>
+            <div class="dash-label">Supabase Storage</div>
+            <div class="dash-value ${stClass}">${mb.toFixed(1)} MB</div>
+            <div class="dash-sub">${imgCnt} תמונות · ${pct.toFixed(1)}% מ-1 GB &nbsp;·&nbsp; לפירוט ›</div>
+            <div class="dash-bar-track">
+              <div class="dash-bar-fill" style="width:${pct.toFixed(1)}%;background:${stColor};"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
+
+  // ── OpenAI detail ─────────────────────────────────────────────────────────────
+  async function loadOpenAIDetail(days = 30) {
+    const el = document.getElementById('openaiDetailContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const r = await fetch(`/api/admin/usage-report?secret=${enc(SECRET)}&days=${days}`);
+      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const usage = await r.json();
       if (!usage || usage.error) {
-        html += `<p class="err">${esc(usage?.error || 'שגיאה')}</p>`;
-      } else {
-        html += `<div class="total-usd">$${usage.total_usd ?? '—'}</div>`;
-        html += `<table><thead><tr><th>תאריך</th><th>עלות ($)</th></tr></thead><tbody>`;
-        (usage.by_day || []).slice().reverse().forEach(d => {
-          const ds = new Date(d.start * 1000).toLocaleDateString('he-IL',
-            { day:'2-digit', month:'2-digit' });
-          html += `<tr><td>${ds}</td><td>${d.amount_usd}</td></tr>`;
-        });
-        html += `</tbody></table>`;
+        el.innerHTML = `<p class="err">${esc(usage?.error || 'שגיאה')}</p>`; return;
       }
+      let html = `<div class="total-usd">$${usage.total_usd ?? '—'}</div>`;
+      html += `<table><thead><tr><th>תאריך</th><th>עלות ($)</th></tr></thead><tbody>`;
+      (usage.by_day || []).slice().reverse().forEach(d => {
+        const ds = new Date(d.start * 1000).toLocaleDateString('he-IL',
+          { day:'2-digit', month:'2-digit' });
+        html += `<tr><td>${ds}</td><td>${d.amount_usd}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      el.innerHTML = html;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
 
-      // Twilio
-      html += `<div class="section-divider"><div class="section-title">📱 SMS Twilio</div>`;
+  // ── Twilio detail ─────────────────────────────────────────────────────────────
+  async function loadTwilioDetail(days = 30) {
+    const el = document.getElementById('twilioDetailContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const r = await fetch(`/api/admin/twilio-usage?secret=${enc(SECRET)}&days=${days}`);
+      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const twilio = await r.json();
       if (!twilio || twilio.error) {
-        html += `<p style="color:var(--muted);font-size:.85rem;">${esc(twilio?.error || 'לא זמין')}</p>`;
-      } else {
-        html += `<div class="total-usd">$${twilio.total_usd}</div>`;
-        html += `<table><tbody>
+        el.innerHTML = `<p style="color:var(--muted);font-size:.85rem;">${esc(twilio?.error || 'לא זמין')}</p>`; return;
+      }
+      el.innerHTML = `
+        <div class="total-usd">$${twilio.total_usd}</div>
+        <table><tbody>
           <tr><td>הודעות SMS</td><td>${twilio.sms_count ?? '—'}</td></tr>
           <tr><td>עלות SMS</td><td>$${twilio.sms_usd ?? '—'}</td></tr>
           <tr><td>עלות מספר</td><td>$${twilio.number_usd ?? '—'}</td></tr>
-        </tbody></table>`;
-      }
-      html += `</div>`;
+        </tbody></table>
+      `;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
 
-      // Storage
-      if (storage) {
-        const mb  = storage.size_estimate_mb ?? 0;
-        const cnt = storage.count ?? 0;
-        const pct = Math.min(100, (mb / 1000) * 100);
-        const col = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
-        html += `<div class="section-divider"><div class="section-title">📦 Supabase Storage</div>
-          <div style="font-size:.85rem;margin-bottom:.4rem;">
-            <strong style="color:${col};">${mb.toFixed(1)} MB</strong>
-            <span style="color:var(--muted);"> / 1,000 MB &nbsp;·&nbsp; ${cnt} תמונות</span>
-          </div>
-          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:3px;transition:width .4s;"></div>
-          </div>
-          <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">תמונות נמחקות אחרי 30 יום</div>
-          ${pct > 80 ? '<div style="color:#e07070;font-size:.8rem;font-weight:600;margin-top:.4rem;">⚠ מעל 80% מהקיבולת</div>' : ''}
-        </div>`;
+  // ── Storage detail ────────────────────────────────────────────────────────────
+  async function loadStorageDetail() {
+    const el = document.getElementById('storageDetailContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const r = await fetch(`/api/admin/storage-usage?secret=${enc(SECRET)}`);
+      if (r.status === 403) { el.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
+      const storage = await r.json();
+      if (!storage || storage.error) {
+        el.innerHTML = `<p class="err">${esc(storage?.error || 'שגיאה')}</p>`; return;
       }
+      const mb  = storage.size_estimate_mb ?? 0;
+      const cnt = storage.count ?? 0;
+      const pct = Math.min(100, (mb / 1000) * 100);
+      const col = pct > 80 ? '#e07070' : pct > 50 ? '#c0845a' : '#7fc4a0';
+      el.innerHTML = `
+        <div style="font-size:.85rem;margin-bottom:.6rem;">
+          <strong style="color:${col};font-size:1.4rem;">${mb.toFixed(1)} MB</strong>
+          <span style="color:var(--muted);"> / 1,000 MB</span>
+        </div>
+        <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:.6rem;">
+          <div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:4px;transition:width .4s;"></div>
+        </div>
+        <table><tbody>
+          <tr><td>תמונות</td><td>${cnt}</td></tr>
+          <tr><td>שטח בשימוש</td><td>${mb.toFixed(2)} MB</td></tr>
+          <tr><td>אחוז מהמכסה</td><td>${pct.toFixed(1)}%</td></tr>
+        </tbody></table>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">תמונות נמחקות אחרי 30 יום</div>
+        ${pct > 80 ? '<div style="color:#e07070;font-size:.8rem;font-weight:600;margin-top:.5rem;">⚠ מעל 80% מהקיבולת</div>' : ''}
+      `;
+    } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
+  }
 
-      el.innerHTML = html;
+  // ── Attention summary ─────────────────────────────────────────────────────────
+  async function loadAttentionSummary() {
+    const el = document.getElementById('attentionSummaryContent');
+    el.innerHTML = '<span class="loading">טוען...</span>';
+    try {
+      const [fR, fbR] = await Promise.allSettled([
+        fetch(`/api/admin/flagged-messages?secret=${enc(SECRET)}`).then(r => r.json()),
+        fetch('/api/feedback').then(r => r.json()),
+      ]);
+      const flagged  = ok(fR);
+      const feedback = ok(fbR);
+
+      const flagCount = Array.isArray(flagged) ? flagged.length : '—';
+      const flagClass = flagCount > 0 ? 'bad' : 'ok';
+      const flagSub   = flagCount > 0 ? 'דורש טיפול' : 'הכל נקי 🎉';
+
+      const fbTotal   = Array.isArray(feedback) ? feedback.length : 0;
+      const fbHandled = Array.isArray(feedback) ? feedback.filter(f => f.resolved).length : 0;
+      const fbPending = fbTotal - fbHandled;
+      const fbClass   = fbPending > 0 ? 'warn' : 'ok';
+      const fbSub     = fbTotal > 0 ? `${fbHandled} טופלו · ${fbTotal} סה"כ` : 'אין פידבק עדיין';
+
+      el.innerHTML = `
+        <div class="dash-grid">
+          <div class="dash-card clickable" onclick="navigate('attention-flagged')" style="grid-column:1/-1;">
+            <div class="dash-icon">🚩</div>
+            <div class="dash-label">הודעות מסומנות</div>
+            <div class="dash-value ${flagClass}">${flagCount}</div>
+            <div class="dash-sub">${esc(flagSub)} &nbsp;·&nbsp; לפירוט ›</div>
+          </div>
+          <div class="dash-card clickable" onclick="navigate('attention-feedback')" style="grid-column:1/-1;">
+            <div class="dash-icon">📝</div>
+            <div class="dash-label">פידבקים ממתינים</div>
+            <div class="dash-value ${fbClass}">${fbPending > 0 ? fbPending : fbTotal > 0 ? '✓' : '—'}</div>
+            <div class="dash-sub">${esc(fbSub)} &nbsp;·&nbsp; לפירוט ›</div>
+          </div>
+        </div>
+      `;
     } catch(e) { el.innerHTML = '<p class="err">שגיאת רשת</p>'; }
   }
 
@@ -540,13 +738,13 @@
     const statusEl = document.getElementById('flaggedStatus');
     const listEl   = document.getElementById('flaggedList');
     statusEl.textContent = 'טוען...';
+    listEl.innerHTML = '';
     try {
       const r = await fetch(`/api/admin/flagged-messages?secret=${enc(SECRET)}`);
       if (r.status === 403) { statusEl.textContent = ''; listEl.innerHTML = '<p class="err">סיסמה שגויה</p>'; return; }
       const rows = await r.json();
       statusEl.textContent = '';
       if (!rows.length) { listEl.innerHTML = '<p class="empty">אין הודעות מסומנות 🎉</p>'; return; }
-      listEl.innerHTML = '';
       rows.forEach(m => {
         const row = document.createElement('div');
         row.className = 'row';
@@ -580,11 +778,11 @@
     const statusEl = document.getElementById('feedbackStatus');
     const listEl   = document.getElementById('feedbackList');
     statusEl.textContent = 'טוען...';
+    listEl.innerHTML = '';
     try {
       const rows = await fetch('/api/feedback').then(r => r.json());
       statusEl.textContent = '';
       if (!rows.length) { listEl.innerHTML = '<p class="empty">אין פידבק</p>'; return; }
-      listEl.innerHTML = '';
       rows.forEach(f => {
         const isHandled = !!f.resolved;
         const div = document.createElement('div');
