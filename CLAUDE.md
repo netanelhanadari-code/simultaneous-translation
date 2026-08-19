@@ -76,6 +76,9 @@ alter table messages add column if not exists edited_at timestamptz;
 - `SUPABASE_ANON_KEY`
 - `OPENAI_ADMIN_KEY` — restricted (usage-read-only) org admin key, only for `/api/admin/usage-report`. Never share in chat, never commit.
 - `REPORT_SECRET` — arbitrary password required as `?secret=` on `/api/admin/usage-report` so it isn't publicly scrapeable
+- `TWILIO_ACCOUNT_SID` — Twilio account SID (starts with AC). Never share in chat.
+- `TWILIO_AUTH_TOKEN` — Twilio auth token. Never share in chat.
+- `TWILIO_FROM` — Twilio sender number in E.164 format (e.g. `+12015551234`)
 
 ---
 
@@ -135,6 +138,13 @@ if (original_text) detected_lang = detectScriptLang(original_text, detected_lang
 // → fetches current translations, merges, PATCHes back to Supabase
 
 // Always: sbInsert first, then broadcast via WS
+
+// WebSocket roles (wss.on('connection')):
+// role=home  → homeSubscribers Map (ws → Set<roomId>); early return, no roomId required
+//              notifyHomeSubscribers() sends {type:'home_message'} after each broadcast
+// role=broadcaster → room.broadcaster = ws
+// role=member / listener → room.members / room.listeners Sets
+// IMPORTANT: role=home check must come before the `if (!roomId)` guard
 ```
 
 ## Critical patterns in room.html
@@ -240,6 +250,18 @@ function linkify(html) { ... }
 ### Home screen splash
 - Only replays on first load of the session or an explicit refresh (`performance.getEntriesByType('navigation')[0].type === 'reload'`) — not on back-navigation from a room, via a sessionStorage flag
 
+### SMS OTP verification (settings.html + server.js)
+- Registration requires phone verification via Twilio SMS
+- `POST /api/send-otp` — 6-digit code, 5-min expiry, max 3 sends, stored in memory Map
+- `POST /api/verify-otp` — max 3 attempts, clears record on success or too-many-attempts
+- OTP overlay in settings.html: appears only when phone is new or changed; fully localized he/ar/en
+- `twilio` added to package.json dependencies
+- Phone format: users enter Israeli `05X...` — Twilio receives as-is (no normalization needed for Israeli numbers; international users should enter E.164)
+- Billing alert recommended in Twilio Console (~$0.26/SMS to Israel)
+
+### Loading text localization (room.html)
+- `roomNameEl` initial text (`טוען...`) replaced with `ui.loading` — localized per UI language: he `טוען...` / ar `جارٍ التحميل...` / en `Loading...`
+
 ### UX
 - RTL layout, own chip rightmost (order:-1)
 - Enter to send, Shift+Enter newline
@@ -254,12 +276,13 @@ function linkify(html) { ... }
 - user-select:none on body, text only on .bubble-text/.bubble-original
 - Language selector: 5 main languages + "Other..." → 35 languages search
 - viewport-fit=cover + env(safe-area-inset-bottom) for Android nav bar
-- localStorage: bf_name, bf_lang, bf_emoji, bf_rooms, bf_mute_tts, bf_mute_notify
+- localStorage: bf_name, bf_lang, bf_emoji, bf_rooms, bf_mute_tts, bf_mute_notify, bf_sound (global sound on/off), bf_notify (desktop notifs on/off); bf_rooms[i].muted (per-room sound mute)
 
 ---
 
 ## Known fixes applied
 - SUPABASE_URL double `/rest/v1` → normalize on startup
+- **Android audio autoplay blocking** — warm-up audio element on first `pointerdown` (play+pause within user gesture) in both room.html and home.html; enables all subsequent programmatic plays without user gesture
 - Translation catch block must NOT set `translations[lang] = original_text`
 - Chinese hallucination → frequency_penalty:1.5 + presence_penalty:0.5 + sanity check
 - Hover tooltips → click-based on mobile
@@ -290,6 +313,9 @@ function linkify(html) { ... }
 - [x] **Feedback checkboxes** — נוספו checkboxes לטאב הפידבק בadmin, מתמידים ב-localStorage
 - [x] **Image upload** — טופל (bucket + migration בוצעו)
 - [x] **Bug: feedback checkboxes מתאפסים** — תוקן: הוסף `input[type="checkbox"]` לרשימת user-select:text; key אוחד ל-`f.created_at || f.id || ''`
+- [x] **Admin dashboard — ניווט back** — הוחלפה מערכת טאבים ב-`history.pushState` + `popstate`; 9 פאנלים (all/activity/costs/costs-openai/costs-twilio/costs-storage/attention/attention-flagged/attention-feedback); כפתור Back באנדרואיד ניווט פנימי בתוך הדשבורד
+- [x] **Home — WS background listener** — `role=home` WebSocket: `homeSubscribers = new Map(ws → Set<roomId>)` בשרת; home.html מתחבר בעת טעינה ומקבל `home_message` עבור כל חדר שנמצא בו המשתמש; auto-reconnect אחרי 5 שניות
+- [x] **הגדרות התראות גלובליות + מיוט פר-חדר** — 🔔 בכותרת home.html → bottom sheet: bf_sound (צליל גלובלי), bf_notify (התראות דסקטופ); לחיצה ארוכה על שבב חדר → אפשרות השתקה (🔕); bf_rooms[i].muted מבטל צליל לאותה קבוצה (התראה ממשיכה); כל UI מתורגם ל-he/ar/en דרך HOME_UI
 - [x] **feedback.html** — נכתב מחדש לגמרי (FROM SCRATCH): עיצוב חדש, RTL נקי ללא `dir="rtl"` על html, splash screen זהה ל-home.html (שני לוגואים: logo.png + babel-fish.png), שדות מדויקים לפי DB
 - [x] **guide.html — lang bar** — גלובוס ובחירת שפה ממורכזים (`position:absolute` על back-btn, `justify-content:center`); שם ليلى תוקן לערבית + "العربية" במקום "ערבית" בכיתוב
 - [x] **Screenshots — מחיקת קודי קבוצות** — 6 תמונות (home, room, room-worf, room-alex, room-lila, recording): קודי הקבוצות הוחלפו ב-`•••••` בצבע ה-muted של האפליקציה
@@ -303,7 +329,7 @@ function linkify(html) { ... }
 - [ ] **שיתוף חדר — דף נפרד** — קישור שתף חדר → דף עם QR + שיתוף ישיר (וואטסאפ, מייל)
 - [ ] **הגדרות קבוצה — כפתור שיתוף** — כפתור לשליחת הזמנה (לא רק copy link)
 - [ ] **דף פידבק — רוחב** — הדף צר מדי, צריך להרחיב
-- [ ] **שרת ישן (Render)** — לשקול ping תקופתי כדי למנוע sleep של Render free tier (למשל: cron חיצוני או UptimeRobot)
+- [ ] **שרת ישן (Render)** — להוסיף `GET /ping` endpoint + להירשם ל-cron-job.org או UptimeRobot (חינמי, כל 5 דקות) כדי למנוע sleep של Render free tier אחרי 15 דקות חוסר פעילות
 - [ ] **הגדרות משתמש — redirect אחרי שמירה** — אחרי save, לחזור לדף הקודם (history.back() או לדף הבית)
 
 ### תשתית

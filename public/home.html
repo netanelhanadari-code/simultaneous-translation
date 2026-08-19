@@ -151,17 +151,17 @@
   <!-- ── Notification settings sheet ────────────────────────── -->
   <div id="notif-overlay" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);" onclick="closeNotifSheet()"></div>
   <div id="notif-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:301;background:#1e0f3a;border-top:1px solid #3d1f6b;border-radius:18px 18px 0 0;padding:1rem .8rem 1.8rem;transform:translateY(100%);transition:transform .22s ease;">
-    <div style="font-size:.85rem;font-weight:700;color:#9b7fc4;margin-bottom:.9rem;text-align:center;">🔔 הגדרות התראות</div>
+    <div id="notifSheetTitle" style="font-size:.85rem;font-weight:700;color:#9b7fc4;margin-bottom:.9rem;text-align:center;"></div>
     <label style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .2rem;border-bottom:1px solid #3d1f6b;">
-      <span style="font-size:.93rem;">🔊 צליל התרעות</span>
+      <span id="notifSheetSoundLabel" style="font-size:.93rem;"></span>
       <input type="checkbox" id="soundToggle" onchange="onSoundToggle(this.checked)" style="width:20px;height:20px;accent-color:#8B2FC9;cursor:pointer;">
     </label>
     <label style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .2rem;border-bottom:1px solid #3d1f6b;">
-      <span style="font-size:.93rem;">🖥 התראות על המסך</span>
+      <span id="notifSheetNotifLabel" style="font-size:.93rem;"></span>
       <input type="checkbox" id="notifToggle" onchange="onNotifToggle(this.checked)" style="width:20px;height:20px;accent-color:#8B2FC9;cursor:pointer;">
     </label>
     <p id="notifSheetMsg" style="font-size:.75rem;color:#9b7fc4;text-align:center;margin-top:.6rem;min-height:1em;"></p>
-    <button onclick="closeNotifSheet()" style="width:100%;margin-top:.5rem;background:#3d1f6b;color:#f0e8ff;border:none;border-radius:10px;padding:.75rem;font-size:.95rem;cursor:pointer;">סגור</button>
+    <button id="notifSheetCloseBtn" onclick="closeNotifSheet()" style="width:100%;margin-top:.5rem;background:#3d1f6b;color:#f0e8ff;border:none;border-radius:10px;padding:.75rem;font-size:.95rem;cursor:pointer;"></button>
   </div>
 
   <div id="chip-overlay"></div>
@@ -198,9 +198,9 @@
     if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
 
     const HOME_UI = {
-      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️', warn: '⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.', terms: 'בשימוש באפליקציה אני מסכים/ה', termsLink: 'לתנאי השימוש', deleteChat: 'מחק שיחה', leaveGroup: 'צא מהקבוצה', cancel: 'ביטול', deleteConfirm: 'למחוק את השיחה?', leaveConfirm: 'לצאת מהקבוצה?' },
-      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️', warn: '⚠️ Babel Fish غير محمية من الاختراق أو انتهاك الخصوصية. لا تشاركوا معلومات حساسة عن أشخاص أو نشاط الحركة.', terms: 'باستخدام التطبيق أوافق', termsLink: 'على شروط الاستخدام', deleteChat: 'حذف المحادثة', leaveGroup: 'مغادرة المجموعة', cancel: 'إلغاء', deleteConfirm: 'هل تريد حذف المحادثة؟', leaveConfirm: 'هل تريد مغادرة المجموعة؟' },
-      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️', warn: '⚠️ Babel Fish is not protected against hacking or privacy breaches. Do not share sensitive information about people or movement activity.', terms: 'By using this app I agree', termsLink: 'to the Terms of Use', deleteChat: 'Delete chat', leaveGroup: 'Leave group', cancel: 'Cancel', deleteConfirm: 'Delete this chat?', leaveConfirm: 'Leave this group?' },
+      he: { greeting: 'שלום, ', newGroup: '➕ קבוצה חדשה', join: '🔗 הצטרף', myGroups: 'הקבוצות שלי', empty: 'אין קבוצות עדיין\nצור קבוצה חדשה או הצטרף לקבוצה קיימת', dm: 'שיחה פרטית', settings: '⚙️', warn: '⚠️ Babel Fish אינה מוגנת מפני פריצה או חדירה לפרטיות. אין להעביר בה מידע רגיש על אנשים או פעילות התנועה.', terms: 'בשימוש באפליקציה אני מסכים/ה', termsLink: 'לתנאי השימוש', deleteChat: 'מחק שיחה', leaveGroup: 'צא מהקבוצה', cancel: 'ביטול', deleteConfirm: 'למחוק את השיחה?', leaveConfirm: 'לצאת מהקבוצה?', notifTitle: '🔔 הגדרות התראות', soundLabel: '🔊 צליל התרעות', notifLabel: '🖥 התראות על המסך', close: 'סגור', notifDenied: 'הדפדפן חסם הרשאת התראות — שנה בהגדרות', muteRoom: '🔕 השתק קבוצה', unmuteRoom: '🔔 בטל השתקה' },
+      ar: { greeting: 'مرحباً، ', newGroup: '➕ مجموعة جديدة', join: '🔗 انضم', myGroups: 'مجموعاتي', empty: 'لا توجد مجموعات بعد\nأنشئ مجموعة جديدة أو انضم إلى مجموعة', dm: 'محادثة خاصة', settings: '⚙️', warn: '⚠️ Babel Fish غير محمية من الاختراق أو انتهاك الخصوصية. لا تشاركوا معلومات حساسة عن أشخاص أو نشاط الحركة.', terms: 'باستخدام التطبيق أوافق', termsLink: 'على شروط الاستخدام', deleteChat: 'حذف المحادثة', leaveGroup: 'مغادرة المجموعة', cancel: 'إلغاء', deleteConfirm: 'هل تريد حذف المحادثة؟', leaveConfirm: 'هل تريد مغادرة المجموعة؟', notifTitle: '🔔 إعدادات الإشعارات', soundLabel: '🔊 صوت الإشعارات', notifLabel: '🖥 إشعارات الشاشة', close: 'إغلاق', notifDenied: 'حظر المتصفح إذن الإشعارات — غيّره في الإعدادات', muteRoom: '🔕 كتم المجموعة', unmuteRoom: '🔔 إلغاء الكتم' },
+      en: { greeting: 'Hello, ', newGroup: '➕ New Group', join: '🔗 Join', myGroups: 'My Groups', empty: 'No groups yet\nCreate a new group or join an existing one', dm: 'Private chat', settings: '⚙️', warn: '⚠️ Babel Fish is not protected against hacking or privacy breaches. Do not share sensitive information about people or movement activity.', terms: 'By using this app I agree', termsLink: 'to the Terms of Use', deleteChat: 'Delete chat', leaveGroup: 'Leave group', cancel: 'Cancel', deleteConfirm: 'Delete this chat?', leaveConfirm: 'Leave this group?', notifTitle: '🔔 Notification Settings', soundLabel: '🔊 Notification sound', notifLabel: '🖥 On-screen notifications', close: 'Close', notifDenied: 'Browser blocked notification permission — change in settings', muteRoom: '🔕 Mute group', unmuteRoom: '🔔 Unmute group' },
     };
     const homeUi = HOME_UI[myUiLang] || HOME_UI.he;
 
@@ -210,6 +210,10 @@
     document.querySelectorAll('.action-btn')[1].textContent   = homeUi.join;
     document.getElementById('noticeWarn').textContent = homeUi.warn;
     document.getElementById('noticeTerms').innerHTML = `${homeUi.terms} <a href="/terms.html">${homeUi.termsLink}</a>`;
+    document.getElementById('notifSheetTitle').textContent     = homeUi.notifTitle;
+    document.getElementById('notifSheetSoundLabel').textContent = homeUi.soundLabel;
+    document.getElementById('notifSheetNotifLabel').textContent = homeUi.notifLabel;
+    document.getElementById('notifSheetCloseBtn').textContent  = homeUi.close;
 
     function getMyRooms() {
       try { return JSON.parse(localStorage.getItem('bf_rooms') || '[]'); } catch { return []; }
@@ -234,7 +238,7 @@
       // Mute / unmute
       const rooms = getMyRooms();
       const room = rooms.find(r => r.id === id);
-      muteBtn.textContent = room?.muted ? '🔔 בטל השתקה' : '🔕 השתק קבוצה';
+      muteBtn.textContent = room?.muted ? homeUi.unmuteRoom : homeUi.muteRoom;
       document.getElementById('chip-overlay').classList.add('open');
       document.getElementById('chip-menu').classList.add('open');
     }
@@ -338,7 +342,7 @@
           document.getElementById('notifToggle').checked = notifOn;
           localStorage.setItem('bf_notify', notifOn ? '1' : '0');
           const msg = document.getElementById('notifSheetMsg');
-          if (!notifOn) msg.textContent = 'הדפדפן חסם הרשאת התראות — שנה בהגדרות';
+          if (!notifOn) msg.textContent = homeUi.notifDenied;
           updateNotifBtn();
         });
       } else {
