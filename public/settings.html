@@ -115,6 +115,26 @@
       <input id="nameInput" type="text" placeholder="שמך" maxlength="30" autocomplete="name">
     </div>
 
+    <!-- Translate buttons -->
+    <div style="display:flex;gap:.5rem;margin-bottom:.25rem;">
+      <button class="save-btn" id="transFromNameBtn" onclick="retranslateFromName()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🌐 תרגם שמות</button>
+      <button class="save-btn" id="transFromEnBtn" onclick="retranslateNames()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם מאנגלית</button>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;" id="nameTransHint">תרגם את שמך לכל השפות. תקן לפי הצורך.</p>
+    <div class="field">
+      <label id="labelNameEn">English</label>
+      <input id="nameEnInput" type="text" dir="ltr" style="text-align:left;" placeholder="Your name in English">
+    </div>
+    <div class="field">
+      <label id="labelNameHe">עברית</label>
+      <input id="nameHeInput" type="text" dir="rtl" placeholder="שמך בעברית">
+    </div>
+    <div class="field">
+      <label id="labelNameAr">العربية</label>
+      <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية">
+    </div>
+    <p class="saved-msg" id="transSavedMsg"></p>
+
     <!-- Emoji (hidden when avatar exists) -->
     <div class="field" id="emojiField">
       <label id="labelEmoji">אימוג'י (אופציונלי — יופיע ברשימת החברים)</label>
@@ -170,33 +190,8 @@
       </select>
     </div>
 
-    <div style="display:flex;gap:.5rem;">
-      <button class="save-btn" id="saveBtn" onclick="save()" style="flex:1;">🌐 תרגם שמות</button>
-      <button class="save-btn" id="retransFromNameBtn" onclick="retranslateFromName()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);">🔁 תרגם מאנגלית</button>
-    </div>
+    <button class="save-btn" id="saveAllBtn" onclick="saveAll()" style="margin-top:.5rem;">✓ שמור הגדרות</button>
     <p class="saved-msg" id="savedMsg"></p>
-  </div>
-
-  <!-- Name translations card -->
-  <div class="card" id="nameTransCard" style="display:none;">
-    <div class="field">
-      <label id="labelNameTrans" style="font-size:.9rem;font-weight:600;color:var(--text);">🌐 תרגום שם — בדוק ותקן</label>
-      <p style="font-size:.75rem;color:var(--muted);margin-top:.1rem;" id="nameTransHint">השם תורגם אוטומטית בשמירה. תקן לפי הצורך ולחץ שמור.</p>
-    </div>
-    <div class="field">
-      <label id="labelNameEn">English</label>
-      <input id="nameEnInput" type="text" dir="ltr" style="text-align:left;" placeholder="Your name in English">
-    </div>
-    <div class="field">
-      <label id="labelNameHe">עברית</label>
-      <input id="nameHeInput" type="text" dir="rtl" placeholder="שמך בעברית">
-    </div>
-    <div class="field">
-      <label id="labelNameAr">العربية</label>
-      <input id="nameArInput" type="text" dir="rtl" placeholder="اسمك بالعربية">
-    </div>
-    <button class="save-btn" id="saveTransBtn" onclick="saveAndClose()">✓ שמור הגדרות</button>
-    <p class="saved-msg" id="transSavedMsg"></p>
   </div>
 
   <!-- OTP overlay -->
@@ -222,9 +217,9 @@
     if (myUiLang === 'en') { document.documentElement.setAttribute('dir', 'ltr'); document.documentElement.setAttribute('lang', 'en'); }
 
     const SETT_UI = {
-      he: { title: '⚙️ הגדרות', name: 'שם', namePh: 'שמך', emoji: "אימוג'י (אופציונלי — יופיע ברשימת החברים)", emojiPh: "או הדבק כל אימוג'י 😊", emojiClear: "ללא אימוג'י", phone: 'מספר טלפון', phoneSub: 'משמש לזיהוי ייחודי + מוצג לחברים', lang: 'שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת', uiLang: 'שפת ממשק — שפת הכפתורים והתפריטים', save: '🌐 תרגם שם ושמור', saved: '✓ נשמר', avatarHint: 'תמונה מחליפה אימוג\'י', nameTrans: '🌐 תרגום שם — בדוק ותקן', nameTransHint: 'השם תורגם אוטומטית בשמירה. תקן לפי הצורך ולחץ שמור.', retrans: '🔁 תקן מאנגלית — תרגם מחדש מהשדה למעלה', saveTrans: '✓ שמור שמות', saving: '⏳ שומר ומתרגם...', translated: '✓ תורגם ונשמר', transError: 'שגיאה', otpTitle: 'אימות מספר טלפון', otpSub: 'שלחנו קוד ל-', otpSubmit: 'אמת', otpResend: 'שלח שוב', otpError: 'קוד שגוי', otpExpired: 'הקוד פג — שלח שוב', otpTooMany: 'יותר מדי ניסיונות', otpFail: 'שגיאה בשליחת SMS' },
-      ar: { title: '⚙️ الإعدادات', name: 'الاسم', namePh: 'اسمك', emoji: 'إيموجي (اختياري — يظهر في قائمة الأعضاء)', emojiPh: 'أو الصق أي إيموجي 😊', emojiClear: 'بدون إيموجي', phone: 'رقم الهاتف', phoneSub: 'يُستخدم للتعريف الفريد + يُعرض للأعضاء', lang: 'لغة التواصل — اللغة التي أكتب وأتحدث بها', uiLang: 'لغة الواجهة — لغة الأزرار والقوائم', save: '🌐 ترجم الاسم واحفظ', saved: '✓ تم الحفظ', avatarHint: 'الصورة تحل محل الإيموجي', nameTrans: '🌐 ترجمة الاسم — راجع وصحّح', nameTransHint: 'تُرجم الاسم تلقائياً عند الحفظ. صحّح حسب الحاجة ثم احفظ.', retrans: '🔁 صحّح من الإنجليزية — أعد الترجمة من الحقل أعلاه', saveTrans: '✓ حفظ الأسماء', saving: '⏳ جارٍ الحفظ والترجمة...', translated: '✓ تمت الترجمة والحفظ', transError: 'خطأ', otpTitle: 'التحقق من رقم الهاتف', otpSub: 'أرسلنا رمزاً إلى ', otpSubmit: 'تحقق', otpResend: 'أعد الإرسال', otpError: 'رمز خاطئ', otpExpired: 'انتهت صلاحية الرمز — أعد الإرسال', otpTooMany: 'محاولات كثيرة جداً', otpFail: 'خطأ في إرسال الرسالة' },
-      en: { title: '⚙️ Settings', name: 'Name', namePh: 'Your name', emoji: 'Emoji (optional — shown in members list)', emojiPh: 'Or paste any emoji 😊', emojiClear: 'No emoji', phone: 'Phone number', phoneSub: 'Used for unique ID + shown to members', lang: 'Communication language — language I write and speak in', uiLang: 'Interface language — language of buttons and menus', save: '🌐 Translate name & save', saved: '✓ Saved', avatarHint: 'Photo replaces emoji', nameTrans: '🌐 Name translation — review & fix', nameTransHint: 'Your name was auto-translated on save. Correct as needed and save.', retrans: '🔁 Fix from English — re-translate from the field above', saveTrans: '✓ Save names', saving: '⏳ Saving & translating...', translated: '✓ Translated & saved', transError: 'Error', otpTitle: 'Verify phone number', otpSub: 'We sent a code to ', otpSubmit: 'Verify', otpResend: 'Resend', otpError: 'Wrong code', otpExpired: 'Code expired — resend', otpTooMany: 'Too many attempts', otpFail: 'Failed to send SMS' },
+      he: { title: '⚙️ הגדרות', name: 'שם', namePh: 'שמך', emoji: "אימוג'י (אופציונלי — יופיע ברשימת החברים)", emojiPh: "או הדבק כל אימוג'י 😊", emojiClear: "ללא אימוג'י", phone: 'מספר טלפון', phoneSub: 'משמש לזיהוי ייחודי + מוצג לחברים', lang: 'שפת תקשורת — שפה שבה אני כותב/ת ומדבר/ת', uiLang: 'שפת ממשק — שפת הכפתורים והתפריטים', translateNames: '🌐 תרגם שמות', translateFromEn: '🔁 תרגם מאנגלית', saveSettings: '✓ שמור הגדרות', nameTransHint: 'תרגם את שמך לכל השפות. תקן לפי הצורך.', saving: '⏳ שומר ומתרגם...', saved: '✓ נשמר', translated: '✓ תורגם ונשמר', transError: 'שגיאה', avatarHint: 'תמונה מחליפה אימוג\'י', otpTitle: 'אימות מספר טלפון', otpSub: 'שלחנו קוד ל-', otpSubmit: 'אמת', otpResend: 'שלח שוב', otpError: 'קוד שגוי', otpExpired: 'הקוד פג — שלח שוב', otpTooMany: 'יותר מדי ניסיונות', otpFail: 'שגיאה בשליחת SMS' },
+      ar: { title: '⚙️ الإعدادات', name: 'الاسم', namePh: 'اسمك', emoji: 'إيموجي (اختياري — يظهر في قائمة الأعضاء)', emojiPh: 'أو الصق أي إيموجي 😊', emojiClear: 'بدون إيموجي', phone: 'رقم الهاتف', phoneSub: 'يُستخدم للتعريف الفريد + يُعرض للأعضاء', lang: 'لغة التواصل — اللغة التي أكتب وأتحدث بها', uiLang: 'لغة الواجهة — لغة الأزرار والقوائم', translateNames: '🌐 ترجم الأسماء', translateFromEn: '🔁 ترجم من الإنجليزية', saveSettings: '✓ حفظ الإعدادات', nameTransHint: 'ترجم اسمك إلى جميع اللغات. صحّح حسب الحاجة.', saving: '⏳ جارٍ الحفظ والترجمة...', saved: '✓ تم الحفظ', translated: '✓ تمت الترجمة والحفظ', transError: 'خطأ', avatarHint: 'الصورة تحل محل الإيموجي', otpTitle: 'التحقق من رقم الهاتف', otpSub: 'أرسلنا رمزاً إلى ', otpSubmit: 'تحقق', otpResend: 'أعد الإرسال', otpError: 'رمز خاطئ', otpExpired: 'انتهت صلاحية الرمز — أعد الإرسال', otpTooMany: 'محاولات كثيرة جداً', otpFail: 'خطأ في إرسال الرسالة' },
+      en: { title: '⚙️ Settings', name: 'Name', namePh: 'Your name', emoji: 'Emoji (optional — shown in members list)', emojiPh: 'Or paste any emoji 😊', emojiClear: 'No emoji', phone: 'Phone number', phoneSub: 'Used for unique ID + shown to members', lang: 'Communication language — language I write and speak in', uiLang: 'Interface language — language of buttons and menus', translateNames: '🌐 Translate names', translateFromEn: '🔁 Translate from English', saveSettings: '✓ Save settings', nameTransHint: 'Translate your name to all languages. Correct as needed.', saving: '⏳ Saving & translating...', saved: '✓ Saved', translated: '✓ Translated & saved', transError: 'Error', avatarHint: 'Photo replaces emoji', otpTitle: 'Verify phone number', otpSub: 'We sent a code to ', otpSubmit: 'Verify', otpResend: 'Resend', otpError: 'Wrong code', otpExpired: 'Code expired — resend', otpTooMany: 'Too many attempts', otpFail: 'Failed to send SMS' },
     };
     function applySettUI(su) {
       document.querySelector('h1').textContent          = su.title;
@@ -236,13 +231,11 @@
       document.getElementById('labelPhone').innerHTML   = `${su.phone} <span style="color:#e07070;">*</span> <small style="font-weight:normal;color:var(--muted)">(${su.phoneSub})</small>`;
       document.getElementById('labelLang').textContent  = su.lang;
       document.getElementById('labelUiLang').textContent= su.uiLang;
-      document.getElementById('saveBtn').textContent    = su.save;
       document.getElementById('avatarHint').textContent = su.avatarHint;
-      // Name translation card
-      if (su.nameTrans)     document.getElementById('labelNameTrans').textContent  = su.nameTrans;
-      if (su.nameTransHint) document.getElementById('nameTransHint').textContent   = su.nameTransHint;
-      // retransBtn removed from UI
-      if (su.saveTrans)     document.getElementById('saveTransBtn').textContent    = su.saveTrans;
+      if (su.translateNames)  document.getElementById('transFromNameBtn').textContent = su.translateNames;
+      if (su.translateFromEn) document.getElementById('transFromEnBtn').textContent   = su.translateFromEn;
+      if (su.nameTransHint)   document.getElementById('nameTransHint').textContent    = su.nameTransHint;
+      if (su.saveSettings)    document.getElementById('saveAllBtn').textContent       = su.saveSettings;
     }
     const su = SETT_UI[myUiLang] || SETT_UI.he;
     applySettUI(su);
@@ -254,7 +247,7 @@
           const cached = await fetch(`/api/page-content?lang=${encodeURIComponent(myUiLang)}`).then(r => r.json());
           const keys = ['title','name','namePh','emoji','emojiPh','emojiClear',
                         'phone','phoneSub','lang','uiLang','save','saved','avatarHint',
-                        'nameTrans','nameTransHint','retrans','saveTrans','saving','translated','transError'];
+                        'translateNames','translateFromEn','saveSettings','nameTransHint','saving','translated','transError'];
           const fromDB = {};
           keys.forEach(k => { if (cached['sett_' + k]) fromDB[k] = cached['sett_' + k]; });
           if (Object.keys(fromDB).length === keys.length) { applySettUI(fromDB); return; }
@@ -539,7 +532,7 @@
       const oldPhone = localStorage.getItem('bf_phone') || '';
       // Require OTP when phone is new or changed
       if (phone !== oldPhone) {
-        const btn = document.getElementById('saveBtn');
+        const btn = document.getElementById('saveAllBtn');
         btn.disabled = true;
         btn.textContent = '⏳';
         let verified = false;
@@ -553,11 +546,11 @@
           return;
         }
         btn.disabled = false;
-        btn.textContent = su.save;
+        btn.textContent = su.saveSettings || '✓ שמור הגדרות';
         if (!verified) return;
       }
 
-      const btn = document.getElementById('saveBtn');
+      const btn = document.getElementById('saveAllBtn');
       btn.disabled = true;
       btn.textContent = su.saving || '⏳';
 
@@ -599,8 +592,7 @@
 
       savedMsg.textContent = su.saved || '✓';
       btn.disabled = false;
-      btn.textContent = su.save || '🌐 תרגם';
-      document.getElementById('nameTransCard').style.display = '';
+      btn.textContent = su.translateNames || '🌐 תרגם שמות';
       setTimeout(() => { savedMsg.textContent = ''; }, 1500);
     }
 
@@ -608,6 +600,16 @@
       await saveNameTranslations();
       location.href = returnTo;
     }
+    async function saveAll() {
+      const btn = document.getElementById('saveAllBtn');
+      btn.disabled = true; btn.textContent = su.saving || '⏳';
+      try {
+        await save();
+        await saveNameTranslations();
+      } catch(e) { console.error('saveAll:', e); }
+      location.href = returnTo;
+    }
+
 
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
 
@@ -617,7 +619,6 @@
     async function loadNameTranslations() {
       const phone = localStorage.getItem('bf_phone') || '';
       if (!phone) return;
-      document.getElementById('nameTransCard').style.display = '';
       try {
         const profile = await fetch(`/api/profile?phone=${encodeURIComponent(phone)}`).then(r => r.json());
         currentNameTrans = profile.name_translations || {};
@@ -632,8 +633,7 @@
       const phone = localStorage.getItem('bf_phone') || '';
       if (!name) return;
       // show name trans card if not visible
-      document.getElementById('nameTransCard').style.display = '';
-      const btn = document.getElementById('retransFromNameBtn');
+      const btn = document.getElementById('transFromNameBtn');
       btn.disabled = true; btn.textContent = '⏳';
       try {
         const tr = await fetch('/api/profile/translate-name', {
@@ -653,14 +653,14 @@
         document.getElementById('transSavedMsg').textContent = su.translated || '✓';
         setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
       } catch(e) { console.error('retranslateFromName:', e); }
-      btn.disabled = false; btn.textContent = '🔁 תרגם מאנגלית';
+      btn.disabled = false; btn.textContent = su.translateNames || '🌐 תרגם שמות';
     }
 
     async function retranslateNames() {
       const phone = localStorage.getItem('bf_phone') || '';
       const en = document.getElementById('nameEnInput').value.trim();
       if (!phone || !en) return;
-      const btn = document.getElementById('retransBtn');
+      const btn = document.getElementById('transFromEnBtn');
       btn.disabled = true; btn.textContent = '⏳';
       try {
         const r = await fetch('/api/profile/name-translations', {
@@ -676,7 +676,7 @@
         document.getElementById('transSavedMsg').textContent = su.translated || '✓';
         setTimeout(() => { document.getElementById('transSavedMsg').textContent = ''; }, 2000);
       } catch(e) { console.error('retranslateNames:', e); }
-      btn.disabled = false; btn.textContent = su.retrans || '🔁';
+      btn.disabled = false; btn.textContent = su.translateFromEn || '🔁 תרגם מאנגלית';
     }
 
     async function saveNameTranslations() {
@@ -685,7 +685,7 @@
       const en = document.getElementById('nameEnInput').value.trim();
       const he = document.getElementById('nameHeInput').value.trim();
       const ar = document.getElementById('nameArInput').value.trim();
-      const btn = document.getElementById('saveTransBtn');
+      const btn = document.getElementById('saveAllBtn');
       btn.disabled = true;
       try {
         await fetch('/api/profile/name-translations', {
