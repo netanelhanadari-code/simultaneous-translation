@@ -118,6 +118,14 @@
   .dash-refresh {
     display: flex; justify-content: flex-end; margin-bottom: .5rem;
   }
+  .dash-group-label {
+    grid-column: 1 / -1;
+    font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+    color: var(--muted); text-transform: uppercase;
+    padding: .25rem 0 .1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: -.1rem;
+  }
 </style>
 </head>
 <body>
@@ -223,14 +231,17 @@
     errEl.textContent = '';
     // Show skeleton
     grid.innerHTML = `
-      ${dashSkeleton('🚩','הודעות מסומנות')}
-      ${dashSkeleton('💰','עלות API — 7 ימים')}
-      ${dashSkeleton('📦','סטורג\' תמונות')}
-      ${dashSkeleton('📝','פידבקים')}
+      <div class="dash-group-label">📈 פעילות</div>
       ${dashSkeleton('🏠','קבוצות')}
       ${dashSkeleton('👥','משתמשים')}
       ${dashSkeleton('💬','הודעות')}
+      <div class="dash-group-label">💸 עלויות</div>
+      ${dashSkeleton('💰','עלות API — 7 ימים')}
       ${dashSkeleton('📱','SMS Twilio — 30 יום')}
+      ${dashSkeleton('📦','סטורג\' תמונות')}
+      <div class="dash-group-label">⚠ לטיפול</div>
+      ${dashSkeleton('🚩','הודעות מסומנות')}
+      ${dashSkeleton('📝','פידבקים')}
     `;
 
     // Fetch everything in parallel
@@ -281,36 +292,7 @@
     const twilioSub    = twilio ? `${twilio.sms_count ?? '—'} SMS · מספר $${twilio.number_usd ?? '—'}` : 'לא זמין';
 
     grid.innerHTML = `
-      <div class="dash-card clickable" onclick="switchTab('flagged')" title="עבור להודעות מסומנות">
-        <div class="dash-icon">🚩</div>
-        <div class="dash-label">הודעות מסומנות</div>
-        <div class="dash-value ${flagClass}">${flagCount}</div>
-        <div class="dash-sub">${flagSub}</div>
-      </div>
-
-      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור להוצאות API">
-        <div class="dash-icon">💰</div>
-        <div class="dash-label">עלות API — 7 ימים</div>
-        <div class="dash-value ${usdClass}">$${usd}</div>
-        <div class="dash-sub">gpt-4o-mini + Whisper</div>
-      </div>
-
-      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור לניהול סטורג'">
-        <div class="dash-icon">📦</div>
-        <div class="dash-label">סטורג' תמונות</div>
-        <div class="dash-value ${stClass}">${mb.toFixed(1)} MB</div>
-        <div class="dash-sub">${imgCnt} תמונות · ${pct.toFixed(1)}% מ-1 GB</div>
-        <div class="dash-bar-track">
-          <div class="dash-bar-fill" style="width:${pct.toFixed(1)}%;background:${stColor};"></div>
-        </div>
-      </div>
-
-      <div class="dash-card clickable" onclick="switchTab('feedback')" title="עבור לפידבק">
-        <div class="dash-icon">📝</div>
-        <div class="dash-label">פידבקים לא טופלו</div>
-        <div class="dash-value ${fbClass}">${fbTotal > 0 ? fbPending : '—'}</div>
-        <div class="dash-sub">${fbSub}</div>
-      </div>
+      <div class="dash-group-label">📈 פעילות</div>
 
       <div class="dash-card">
         <div class="dash-icon">🏠</div>
@@ -326,11 +308,20 @@
         <div class="dash-sub">לפי מספר טלפון</div>
       </div>
 
-      <div class="dash-card">
+      <div class="dash-card" style="grid-column:1/-1;">
         <div class="dash-icon">💬</div>
         <div class="dash-label">הודעות</div>
         <div class="dash-value ok">${stats?.messages ?? '—'}</div>
         <div class="dash-sub">${stats?.messages_24h ?? '—'} ב-24 שעות אחרונות</div>
+      </div>
+
+      <div class="dash-group-label">💸 עלויות</div>
+
+      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור להוצאות API">
+        <div class="dash-icon">💰</div>
+        <div class="dash-label">OpenAI — 7 ימים</div>
+        <div class="dash-value ${usdClass}">$${usd}</div>
+        <div class="dash-sub">gpt-4o-mini + Whisper</div>
       </div>
 
       <div class="dash-card">
@@ -338,6 +329,32 @@
         <div class="dash-label">SMS Twilio — 30 יום</div>
         <div class="dash-value ${twilioClass}">${twilioUsd !== null ? '$' + twilioUsd : '—'}</div>
         <div class="dash-sub">${twilioSub}</div>
+      </div>
+
+      <div class="dash-card clickable" onclick="switchTab('usage')" title="עבור לניהול סטורג'" style="grid-column:1/-1;">
+        <div class="dash-icon">📦</div>
+        <div class="dash-label">סטורג' תמונות</div>
+        <div class="dash-value ${stClass}">${mb.toFixed(1)} MB</div>
+        <div class="dash-sub">${imgCnt} תמונות · ${pct.toFixed(1)}% מ-1 GB</div>
+        <div class="dash-bar-track">
+          <div class="dash-bar-fill" style="width:${pct.toFixed(1)}%;background:${stColor};"></div>
+        </div>
+      </div>
+
+      <div class="dash-group-label">⚠ לטיפול</div>
+
+      <div class="dash-card clickable" onclick="switchTab('flagged')" title="עבור להודעות מסומנות">
+        <div class="dash-icon">🚩</div>
+        <div class="dash-label">הודעות מסומנות</div>
+        <div class="dash-value ${flagClass}">${flagCount}</div>
+        <div class="dash-sub">${flagSub}</div>
+      </div>
+
+      <div class="dash-card clickable" onclick="switchTab('feedback')" title="עבור לפידבק">
+        <div class="dash-icon">📝</div>
+        <div class="dash-label">פידבקים לא טופלו</div>
+        <div class="dash-value ${fbClass}">${fbTotal > 0 ? fbPending : '—'}</div>
+        <div class="dash-sub">${fbSub}</div>
       </div>
     `;
   }
