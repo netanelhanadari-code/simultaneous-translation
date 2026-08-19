@@ -1229,6 +1229,26 @@ app.get('/api/admin/twilio-usage', async (req, res) => {
   }
 });
 
+// ── Unread counts per room ───────────────────────────────────────────────────
+app.post('/api/rooms/unread-counts', express.json(), async (req, res) => {
+  const rooms = req.body?.rooms;
+  if (!Array.isArray(rooms) || !rooms.length) return res.json({});
+  try {
+    const entries = await Promise.all(
+      rooms.map(async ({ id, since }) => {
+        if (!id || !since) return [id, 0];
+        const msgs = await sbQuery('messages',
+          `select=id&room_id=eq.${encodeURIComponent(id)}&created_at=gt.${encodeURIComponent(since)}`);
+        return [id, Array.isArray(msgs) ? msgs.length : 0];
+      })
+    );
+    res.json(Object.fromEntries(entries));
+  } catch(e) {
+    console.error('[unread-counts]', e.message);
+    res.json({});
+  }
+});
+
 // ── Admin: activity report ────────────────────────────────────────────────────
 app.get('/api/admin/activity-report', async (req, res) => {
   if (!process.env.REPORT_SECRET || req.query.secret !== process.env.REPORT_SECRET) {

@@ -489,6 +489,33 @@
     let notifyOn = localStorage.getItem('bf_mute_notify') !== '0';
     let latestMsgTs = null;
     const displayedIds = new Set();
+
+    // ── Message cache ─────────────────────────────────────────────────────
+    const MSG_CACHE_KEY = 'msgcache_' + roomId;
+    const MSG_CACHE_MAX = 50;
+    let msgCacheArr = [];
+    function saveMsgCache() {
+      try {
+        localStorage.setItem(MSG_CACHE_KEY,
+          JSON.stringify(msgCacheArr.slice(-MSG_CACHE_MAX)));
+      } catch(e) {}
+    }
+    function addToMsgCache(msg) {
+      if (!msg.id || !msg.created_at) return;
+      const idx = msgCacheArr.findIndex(m => String(m.id) === String(msg.id));
+      const entry = {
+        id: msg.id, sender_name: msg.sender_name, sender_emoji: msg.sender_emoji,
+        sender_lang: msg.sender_lang, original_text: msg.original_text,
+        translations: msg.translations, created_at: msg.created_at,
+        edited: msg.edited, image_url: msg.image_url,
+        reactions: msg.reactions, reply_to: msg.reply_to
+      };
+      if (idx >= 0) msgCacheArr[idx] = entry; else msgCacheArr.push(entry);
+      if (msgCacheArr.length > MSG_CACHE_MAX) msgCacheArr = msgCacheArr.slice(-MSG_CACHE_MAX);
+      saveMsgCache();
+    }
+    // Load existing cache on startup
+    try { msgCacheArr = JSON.parse(localStorage.getItem(MSG_CACHE_KEY) || '[]'); } catch(e) { msgCacheArr = []; }
     const msgElements  = new Map(); // msgId → { reactionsEl, pickerEl }
     const REACTION_EMOJIS = ['❤️','👍','😂','😢','🤯','🙏','🦖'];
 
@@ -712,6 +739,12 @@
 
     // ── Load history ───────────────────────────────────────────────────────
     async function loadRoom() {
+      // Show cached messages immediately while server loads
+      if (msgCacheArr.length > 0) {
+        document.querySelector('.empty')?.remove();
+        msgCacheArr.forEach(addMessage);
+        scrollBottom();
+      }
       try {
         const r = await fetch('/api/rooms/' + roomId);
         if (!r.ok) { location.href = '/home.html'; return; }
@@ -975,6 +1008,7 @@
     function addMessage(msg) {
       if (msg.id && displayedIds.has(String(msg.id))) return;
       if (msg.id) displayedIds.add(String(msg.id));
+      addToMsgCache(msg);
       const isMine = msg.sender_name === myName;
       // Own messages: always show as written — no translation for sender
       const hasTrans = !isMine && !!msg.translations?.[myLang];

@@ -75,6 +75,13 @@
       width: 8px; height: 8px; border-radius: 50%;
       background: var(--accent); flex-shrink: 0;
     }
+    .unread-badge {
+      background: var(--accent); color: #fff;
+      font-size: .65rem; font-weight: 700; line-height: 1;
+      min-width: 18px; height: 18px; border-radius: 9px;
+      padding: 0 4px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
     .room-chip-info { flex: 1; min-width: 0; }
     .room-chip-name {
       font-size: .93rem; font-weight: 600;
@@ -266,7 +273,8 @@
       location.href = `/room.html?room=${id}`;
     }
 
-    function renderRooms(latestMap) {
+    function renderRooms(latestMap, countMap) {
+      countMap = countMap || {};
       const rooms = getMyRooms();
       const label = document.getElementById('rooms-label');
       const list  = document.getElementById('rooms-list');
@@ -297,8 +305,12 @@
         chip.className = 'room-chip' + (r.hasNew ? ' has-new' : '');
         const isDM = r.type === 'dm' || (r.id?.startsWith('D') && r.id.length <= 7);
         const displayName = isDM ? r.name : (r.names?.[myUiLang] || r.name);
+        const unreadCount = countMap[r.id];
+        const badgeHtml = unreadCount > 0
+          ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>`
+          : r.hasNew ? '<span class="unread-dot"></span>' : '';
         chip.innerHTML =
-          (r.hasNew ? '<span class="unread-dot"></span>' : '') +
+          badgeHtml +
           `<div class="room-chip-info">
             <div class="room-chip-name">${isDM ? '👤 ' : '💬 '}${esc(displayName)}</div>
             <div class="room-chip-code">${isDM ? homeUi.dm : r.id}</div>
@@ -315,20 +327,30 @@
       if (!rooms.length) return;
       const ids = rooms.map(r => r.id).join(',');
       try {
-        // Fetch unread + translated names in parallel
-        const [latestRes, namesRes] = await Promise.all([
+        // Build unread-counts request from rooms that have lastSeen
+        const roomsWithSince = rooms.filter(r => r.lastSeen).map(r => ({ id: r.id, since: r.lastSeen }));
+        // Fetch latest timestamps, translated names, and unread counts in parallel
+        const [latestRes, namesRes, countRes] = await Promise.all([
           fetch(`/api/rooms/latest?ids=${encodeURIComponent(ids)}`),
-          fetch(`/api/rooms/names?ids=${encodeURIComponent(ids)}`)
+          fetch(`/api/rooms/names?ids=${encodeURIComponent(ids)}`),
+          roomsWithSince.length
+            ? fetch('/api/rooms/unread-counts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rooms: roomsWithSince })
+              })
+            : Promise.resolve(null)
         ]);
         const latestMap = await latestRes.json();
         const namesMap  = await namesRes.json();
+        const countMap  = countRes ? await countRes.json() : {};
         // Update bf_rooms with fresh translated names
         const stored = getMyRooms();
         stored.forEach(r => {
           if (namesMap[r.id]) r.names = namesMap[r.id];
         });
         saveMyRooms(stored);
-        renderRooms(latestMap);
+        renderRooms(latestMap, countMap);
       } catch(e) { renderRooms({}); }
     }
     init();
