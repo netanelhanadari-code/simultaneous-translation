@@ -104,6 +104,21 @@
   .dash-bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: .2rem; }
   .dash-bar-fill  { height: 100%; border-radius: 2px; transition: width .4s; }
 
+  /* ── Tools launcher ── */
+  .tool-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .75rem;
+  }
+  .tool-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: .9rem 1rem;
+    display: flex; flex-direction: column; gap: .3rem;
+    text-decoration: none; color: var(--text);
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .tool-card:active { background: #1a0d35; }
+  .tool-card:hover  { border-color: var(--accent); }
+  .tool-title { font-size: .95rem; font-weight: 700; }
+
   .dash-group-label {
     grid-column: 1 / -1;
     display: flex; justify-content: space-between; align-items: center;
@@ -176,6 +191,7 @@
       <button class="tab-btn"        data-tab="activity"  onclick="navigate('activity')">📈 פעילות</button>
       <button class="tab-btn"        data-tab="costs"     onclick="navigate('costs')">💸 עלויות</button>
       <button class="tab-btn"        data-tab="attention" onclick="navigate('attention')">⚠ לטיפול</button>
+      <button class="tab-btn"        data-tab="tools"     onclick="navigate('tools')">🧰 כלים</button>
     </div>
 
     <!-- ════════════════════════════════════════════════════════════════
@@ -307,6 +323,52 @@
       </div>
       <span class="loading" id="feedbackStatus"></span>
       <div id="feedbackList"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         כלים: launcher for all internal / staff tools
+    ══════════════════════════════════════════════════════════════════ -->
+    <div id="panel-tools" class="panel card">
+      <div class="back-bar">
+        <strong>🧰 כלים — גישה מהירה</strong>
+      </div>
+      <div class="tool-grid">
+        <a class="tool-card" href="/broadcaster.html" target="_blank" rel="noopener">
+          <div class="dash-icon">📡</div>
+          <div class="tool-title">שידור</div>
+          <div class="dash-sub">Broadcaster — פתיחת שידור חי</div>
+        </a>
+        <a class="tool-card" href="/listener.html" target="_blank" rel="noopener">
+          <div class="dash-icon">🎧</div>
+          <div class="tool-title">האזנה</div>
+          <div class="dash-sub">Listener — צפייה בשידור</div>
+        </a>
+        <a class="tool-card" href="/recorder.html" target="_blank" rel="noopener">
+          <div class="dash-icon">🎙️</div>
+          <div class="tool-title">הקלטה ובדיקה</div>
+          <div class="dash-sub">הקלטה חיה או העלאת קובץ לבדיקת תרגום</div>
+        </a>
+        <a class="tool-card" href="/compression-tester.html" target="_blank" rel="noopener">
+          <div class="dash-icon">🖼️</div>
+          <div class="tool-title">בדיקת דחיסת תמונות</div>
+          <div class="dash-sub">Compression Tester</div>
+        </a>
+        <a class="tool-card" href="/guide.html" target="_blank" rel="noopener">
+          <div class="dash-icon">📖</div>
+          <div class="tool-title">מדריך</div>
+          <div class="dash-sub">מדריך שימוש למשתמשים</div>
+        </a>
+        <a class="tool-card" href="/feedback.html" target="_blank" rel="noopener">
+          <div class="dash-icon">🐞</div>
+          <div class="tool-title">דיווח באג</div>
+          <div class="dash-sub">טופס פידבק</div>
+        </a>
+        <a class="tool-card" href="/home.html" target="_blank" rel="noopener">
+          <div class="dash-icon">🏠</div>
+          <div class="tool-title">האפליקציה</div>
+          <div class="dash-sub">Babel Fish — מסך הבית</div>
+        </a>
+      </div>
     </div>
   </div>
 
