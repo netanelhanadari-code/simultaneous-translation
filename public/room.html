@@ -501,14 +501,26 @@
       } catch(e) {}
     }
     function addToMsgCache(msg) {
-      if (!msg.id || !msg.created_at) return;
+      if (!msg.id) return;
       const idx = msgCacheArr.findIndex(m => String(m.id) === String(msg.id));
+      const prev = idx >= 0 ? msgCacheArr[idx] : null;
+      // A brand-new cache entry needs created_at (for ordering/display); an
+      // update to an existing entry (e.g. from a message_edited WS event,
+      // which doesn't carry created_at) falls back to what's already cached
+      // for any field it doesn't include, instead of wiping it out.
+      if (!prev && !msg.created_at) return;
       const entry = {
-        id: msg.id, sender_name: msg.sender_name, sender_emoji: msg.sender_emoji,
-        sender_lang: msg.sender_lang, original_text: msg.original_text,
-        translations: msg.translations, created_at: msg.created_at,
-        edited: msg.edited, image_url: msg.image_url,
-        reactions: msg.reactions, reply_to: msg.reply_to
+        id: msg.id,
+        sender_name: msg.sender_name ?? prev?.sender_name,
+        sender_emoji: msg.sender_emoji ?? prev?.sender_emoji,
+        sender_lang: msg.sender_lang ?? prev?.sender_lang,
+        original_text: msg.original_text ?? prev?.original_text,
+        translations: msg.translations ?? prev?.translations,
+        created_at: msg.created_at ?? prev?.created_at,
+        edited: msg.edited ?? prev?.edited,
+        image_url: msg.image_url ?? prev?.image_url,
+        reactions: msg.reactions ?? prev?.reactions,
+        reply_to: msg.reply_to ?? prev?.reply_to
       };
       if (idx >= 0) msgCacheArr[idx] = entry; else msgCacheArr.push(entry);
       if (msgCacheArr.length > MSG_CACHE_MAX) msgCacheArr = msgCacheArr.slice(-MSG_CACHE_MAX);
@@ -1465,6 +1477,13 @@
     // Applied when a 'message_edited' WS event arrives — updates the bubble
     // in place (translation + original text) without moving its position.
     function applyMessageEdit(msg) {
+      // Keep the local msgcache_<roomId> cache in sync with the edit — otherwise
+      // it keeps the pre-edit text forever, and a full page reload shortly after
+      // (common on mobile: screen lock, app switch, tab reload) repaints from
+      // that stale cache before the fresh server fetch can, and the "already
+      // displayed" guard in addMessage() then silently drops the correct data,
+      // making the edit appear to revert.
+      addToMsgCache(msg);
       const inner = document.getElementById('msg-' + msg.id);
       if (!inner) return;
       const isMine = msg.sender_name === myName;
