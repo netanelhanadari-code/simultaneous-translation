@@ -24,6 +24,13 @@ if (TWILIO_SID && TWILIO_TOKEN) {
 const otpStore = new Map(); // phone -> { code, expires, attempts, sendCount }
 function generateOTP() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
+// ── Test-user OTP bypass ────────────────────────────────────────────────────
+// A single fixed non-numeric "phone" used only by an automated Claude test
+// identity (see admin/tools). Deliberately not a real phone number format so
+// it can never collide with a genuine user. Skips Twilio entirely — no SMS
+// is ever sent, and any 6-digit code is accepted.
+const TEST_BYPASS_PHONE = 'CLAUDE-TEST-BOT';
+
 // ── Supabase REST helpers ────────────────────────────────────────────────────
 const SB_RAW = process.env.SUPABASE_URL || '';
 const SB_URL = SB_RAW.replace(/\/rest\/v1\/?$/, ''); // strip trailing /rest/v1 if user pasted full URL
@@ -1296,6 +1303,7 @@ app.get('/api/admin/activity-report', async (req, res) => {
 app.post('/api/send-otp', express.json(), async (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'phone required' });
+  if (phone === TEST_BYPASS_PHONE) return res.json({ ok: true });
   if (!twilioClient) return res.status(503).json({ error: 'SMS not configured' });
 
   const existing = otpStore.get(phone);
@@ -1325,6 +1333,7 @@ app.post('/api/send-otp', express.json(), async (req, res) => {
 app.post('/api/verify-otp', express.json(), (req, res) => {
   const { phone, code } = req.body;
   if (!phone || !code) return res.status(400).json({ error: 'phone and code required' });
+  if (phone === TEST_BYPASS_PHONE) return res.json({ ok: true });
 
   const record = otpStore.get(phone);
   if (!record) return res.status(400).json({ error: 'no_otp' });
