@@ -947,6 +947,46 @@
     }
     connectWS();
 
+    // ── Background listener for the user's OTHER rooms ───────────────────────
+    // connectWS() above only hears messages for *this* room. Without this,
+    // notification sound only ever worked from home.html's own role=home
+    // listener — meaning it went silent the moment you opened any room,
+    // even a different one than the message came from. This mirrors
+    // home.html's role=home subscription so sound (and later, other
+    // notification behavior) keeps working while inside any room.
+    let bgWs = null, bgWsReconnectTimer = null;
+    function connectBackgroundWS() {
+      let rooms;
+      try { rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]'); } catch(_) { rooms = []; }
+      const otherRoomIds = rooms.map(r => r.id).filter(id => id && id !== roomId);
+      if (!otherRoomIds.length) return;
+      const url = `${wsProto}://${location.host}/ws?role=home&rooms=${encodeURIComponent(otherRoomIds.join(','))}&name=${encodeURIComponent(myName)}`;
+      try { bgWs?.close(); } catch(_) {}
+      const bgws = new WebSocket(url);
+      bgWs = bgws;
+      bgws.onmessage = e => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type !== 'home_message') return;
+          if (msg.sender_name === myName) return; // own message
+          if (!notifyOn) return;
+          if (localStorage.getItem('bf_sound') === '0') return; // global mute
+          let rooms2;
+          try { rooms2 = JSON.parse(localStorage.getItem('bf_rooms') || '[]'); } catch(_) { rooms2 = []; }
+          const room = rooms2.find(r => r.id === msg.room_id);
+          if (!room || room.muted) return; // unknown or per-room mute
+          playRawNotifSound();
+        } catch(_) {}
+      };
+      bgws.onclose = () => {
+        if (bgWs !== bgws) return; // replaced/superseded
+        clearTimeout(bgWsReconnectTimer);
+        bgWsReconnectTimer = setTimeout(connectBackgroundWS, 5000);
+      };
+      bgws.onerror = () => bgws.close();
+    }
+    connectBackgroundWS();
+
     // ── Unread badge ───────────────────────────────────────────────────────
     let unreadCount = 0;
     let baseTitle = document.title;
@@ -1306,6 +1346,13 @@
     document.addEventListener('pointerdown', function() {
       _notifyAudio.play().then(() => { _notifyAudio.pause(); _notifyAudio.currentTime = 0; }).catch(() => {});
     }, { once: true, passive: true });
+    function playRawNotifSound() {
+      try {
+        _notifyAudio.currentTime = 0;
+        _notifyAudio.play().catch(() => {});
+        setTimeout(() => { _notifyAudio.pause(); }, 1500);
+      } catch(e) {}
+    }
     function playTardisSound() {
       if (!notifyOn) return;
       if (localStorage.getItem('bf_sound') === '0') return; // global mute
@@ -1313,11 +1360,7 @@
         const rooms = JSON.parse(localStorage.getItem('bf_rooms') || '[]');
         if (rooms.find(r => r.id === roomId)?.muted) return; // per-room mute
       } catch(_) {}
-      try {
-        _notifyAudio.currentTime = 0;
-        _notifyAudio.play().catch(() => {});
-        setTimeout(() => { _notifyAudio.pause(); }, 1500);
-      } catch(e) {}
+      playRawNotifSound();
     }
 
     // ── Text input ─────────────────────────────────────────────────────────
