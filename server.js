@@ -27,7 +27,9 @@ function generateOTP() { return String(Math.floor(100000 + Math.random() * 90000
 // ── Supabase REST helpers ────────────────────────────────────────────────────
 const SB_RAW = process.env.SUPABASE_URL || '';
 const SB_URL = SB_RAW.replace(/\/rest\/v1\/?$/, ''); // strip trailing /rest/v1 if user pasted full URL
-const SB_KEY = process.env.SUPABASE_ANON_KEY;
+// Prefer the service_role key so the server bypasses RLS (which is now enabled
+// with no policies — anon key alone can no longer read/write anything).
+const SB_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 const sbHeaders = () => ({
   'apikey': SB_KEY,
   'Authorization': 'Bearer ' + SB_KEY,
